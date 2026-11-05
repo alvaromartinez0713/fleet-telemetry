@@ -1,0 +1,18 @@
+# Binaries
+ingest
+consumer
+alerts
+agent
+gateway
+
+# Go
+*.test
+*.out
+
+# Environment
+.env
+.env.*
+
+# Editor
+.idea/
+.vscode/
