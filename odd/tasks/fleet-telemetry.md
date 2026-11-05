@@ -24,8 +24,8 @@ Decisiones de arquitectura cerradas (Engram obs #41 rev 10, #10): monorepo con 5
 
 ## Tasks
 
-- **T1** (S11) docs: feature doc ODD + ADRs lean — commit docs
-- **T2** (S9) esqueleto del monorepo: estructura Go, 5 `cmd/`, Docker Compose con Redpanda + TimescaleDB — commit skeleton
+- **T1** (S11) docs: feature doc ODD + ADRs lean — commit `1d1ebc3`
+- **T2** (S9) esqueleto del monorepo: estructura Go, 5 `cmd/`, Docker Compose con Redpanda + TimescaleDB — commit `903f80e`
 - **T3** (S1, S2) slice 1: contracts + INGEST + CONSUMER idempotente + watermark + persistencia Timescale — pendiente
 - **T4** (S1) GATEWAY REST + SSE con Redis pub/sub — pendiente
 - **T5** (S5) portal web reactivo (mapa, alertas, chat) — pendiente
