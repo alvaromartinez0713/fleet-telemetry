@@ -52,6 +52,11 @@ const (
 	// coming back is not, and the process must fail so orchestration restarts
 	// it instead of spinning forever without consuming.
 	maxPollFailures = 5
+	// maxFlushFailures bounds a storage outage. A flush failure is retried with
+	// the batch kept, but a database that stays down long enough also gets the
+	// consumer evicted from the group: after this many consecutive failures the
+	// process must exit instead of re-persisting the same batch forever.
+	maxFlushFailures = 5
 )
 
 // Runner joins the bus group and moves telemetry from the bus to storage.
@@ -101,6 +106,7 @@ func NewRunner(group Source, writer Writer, opts Options) *Runner {
 // orchestrator restarts the process instead of leaving it consuming nothing.
 func (r *Runner) Run(ctx context.Context) error {
 	pollFailures := 0
+	flushFailures := 0
 	for {
 		if ctx.Err() != nil {
 			r.drain(ctx)
@@ -110,8 +116,13 @@ func (r *Runner) Run(ctx context.Context) error {
 		if r.flushDue() {
 			if err := r.flush(ctx); err != nil {
 				r.flushFailed = true
+				flushFailures++
 				r.log.Error("flush failed, keeping the batch for a retry",
-					"error", err, "pending", len(r.pending))
+					"error", err, "pending", len(r.pending), "consecutive_failures", flushFailures)
+				if flushFailures >= maxFlushFailures {
+					r.drain(ctx)
+					return fmt.Errorf("storage is not writable after %d consecutive flush failures: %w", flushFailures, err)
+				}
 				if !r.sleep(ctx) {
 					r.drain(ctx)
 					return nil
@@ -119,6 +130,7 @@ func (r *Runner) Run(ctx context.Context) error {
 				continue
 			}
 			r.flushFailed = false
+			flushFailures = 0
 			r.lastFlush = time.Now()
 			continue
 		}
@@ -126,9 +138,13 @@ func (r *Runner) Run(ctx context.Context) error {
 		pollCtx, cancel := context.WithTimeout(ctx, r.pollWait())
 		msgs, err := r.group.Poll(pollCtx)
 		cancel()
+		// Whatever the fetch delivered is kept even when it also carries an
+		// error: the broker already advanced past those records, so dropping
+		// them would commit past events that were never persisted (ADR-002).
+		r.pending = append(r.pending, msgs...)
 		if err != nil {
 			pollFailures++
-			r.log.Error("poll failed", "error", err, "consecutive_failures", pollFailures)
+			r.log.Error("poll failed", "error", err, "consecutive_failures", pollFailures, "kept", len(msgs))
 			if pollFailures >= maxPollFailures {
 				r.drain(ctx)
 				return fmt.Errorf("consumer group is not usable after %d consecutive poll failures: %w", pollFailures, err)
@@ -140,7 +156,6 @@ func (r *Runner) Run(ctx context.Context) error {
 			continue
 		}
 		pollFailures = 0
-		r.pending = append(r.pending, msgs...)
 	}
 }
 
