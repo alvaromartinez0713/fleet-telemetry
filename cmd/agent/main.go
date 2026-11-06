@@ -1,5 +1,5 @@
 // Command agent implements the AI operator: a direct function-calling loop in
-// Go against the LLM API (ADR-014, no LangChain), with 8-10 tools including
+// Go against the LLM API (ADR-005, no LangChain), with 8-10 tools including
 // salud_pipeline() to answer natural-language queries about fleet state.
 package main
 

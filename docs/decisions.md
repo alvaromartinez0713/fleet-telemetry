@@ -229,7 +229,8 @@ is the difference between a dashboard and a support incident.
 
 ### References
 
-- `odd/tasks/fleet-telemetry.md` (Specs S6; tasks T3, T4, T8)- ADR-002 (event identity and delivery guarantees)
+- `odd/tasks/fleet-telemetry.md` (Specs S6; tasks T3, T4, T8)
+- ADR-002 (event identity and delivery guarantees)
 - `docs/architecture.excalidraw` (watermark loop, adaptive frequency note)
 
 ## ADR-004: Failure boundaries: circuit breakers where they matter

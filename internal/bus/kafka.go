@@ -108,6 +108,13 @@ func (g *Group) Poll(ctx context.Context) ([]Message, error) {
 			out = append(out, Message{Record: r, DecodeErr: err})
 			return
 		}
+		// A record can decode and still be structurally unusable; it is handled
+		// like an undecodable one so it never becomes a row with an empty device
+		// or a zero timestamp.
+		if err := env.ValidateShape(); err != nil {
+			out = append(out, Message{Record: r, DecodeErr: err})
+			return
+		}
 		out = append(out, Message{Envelope: env, Record: r})
 	})
 	return out, nil

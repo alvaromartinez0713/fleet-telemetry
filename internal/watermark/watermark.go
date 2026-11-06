@@ -10,9 +10,15 @@ package watermark
 // Advance returns the new watermark for a device.
 //
 // current is the stored watermark, maxSeq is the highest seq persisted for the
-// device, and present is how many events with seq > current exist. The run is
-// contiguous exactly when the count matches the span maxSeq-current, and only
-// then may the watermark move. The value never decreases.
+// device, and present is how many DISTINCT seq values greater than current
+// exist. It must be a distinct count: the dedup key allows the same seq to be
+// stored twice under a different captured_at, and a duplicated seq would
+// otherwise inflate the count, mask a hole and move the watermark over an event
+// that was never stored.
+//
+// The run is contiguous exactly when the count matches the span
+// maxSeq-current, and only then may the watermark move. The value never
+// decreases.
 func Advance(current, maxSeq uint64, present int64) uint64 {
 	if present <= 0 || maxSeq <= current {
 		return current
