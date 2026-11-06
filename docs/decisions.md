@@ -107,6 +107,16 @@ event, and how is a duplicate recognized.
 - **At-least-once end to end; the consumer is idempotent, not exactly-once.**
   Exactly-once across a broker and a database requires distributed transactions
   and buys nothing here, because dedup is cheap and deterministic.
+- **Three timestamps, and only one of them belongs to the identity.**
+  `captured_at` is stamped by the device and is immutable; `received_at` is
+  stamped by ingest when the batch is accepted; `stored_at` is the database
+  clock at insert. A retry re-stamps `received_at` and `stored_at` but keeps
+  `captured_at`, so a dedup key containing the intake or storage time would
+  treat a replay as a new event.
+- **Dedup identity is `UNIQUE(device_id, captured_at, seq)`.** A hypertable
+  unique index must contain the partitioning column, and `time` is
+  `captured_at`; including it is not a workaround but the only form that both
+  satisfies Timescale and stays stable across retries.
 - **Every event carries `seq`, monotonic per device, and an immutable
   device-stamped `ts`.** A retried event is a byte-identical replay: same
   `seq`, same `ts`, same payload. Identity of an event is
@@ -131,12 +141,12 @@ event, and how is a duplicate recognized.
 
 ### Consequences and trade-offs
 
-- **The dedup index has a Timescale-shaped constraint.** A unique index on a
-  hypertable must contain every partitioning column, and `time` is always one,
-  so `UNIQUE(device_id, seq)` alone is rejected by the database. The choice
-  between `UNIQUE(device_id, ts, seq)` (works because replays keep `ts`) and a
-  side dedup table keyed on `(device_id, seq)` is decided in T3a against a real
-  instance; this record is updated when it lands.
+- **Device clocks are untrusted input.** `captured_at` is data, not system
+  truth: a device with a skewed clock writes into an older chunk, and a
+  retention policy could age those rows out sooner. Each timestamp has one
+  reader — alerts use `captured_at` (the vehicle's own timeline), pipeline
+  latency uses `received_at - captured_at`, and retention and health use
+  `stored_at`.
 - **`202` without per-event acknowledgment** means a client can only trust the
   watermark. Any code path that treats a `202` as "safe to delete" reintroduces
   the data-loss bug this contract exists to prevent.
@@ -171,6 +181,13 @@ is the difference between a dashboard and a support incident.
   `POST /v1/devices/register`; `driver_id` is the business identity** of the
   person. Reinstalling the app creates a new `device_id`, which starts at
   watermark 0 — no stale state can be inherited.
+- **Registration and the watermark endpoint land in later slices, on purpose.**
+  The slice that builds persistence authenticates with a static development
+  JWT whose `sub` is the device id, and proves the watermark algorithm and its
+  transaction without exposing an endpoint; `POST /v1/devices/register` lands
+  with the mobile app (T8), where the installation identity is actually
+  minted, and `GET /v1/devices/self/watermark` lands with the gateway (T4),
+  which is the only place the read belongs.
 - **JWT with a ~90 day lifetime, validated stateless.** At thousands of devices
   emitting every few seconds, a session lookup per request is the wrong
   bottleneck; rotation happens at registration.
@@ -183,7 +200,8 @@ is the difference between a dashboard and a support incident.
   no special case. The value is monotonic and is advanced in the same
   transaction that persists the events.
 - **`GET /v1/devices/self/watermark` (gateway)** is the only read the sync loop
-  needs; it is authenticated by the same device JWT.
+  needs; it is authenticated by the same device JWT. Until it exists, the
+  watermark is an internal contract proven by persistence tests.
 - **Adaptive frequency**: ~2–5s while moving, a ~60s heartbeat while stopped
   (a ~30x reduction), and three derived states — moving, stopped (heartbeat
   alive), no signal (expected beat missed).
@@ -206,8 +224,7 @@ is the difference between a dashboard and a support incident.
 
 ### References
 
-- `odd/tasks/fleet-telemetry.md` (Specs S6; tasks T3, T4, T8)
-- ADR-002 (event identity and delivery guarantees)
+- `odd/tasks/fleet-telemetry.md` (Specs S6; tasks T3, T4, T8)- ADR-002 (event identity and delivery guarantees)
 - `docs/architecture.excalidraw` (watermark loop, adaptive frequency note)
 
 ## ADR-004: Failure boundaries: circuit breakers where they matter
