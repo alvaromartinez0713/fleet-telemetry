@@ -50,7 +50,7 @@ func run(log *slog.Logger) error {
 	handler := ingest.NewServer(
 		ingest.NewAuthenticator(cfg.JWTSecret, time.Now),
 		producer,
-		ingest.Options{Logger: log},
+		ingest.Options{Logger: log, MaxBatch: cfg.MaxBatch},
 	)
 
 	srv := &http.Server{

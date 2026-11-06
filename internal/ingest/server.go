@@ -37,7 +37,11 @@ type Options struct {
 	Now func() time.Time
 	// MaxBodyBytes bounds the request body.
 	MaxBodyBytes int64
-	Logger       *slog.Logger
+	// MaxBatch bounds how many events one request may carry. Zero falls back to
+	// contracts.MaxBatchSize; an operator-configured limit lowers it, never
+	// raises it above the wire contract.
+	MaxBatch int
+	Logger   *slog.Logger
 }
 
 // Server is the HTTP intake for POST /v1/telemetry.
@@ -46,6 +50,7 @@ type Server struct {
 	producer Producer
 	now      func() time.Time
 	maxBytes int64
+	maxBatch int
 	log      *slog.Logger
 }
 
@@ -58,6 +63,13 @@ func NewServer(auth *Authenticator, producer Producer, opts Options) http.Handle
 	if opts.MaxBodyBytes <= 0 {
 		opts.MaxBodyBytes = maxBodyBytes
 	}
+	if opts.MaxBatch <= 0 || opts.MaxBatch > contracts.MaxBatchSize {
+		if opts.MaxBatch > contracts.MaxBatchSize {
+			opts.Logger.Warn("configured batch limit exceeds the wire contract, using the contract limit",
+				"configured", opts.MaxBatch, "contract", contracts.MaxBatchSize)
+		}
+		opts.MaxBatch = contracts.MaxBatchSize
+	}
 	if opts.Logger == nil {
 		opts.Logger = slog.Default()
 	}
@@ -67,6 +79,7 @@ func NewServer(auth *Authenticator, producer Producer, opts Options) http.Handle
 		producer: producer,
 		now:      opts.Now,
 		maxBytes: opts.MaxBodyBytes,
+		maxBatch: opts.MaxBatch,
 		log:      opts.Logger,
 	}
 
@@ -146,6 +159,18 @@ func (s *Server) handleTelemetry(w http.ResponseWriter, r *http.Request) {
 			Title:  "Invalid request body",
 			Status: http.StatusBadRequest,
 			Detail: "the body is not a valid telemetry batch",
+		})
+		return
+	}
+
+	if len(batch.Events) > s.maxBatch {
+		s.log.Warn("rejected batch above the configured limit",
+			"device", deviceID, "events", len(batch.Events), "limit", s.maxBatch)
+		writeProblem(w, problem{
+			Type:   problemInvalidBatch,
+			Title:  "Telemetry batch too large",
+			Status: http.StatusBadRequest,
+			Detail: fmt.Sprintf("the batch has %d events and the configured limit is %d", len(batch.Events), s.maxBatch),
 		})
 		return
 	}
