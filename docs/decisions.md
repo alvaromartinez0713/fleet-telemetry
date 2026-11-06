@@ -13,6 +13,7 @@ the feature doc.
 | ADR-004 | Failure boundaries: circuit breakers where they matter    | Accepted | 2026-11-05 |
 | ADR-005 | Agent architecture: direct function calling with evals    | Accepted | 2026-11-05 |
 | ADR-006 | HTTP concerns as middleware, one responsibility each      | Accepted | 2026-11-06 |
+| ADR-007 | Modular monolith: modules, boundaries and extraction      | Accepted | 2026-11-06 |
 
 Diagram of the resulting system: `docs/architecture.excalidraw`
 (preview in `docs/architecture-preview.png`).
@@ -37,9 +38,10 @@ allows choosing the stack; what gets evaluated is the architectural reasoning
 
 ### Decisions
 
-- **Go monorepo with five binaries** (S1, S3). `ingest` (HTTP intake),
-  `consumer` (bus → storage), `alerts` (rules over state), `agent` (LLM + tools),
-  `gateway` (REST + SSE). One module, one build, five deployable units. The only
+- **Go monorepo with five binaries** (S1, S3). `intake` (accepts telemetry
+  reports over HTTP), `journal` (bus → storage), `alerting` (rules over state),
+  `assistant` (LLM + tools), `live` (REST + SSE). One build, five deployable
+  units, each owned by a module (ADR-007). The only
   synchronous inter-service call is `gateway → agent`; everything else couples
   through the bus. Go because concurrency, a small runtime image and a single
   static binary matter more here than framework ergonomics.
@@ -346,8 +348,10 @@ would have started by copying that code.
 ### Decisions
 
 - **One middleware per cross-cutting concern**: `recoverer`, `requestLogger`,
-  `authenticate`, `limitBody`. Each wraps `http.Handler`, does one thing, and
-  none of them decodes telemetry.
+  `authenticate`, `limitBody`. Each is a `gin.HandlerFunc` wrapping the chain,
+  does one thing, and none of them decodes telemetry. The router is `gin.New()`,
+  never `gin.Default()`: Gin's logger and recovery would duplicate these
+  middlewares instead of composing with them.
 - **One choke point for failures.** Handlers return an error; `httpx.Errors`
   logs it and renders the problem exactly once. Two audiences, structurally
   separated: `ProblemError.Error()` is the user-safe detail that may reach the
@@ -374,7 +378,10 @@ would have started by copying that code.
 ### Consequences and trade-offs
 
 - **A 405 or 404 never requires a token.** Deliberate: an unknown route is not
-  a place to leak whether a token would have been valid.
+  a place to leak whether a token would have been valid. Those two answers are
+  still net/http's plain-text routing replies, not problem documents: they come
+  from the router, not from the application, and turning them into problems is
+  a behaviour change nobody asked for yet.
 - **A panicking request produces no INFO access line**, because `recoverer` is
   outermost and the unwind passes the logger by design; it does produce the
   ERROR line with the stack, the method and the path.
@@ -392,6 +399,87 @@ would have started by copying that code.
 
 - `odd/tasks/fleet-telemetry.md` (task T3, Log L11)
 - ADR-002 (what the intake promises), ADR-004 (breaker and timeout discipline)
-- `internal/platform/httpx/errors.go` (the choke point),
-  `internal/ingest/middleware.go` (one concern each),
-  `internal/ingest/server.go` (chain order and why)
+- `internal/platform/httpx/gin.go` (the choke point adapter; `problem.go` holds
+  the router-agnostic document),
+  `internal/telemetry/intake/http/middleware.go` (one concern each),
+  `internal/telemetry/intake/http/server.go` (chain order and why)
+
+## ADR-007: Modular monolith: modules, boundaries and extraction
+
+Status: Accepted — 2026-11-06
+
+### Context
+
+The project has five services to build (intake, journal, live, alerting,
+assistant) and one developer. Five repositories and five deployment pipelines
+today would cost more than it buys, but the design must not become a monolith
+where everything reaches into everything: the stated goal is that each service
+can be deployed on its own now and extracted to a separate service later
+without a rewrite.
+
+The earlier reference (the URL shortener) does not transfer: it is a small
+monolith where one vertical slice and one deployment are the same thing. Here
+the unit that matters is the **module that ships**, and vertical slices are how
+a module is organised inside.
+
+### Decisions
+
+- **A module is a bounded context slice with exactly one binary.**
+  `internal/<context>/<module>` plus `cmd/<module>`. Today:
+  `telemetry/intake` → `cmd/intake`, `telemetry/journal` → `cmd/journal`, and
+  the `fleet/*` modules for the pending slices.
+- **`module.go` is the public surface: `New(...)` and `Run(ctx)`.** Nothing
+  else in a module is importable by another module. A composition root does
+  config, construction, run and graceful shutdown — no HTTP, no SQL, no
+  business rule.
+- **Modules never import each other.** They talk through the event bus, whose
+  topic names and payloads live in `internal/contracts`, or — for the single
+  synchronous edge, gateway → assistant — over HTTP behind a circuit breaker.
+- **The core declares its ports and its own types.** `app` must not import Gin,
+  `net/http`, pgx or franz-go, and must not import its own `adapter`. Adapters
+  implement the ports and may import `app`; never the reverse. This is what
+  closed the concrete violation found in review: the journal use case returned
+  the storage adapter's `PersistResult`, so swapping Timescale would have
+  changed the use case signature. It now returns `app.Result`.
+- **Shared code is deliberately tiny**: `internal/contracts` (the wire contract,
+  owned by no module) and `internal/platform` (config and the HTTP problem
+  contract). A shared package must not import a module either, or every
+  importer would depend on that module.
+- **The boundary is executable, not a promise.**
+  `internal/archtest/architecture_test.go` parses the repository import graph
+  and fails, naming the file and the import, when: a module imports another
+  module at any depth; an `app` package imports a framework or driver (or its
+  own adapter); or a `cmd/` entrypoint imports anything beyond the standard
+  library, `platform` and its own module.
+
+### Consequences and trade-offs
+
+- **Some duplication between modules is accepted on purpose.** `intake` has its
+  own Kafka producer and `journal` its own consumer group, instead of a shared
+  bus package. That is what keeps a module readable as a whole and extractable
+  without touching its neighbour.
+- **The core carries mapping code at the edges.** `app` returns its own
+  `Rejection` and `Result`, so the HTTP and storage layers translate. More
+  mapping, fewer cross-layer couplings; the payoff is that a framework swap
+  stops at the adapter.
+- **`app.Message.Ref any` is the one type-unsafe seam.** franz-go's commit path
+  needs the real record (topic, partition, offset, leader epoch); rebuilding one
+  would change bus effects. It is documented here rather than hidden.
+- **`journal`'s watermark lives inside the module** (`telemetry/journal/watermark`),
+  not in `internal/`: only the journal records and advances it, and hoisting it
+  would turn a module rule into a shared package with no owner.
+- **Extraction is mechanical**: move the module directory and its `cmd`, keep
+  the contract package or publish it as a schema, and no sibling module
+  changes. What does not travel is deployment configuration — each binary loads
+  only its own.
+- **The archtest is a guard, not a proof.** It sees imports, not behaviour: a
+  module can still couple through a shared database table. Topic and table
+  ownership stay a review responsibility.
+
+### References
+
+- ADR-001 (stack and topology), ADR-006 (HTTP concerns as middleware)
+- `internal/archtest/architecture_test.go` (the three rules),
+  `internal/telemetry/intake/module.go`, `internal/telemetry/journal/module.go`
+  (the public surfaces)
+- `odd/tasks/fleet-telemetry.md` (task T3, Log L12)
