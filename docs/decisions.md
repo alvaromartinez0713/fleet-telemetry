@@ -211,6 +211,11 @@ is the difference between a dashboard and a support incident.
 - **The heartbeat is both liveness and a data-reduction mechanism.** Without it
   "stopped" and "no signal" are indistinguishable; with it, a stationary
   vehicle costs ~60 events/hour instead of ~1800.
+- **The watermark is the last completed run, not the largest complete prefix.**
+  If `seq` 2 is missing while 3..9 are stored, the value stays where it was
+  (0 for a fresh device) until the gap is filled and the run from `watermark+1`
+  completes. Deliberately conservative: it never claims a durability the
+  database does not have, at the cost of the device holding a few extra rows.
 - **A `seq` gap blocks the watermark until the client resends.** That is
   correct and visible by design; it is also why the local queue must be
   append-only and drained in order.
