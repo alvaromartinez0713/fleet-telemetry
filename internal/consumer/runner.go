@@ -47,6 +47,11 @@ const (
 	defaultFlushEvery   = 2 * time.Second
 	defaultBackoff      = time.Second
 	defaultDrainTimeout = 10 * time.Second
+	// maxPollFailures bounds how long a permanently broken group is retried.
+	// A transient poll error is expected and retried; an error that keeps
+	// coming back is not, and the process must fail so orchestration restarts
+	// it instead of spinning forever without consuming.
+	maxPollFailures = 5
 )
 
 // Runner joins the bus group and moves telemetry from the bus to storage.
@@ -90,9 +95,12 @@ func NewRunner(group Source, writer Writer, opts Options) *Runner {
 
 // Run consumes until ctx is cancelled. A cancelled context is a graceful stop:
 // whatever is pending is flushed with a fresh bounded context and Run returns
-// nil. Only a broken group ends Run with an error, because the binary should
-// restart and let the broker redeliver (ADR-002).
+// nil. A poll failure is retried with backoff, but a group that keeps failing
+// for maxPollFailures consecutive attempts is broken (bad authorization,
+// unknown topic, unreachable cluster): Run drains and returns the error so the
+// orchestrator restarts the process instead of leaving it consuming nothing.
 func (r *Runner) Run(ctx context.Context) error {
+	pollFailures := 0
 	for {
 		if ctx.Err() != nil {
 			r.drain(ctx)
@@ -119,13 +127,19 @@ func (r *Runner) Run(ctx context.Context) error {
 		msgs, err := r.group.Poll(pollCtx)
 		cancel()
 		if err != nil {
-			r.log.Error("poll failed", "error", err)
+			pollFailures++
+			r.log.Error("poll failed", "error", err, "consecutive_failures", pollFailures)
+			if pollFailures >= maxPollFailures {
+				r.drain(ctx)
+				return fmt.Errorf("consumer group is not usable after %d consecutive poll failures: %w", pollFailures, err)
+			}
 			if !r.sleep(ctx) {
 				r.drain(ctx)
 				return nil
 			}
 			continue
 		}
+		pollFailures = 0
 		r.pending = append(r.pending, msgs...)
 	}
 }

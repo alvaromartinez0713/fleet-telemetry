@@ -15,6 +15,8 @@ import (
 // for a missing event and push the watermark past a seq that was never stored —
 // the device would then delete local events the server does not have (ADR-003).
 func TestWatermarkNotAdvancedByDuplicateSeqMaskingAGap(t *testing.T) {
+	requireIntegration(t)
+
 	st := startStore(t)
 	ctx := context.Background()
 	device := "dev-dup-gap"
