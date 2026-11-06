@@ -93,14 +93,16 @@ func NewGroup(brokers []string, group, topic string) (*Group, error) {
 
 // Poll returns the messages available within ctx. A deadline expiry is not an
 // error: it is the caller's flush tick.
+//
+// The records are read out of the fetch BEFORE the fetch error is considered.
+// A fetch can carry both records and an error, and franz-go has already advanced
+// the consumer position for those records: returning early would drop events
+// whose offsets a later commit still covers, which is exactly the at-least-once
+// guarantee this pipeline promises (ADR-002). Callers must persist the returned
+// messages even when err is not nil, then decide what to do with the error.
 func (g *Group) Poll(ctx context.Context) ([]Message, error) {
 	fetches := g.client.PollFetches(ctx)
-	if err := fetches.Err(); err != nil {
-		if ctx.Err() != nil || errors.Is(err, context.DeadlineExceeded) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("poll: %w", err)
-	}
+
 	var out []Message
 	fetches.EachRecord(func(r *kgo.Record) {
 		var env contracts.Envelope
@@ -117,6 +119,13 @@ func (g *Group) Poll(ctx context.Context) ([]Message, error) {
 		}
 		out = append(out, Message{Envelope: env, Record: r})
 	})
+
+	if err := fetches.Err(); err != nil {
+		if ctx.Err() != nil || errors.Is(err, context.DeadlineExceeded) {
+			return out, nil
+		}
+		return out, fmt.Errorf("poll: %w", err)
+	}
 	return out, nil
 }
 
