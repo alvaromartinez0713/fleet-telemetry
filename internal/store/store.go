@@ -19,10 +19,29 @@ import (
 // Store owns the connection pool to TimescaleDB.
 type Store struct {
 	pool *pgxpool.Pool
+	// scanWindow bounds how many seq values above the watermark one flush may
+	// examine. Without a bound, a device with a permanent gap would make the
+	// contiguity query scan an ever-growing range on every flush and let a
+	// single device slow the shared consumer down.
+	scanWindow int64
 }
 
-// Open connects to TimescaleDB.
+// DefaultWatermarkScanWindow bounds the per-flush contiguity scan.
+const DefaultWatermarkScanWindow int64 = 10000
+
+// Options tunes the adapter. Zero values fall back to the defaults.
+type Options struct {
+	// WatermarkScanWindow is how far above the watermark a flush looks.
+	WatermarkScanWindow int64
+}
+
+// Open connects to TimescaleDB with the default options.
 func Open(ctx context.Context, dsn string) (*Store, error) {
+	return OpenWithOptions(ctx, dsn, Options{})
+}
+
+// OpenWithOptions connects to TimescaleDB with explicit options.
+func OpenWithOptions(ctx context.Context, dsn string, opts Options) (*Store, error) {
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("connect to timescale: %w", err)
@@ -31,7 +50,10 @@ func Open(ctx context.Context, dsn string) (*Store, error) {
 		pool.Close()
 		return nil, fmt.Errorf("ping timescale: %w", err)
 	}
-	return &Store{pool: pool}, nil
+	if opts.WatermarkScanWindow <= 0 {
+		opts.WatermarkScanWindow = DefaultWatermarkScanWindow
+	}
+	return &Store{pool: pool, scanWindow: opts.WatermarkScanWindow}, nil
 }
 
 // Close releases the pool.
@@ -73,15 +95,23 @@ WITH ins AS (
 )
 SELECT count(*) FROM ins`
 
-// deviceProgress reports how far a device has been persisted.
+// deviceProgress reports how far a device has been persisted, inside a bounded
+// window above the watermark.
+//
 // The count is over DISTINCT seq on purpose: the dedup key is
 // (device_id, captured_at, seq), so one seq can legally be stored twice under a
 // different captured_at, and counting rows would let a duplicate mask a hole and
 // push the watermark past an event that was never stored (ADR-003).
+//
+// The window keeps the work per flush constant. A device with a permanent gap
+// would otherwise leave every batch scanning an ever-growing range, and one
+// authenticated device could slow down the consumer that every device shares.
+// Reaching the window bound only makes the watermark advance in steps: it stays
+// conservative, never wrong.
 const deviceProgress = `
 SELECT COALESCE(MAX(seq), 0), COUNT(DISTINCT seq)
 FROM telemetry_events
-WHERE device_id = $1 AND seq > $2`
+WHERE device_id = $1 AND seq > $2 AND seq <= $2 + $3`
 
 const lockWatermark = `SELECT watermark FROM device_watermark WHERE device_id = $1 FOR UPDATE`
 
@@ -123,7 +153,7 @@ func (s *Store) PersistBatch(ctx context.Context, envs []contracts.Envelope) (Pe
 	res.Duplicates = int64(len(envs)) - res.Inserted
 
 	for _, deviceID := range cols.devices() {
-		next, err := advanceWatermark(ctx, tx, deviceID)
+		next, err := advanceWatermark(ctx, tx, deviceID, s.scanWindow)
 		if err != nil {
 			return res, err
 		}
@@ -140,7 +170,7 @@ func (s *Store) PersistBatch(ctx context.Context, envs []contracts.Envelope) (Pe
 
 // advanceWatermark locks the device row, computes the contiguous run and moves
 // the watermark forward when the run is complete.
-func advanceWatermark(ctx context.Context, tx pgx.Tx, deviceID string) (uint64, error) {
+func advanceWatermark(ctx context.Context, tx pgx.Tx, deviceID string, scanWindow int64) (uint64, error) {
 	var current int64
 	err := tx.QueryRow(ctx, lockWatermark, deviceID).Scan(&current)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
@@ -148,7 +178,7 @@ func advanceWatermark(ctx context.Context, tx pgx.Tx, deviceID string) (uint64, 
 	}
 
 	var maxSeq, present int64
-	if err := tx.QueryRow(ctx, deviceProgress, deviceID, current).Scan(&maxSeq, &present); err != nil {
+	if err := tx.QueryRow(ctx, deviceProgress, deviceID, current, scanWindow).Scan(&maxSeq, &present); err != nil {
 		return 0, fmt.Errorf("read progress of %s: %w", deviceID, err)
 	}
 

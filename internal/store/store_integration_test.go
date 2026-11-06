@@ -27,7 +27,7 @@ func requireIntegration(t *testing.T) {
 	}
 }
 
-func startStore(t *testing.T) *store.Store {
+func timescaleDSN(t *testing.T) string {
 	t.Helper()
 
 	// The reaper (ryuk) reads the Docker socket, which is root-owned on most
@@ -70,9 +70,16 @@ func startStore(t *testing.T) *store.Store {
 	if err != nil {
 		t.Fatalf("container port: %v", err)
 	}
-	dsn := fmt.Sprintf("postgres://fleet:fleet@%s:%s/fleet?sslmode=disable", host, port.Port())
+	return fmt.Sprintf("postgres://fleet:fleet@%s:%s/fleet?sslmode=disable", host, port.Port())
+}
 
-	st, err := store.Open(ctx, dsn)
+func startStore(t *testing.T) *store.Store {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	st, err := store.Open(ctx, timescaleDSN(t))
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}
