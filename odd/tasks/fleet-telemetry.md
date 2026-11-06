@@ -24,10 +24,10 @@ Decisiones de arquitectura cerradas (Engram obs #41 rev 10, #10): monorepo con 5
 
 ## Tasks
 
-- **T1** (S11) docs: feature doc ODD + ADRs lean — commit `1d1ebc3`
+- **T1** (S11) docs: feature doc ODD + ADRs (`docs/decisions.md`) + diagrama de arquitectura (`docs/architecture.excalidraw`) — commit `1d1ebc3`, revisado en `0b0b635`
 - **T2** (S9) esqueleto del monorepo: estructura Go, 5 `cmd/`, Docker Compose con Redpanda + TimescaleDB — commit `903f80e`
-- **T3** (S1, S2) slice 1: contracts + INGEST + CONSUMER idempotente + watermark + persistencia Timescale — pendiente
-- **T4** (S1) GATEWAY REST + SSE con Redis pub/sub — pendiente
+- **T3** (S1, S2) slice 1: contracts + INGEST (`POST /v1/telemetry`, `POST /v1/devices/register`) + CONSUMER idempotente + watermark (`GET /v1/devices/self/watermark`) + persistencia Timescale — pendiente
+- **T4** (S1) SSE con Redis pub/sub en GATEWAY — pendiente
 - **T5** (S5) portal web reactivo (mapa, alertas, chat) — pendiente
 - **T6** (S3, S4) agente IA + circuit breakers (gateway→agent, agent→LLM) + tools — pendiente
 - **T7** (S4) ALERTS (detenido >20 min en zona crítica) — pendiente
@@ -40,3 +40,6 @@ Decisiones de arquitectura cerradas (Engram obs #41 rev 10, #10): monorepo con 5
 
 - **L1** (pedido original, verbatim): "aca vamos a iniciar el desarrollo de fleet-telemetry busca en engram todo lo que ya tenemos definido para este proyecto y vamos a definir primero con que vamos a iniciar"
 - **L2**: usuario eligió "Docs + esqueleto": feature doc + ADRs + esqueleto del monorepo con Docker Compose; el slice funcional (T3) queda para la próxima sesión.
+- **L3** (verbatim): "hay algunos detalles yo se que hay decisiones que se tomaron y estan guardadas asi deben quedar en engram, pero los ADR en decision no tienen mucho sentido y no cumplen realmente todas son decisiones importantes de arquiterura o para el comportamiento de la aplicacion, el archivo ADR me gusta como tiene el indice pero mira la estructura de como se crearon en otro proyecto el de urlshortener, esa ruta de ingest no me gusta el nombre deberia ser algo como /v1/telemetry sin ese batch, antes de iniciar a crear codigo me gustaria que hicieras un diseño en excaldraw de como esta conectada toda la app como va funcionar que se conecta con que y como"
+  Consecuencias: `docs/decisions.md` reescrito con la estructura de urlshortener (5 ADRs consolidados con Contexto / Decisiones / Consecuencias / Referencias); ruta de ingesta es `POST /v1/telemetry` (sin `/batch`); diagrama de arquitectura en `docs/architecture.excalidraw` + preview PNG antes de escribir código.
+- **L4**: nota de alcance de revisión — `docs/architecture.excalidraw` (3057 líneas en el diff) es JSON generado por la herramienta de diagramas, no trabajo de autor; el diff revisable de ese slice es `docs/decisions.md` + este documento (~540 líneas). No se parte el slice por el artefacto generado.
