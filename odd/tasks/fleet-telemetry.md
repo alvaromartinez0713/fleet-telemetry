@@ -26,12 +26,12 @@ Decisiones de arquitectura cerradas (Engram obs #41 rev 10, #10): monorepo con 5
 
 - **T1** (S11) docs: feature doc ODD + ADRs (`docs/decisions.md`) + diagrama de arquitectura (`docs/architecture.excalidraw`) — commit `1d1ebc3`, revisado en `0b0b635`
 - **T2** (S9) esqueleto del monorepo: estructura Go, 5 `cmd/`, Docker Compose con Redpanda + TimescaleDB — commit `903f80e`
-- **T3** (S1, S2) slice 1: contracts + INGEST (`POST /v1/telemetry`, `POST /v1/devices/register`) + CONSUMER idempotente + watermark (`GET /v1/devices/self/watermark`) + persistencia Timescale — pendiente
-- **T4** (S1) SSE con Redis pub/sub en GATEWAY — pendiente
+- **T3** (S1, S2) slice 1: contracts + migración Timescale + INGEST (`POST /v1/telemetry`, JWT estático de dev) + CONSUMER (dedup `UNIQUE(device_id, captured_at, seq)`, tres timestamps, watermark transaccional) — pendiente
+- **T4** (S1) GATEWAY REST (`GET /v1/devices/self/watermark`) + SSE con Redis pub/sub — pendiente
 - **T5** (S5) portal web reactivo (mapa, alertas, chat) — pendiente
 - **T6** (S3, S4) agente IA + circuit breakers (gateway→agent, agent→LLM) + tools — pendiente
 - **T7** (S4) ALERTS (detenido >20 min en zona crítica) — pendiente
-- **T8** (S6) app móvil offline-first (SQLite, cola append-only, sync por lotes) — pendiente
+- **T8** (S6) app móvil offline-first (SQLite, cola append-only, sync por lotes) + `POST /v1/devices/register` con JWT real — pendiente
 - **T9** (S7) CI/CD móvil (EAS/Fastlane + GitHub Actions) — pendiente
 - **T10** (S8) k6: cientos de vehículos, 10% duplicados, 5% errores — pendiente
 - **T11** (S9, S10) IaC Terraform documentado + README final — pendiente
@@ -43,3 +43,8 @@ Decisiones de arquitectura cerradas (Engram obs #41 rev 10, #10): monorepo con 5
 - **L3** (verbatim): "hay algunos detalles yo se que hay decisiones que se tomaron y estan guardadas asi deben quedar en engram, pero los ADR en decision no tienen mucho sentido y no cumplen realmente todas son decisiones importantes de arquiterura o para el comportamiento de la aplicacion, el archivo ADR me gusta como tiene el indice pero mira la estructura de como se crearon en otro proyecto el de urlshortener, esa ruta de ingest no me gusta el nombre deberia ser algo como /v1/telemetry sin ese batch, antes de iniciar a crear codigo me gustaria que hicieras un diseño en excaldraw de como esta conectada toda la app como va funcionar que se conecta con que y como"
   Consecuencias: `docs/decisions.md` reescrito con la estructura de urlshortener (5 ADRs consolidados con Contexto / Decisiones / Consecuencias / Referencias); ruta de ingesta es `POST /v1/telemetry` (sin `/batch`); diagrama de arquitectura en `docs/architecture.excalidraw` + preview PNG antes de escribir código.
 - **L4**: nota de alcance de revisión — `docs/architecture.excalidraw` (3057 líneas en el diff) es JSON generado por la herramienta de diagramas, no trabajo de autor; el diff revisable de ese slice es `docs/decisions.md` + este documento (~540 líneas). No se parte el slice por el artefacto generado.
+- **L5** (decisiones tomadas antes de T3, respuestas del usuario):
+  - Dedup y timestamps (respuesta custom, verbatim): "pero en el dispositivo se deberia guardar la fecha exacta en la que captura el evento y tambien se deberia almacenar, y en el ingesta tambien se deberia tomar la fecha en la que se recibe el evento, y en el cosumer tambien guardar un store_at en la que se guarda el evento en la base datos" → `captured_at` (dispositivo, inmutable) / `received_at` (ingesta) / `stored_at` (base), y el índice único es `UNIQUE(device_id, captured_at, seq)` porque la hyptable exige la columna de partición.
+  - Endpoint de watermark: "Diferirlo a T4" → T3 prueba el algoritmo y la transacción; el endpoint nace con el GATEWAY en T4.
+  - Auth: "JWT con token estático de dev" → T3 valida JWT HS256 con `sub` = device_id; el registro real va a T8.
+  - Entrega del slice de docs: "Push + PR + merge a main" → PR #4 mergeada, `main` en `6b410a2`.
