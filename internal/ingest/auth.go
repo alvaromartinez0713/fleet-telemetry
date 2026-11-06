@@ -1,7 +1,3 @@
-// Package ingest is the HTTP intake adapter: it authenticates the device,
-// validates the batch against the shared contract, stamps received_at and hands
-// the batch to the bus. Contract rules live in internal/contracts; this package
-// only translates HTTP into that contract and back.
 package ingest
 
 import (
@@ -39,7 +35,8 @@ func NewAuthenticator(secret []byte, now func() time.Time) *Authenticator {
 }
 
 // DeviceID validates the Authorization header and returns the device id it
-// authenticates and trusts.
+// authenticates and trusts. Callers supply the header, never the request: this
+// type is the credential check and the authenticate middleware owns the HTTP.
 func (a *Authenticator) DeviceID(header string) (string, error) {
 	raw := bearerToken(header)
 	if raw == "" {
