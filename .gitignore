@@ -1,10 +1,10 @@
-# Binaries built at the repository root. Anchored: an unanchored rule would
-# also ignore cmd/ingest, cmd/consumer, internal/ingest and internal/consumer.
-/ingest
-/consumer
-/alerts
-/agent
-/gateway
+# Binaries built at the repository root. Anchored: an unanchored rule would also
+# ignore cmd/intake, cmd/journal and the module directories of the same name.
+/intake
+/journal
+/live
+/alerting
+/assistant
 
 # Go
 *.test

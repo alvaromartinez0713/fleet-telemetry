@@ -1,4 +1,4 @@
-BINS := ingest consumer alerts agent gateway
+BINS := intake journal live alerting assistant
 
 .PHONY: build run-up run-down run-status test
 
