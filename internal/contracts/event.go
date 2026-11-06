@@ -6,6 +6,7 @@ package contracts
 import (
 	"errors"
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -38,17 +39,19 @@ const (
 )
 
 var (
-	ErrEmptyDeviceID    = errors.New("device_id is empty")
-	ErrDeviceIDTooLong  = errors.New("device_id is longer than 64 bytes")
-	ErrSeqNotPositive   = errors.New("seq must be greater than zero")
-	ErrCapturedAtZero   = errors.New("captured_at is zero")
-	ErrCapturedInFuture = errors.New("captured_at is beyond the accepted clock skew")
-	ErrBadMode          = errors.New("mode must be moving or heartbeat")
-	ErrLatitudeRange    = errors.New("lat is outside [-90, 90]")
-	ErrLongitudeRange   = errors.New("lon is outside [-180, 180]")
-	ErrSchemaVersion    = errors.New("unsupported schema_version")
-	ErrEmptyBatch       = errors.New("batch has no events")
-	ErrBatchTooLarge    = errors.New("batch exceeds MaxBatchSize")
+	ErrEmptyDeviceID     = errors.New("device_id is empty")
+	ErrDeviceIDTooLong   = errors.New("device_id is longer than 64 bytes")
+	ErrSeqNotPositive    = errors.New("seq must be greater than zero")
+	ErrSeqTooLarge       = errors.New("seq does not fit the unsigned 63-bit range")
+	ErrMissingReceivedAt = errors.New("received_at is zero")
+	ErrCapturedAtZero    = errors.New("captured_at is zero")
+	ErrCapturedInFuture  = errors.New("captured_at is beyond the accepted clock skew")
+	ErrBadMode           = errors.New("mode must be moving or heartbeat")
+	ErrLatitudeRange     = errors.New("lat is outside [-90, 90]")
+	ErrLongitudeRange    = errors.New("lon is outside [-180, 180]")
+	ErrSchemaVersion     = errors.New("unsupported schema_version")
+	ErrEmptyBatch        = errors.New("batch has no events")
+	ErrBatchTooLarge     = errors.New("batch exceeds MaxBatchSize")
 )
 
 // Event is one telemetry sample as captured by a device.
@@ -93,6 +96,10 @@ func (e Event) Validate(now time.Time) error {
 		return ErrDeviceIDTooLong
 	case e.Seq == 0:
 		return ErrSeqNotPositive
+	case e.Seq > math.MaxInt64:
+		// Stored as a signed bigint; a larger value would come back negative and
+		// permanently block the device watermark.
+		return ErrSeqTooLarge
 	case e.CapturedAt.IsZero():
 		return ErrCapturedAtZero
 	case e.CapturedAt.After(now.Add(clockSkewTolerance)):
@@ -105,6 +112,27 @@ func (e Event) Validate(now time.Time) error {
 		return ErrBadMode
 	case e.SchemaVersion != SchemaVersion:
 		return fmt.Errorf("%w: got %d", ErrSchemaVersion, e.SchemaVersion)
+	}
+	return nil
+}
+
+// ValidateShape checks the structural invariants of a consumed envelope: the
+// fields the pipeline must not accept empty, without judging device clock skew
+// (a queued event may legitimately be old). The bus calls it so a structurally
+// broken record is handled like an undecodable one instead of becoming a row
+// with an empty device or a zero timestamp.
+func (e Envelope) ValidateShape() error {
+	switch {
+	case e.DeviceID == "":
+		return ErrEmptyDeviceID
+	case e.Seq == 0:
+		return ErrSeqNotPositive
+	case e.Seq > math.MaxInt64:
+		return ErrSeqTooLarge
+	case e.CapturedAt.IsZero():
+		return ErrCapturedAtZero
+	case e.ReceivedAt.IsZero():
+		return ErrMissingReceivedAt
 	}
 	return nil
 }

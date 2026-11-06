@@ -1,6 +1,6 @@
 // Command gateway is the public API: REST for portal queries, SSE for
-// real-time streaming (ADR-009/ADR-010), and the synchronous call to the agent
-// guarded by a circuit breaker (ADR-013).
+// real-time streaming (ADR-001), and the synchronous call to the agent
+// guarded by a circuit breaker (ADR-004).
 package main
 
 import (

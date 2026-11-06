@@ -73,8 +73,13 @@ WITH ins AS (
 )
 SELECT count(*) FROM ins`
 
+// deviceProgress reports how far a device has been persisted.
+// The count is over DISTINCT seq on purpose: the dedup key is
+// (device_id, captured_at, seq), so one seq can legally be stored twice under a
+// different captured_at, and counting rows would let a duplicate mask a hole and
+// push the watermark past an event that was never stored (ADR-003).
 const deviceProgress = `
-SELECT COALESCE(MAX(seq), 0), COUNT(*)
+SELECT COALESCE(MAX(seq), 0), COUNT(DISTINCT seq)
 FROM telemetry_events
 WHERE device_id = $1 AND seq > $2`
 
