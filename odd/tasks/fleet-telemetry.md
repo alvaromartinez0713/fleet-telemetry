@@ -24,9 +24,11 @@ Decisiones de arquitectura cerradas (Engram obs #41 rev 10, #10): monorepo con 5
 
 ## Tasks
 
-- **T1** (S11) docs: feature doc ODD + ADRs (`docs/decisions.md`) + diagrama de arquitectura (`docs/architecture.excalidraw`) — commit `1d1ebc3`, revisado en `0b0b635`
-- **T2** (S9) esqueleto del monorepo: estructura Go, 5 `cmd/`, Docker Compose con Redpanda + TimescaleDB — commit `903f80e`
-- **T3** (S1, S2) slice 1: contracts + migración Timescale + INGEST (`POST /v1/telemetry`, JWT estático de dev) + CONSUMER (dedup `UNIQUE(device_id, captured_at, seq)`, tres timestamps, watermark transaccional) — commits `ac558e8`, `1db364c`, `17f4b06`, `022dfc7`
+Las referencias son por título de commit, no por hash: el merge por rebase reescribe los hashes y un SHA citado como evidencia deja de existir.
+
+- **T1** (S11) docs: feature doc ODD + ADRs (`docs/decisions.md`) + diagrama de arquitectura (`docs/architecture.excalidraw`) — commit `docs: add ODD feature doc and lean ADRs for fleet-telemetry`, revisado en `docs: rewrite ADRs in the urlshortener format and add architecture diagram`
+- **T2** (S9) esqueleto del monorepo: estructura Go, 5 `cmd/`, Docker Compose con Redpanda + TimescaleDB — commit `feat: monorepo skeleton with five Go services and local compose`
+- **T3** (S1, S2) slice 1: contracts + migración Timescale + INGEST (`POST /v1/telemetry`, JWT estático de dev) + CONSUMER (dedup `UNIQUE(device_id, captured_at, seq)`, tres timestamps, watermark transaccional) — commits `feat: telemetry event contract and cumulative watermark`, `feat: timescale and kafka adapters for the telemetry slice`, `test: prove dedup and watermark against a real timescaledb`, `feat: POST /v1/telemetry intake and micro-batch consumer runner`
 - **T4** (S1) GATEWAY REST (`GET /v1/devices/self/watermark`) + SSE con Redis pub/sub — pendiente
 - **T5** (S5) portal web reactivo (mapa, alertas, chat) — pendiente
 - **T6** (S3, S4) agente IA + circuit breakers (gateway→agent, agent→LLM) + tools — pendiente
@@ -47,8 +49,8 @@ Decisiones de arquitectura cerradas (Engram obs #41 rev 10, #10): monorepo con 5
   - Dedup y timestamps (respuesta custom, verbatim): "pero en el dispositivo se deberia guardar la fecha exacta en la que captura el evento y tambien se deberia almacenar, y en el ingesta tambien se deberia tomar la fecha en la que se recibe el evento, y en el cosumer tambien guardar un store_at en la que se guarda el evento en la base datos" → `captured_at` (dispositivo, inmutable) / `received_at` (ingesta) / `stored_at` (base), y el índice único es `UNIQUE(device_id, captured_at, seq)` porque la hyptable exige la columna de partición.
   - Endpoint de watermark: "Diferirlo a T4" → T3 prueba el algoritmo y la transacción; el endpoint nace con el GATEWAY en T4.
   - Auth: "JWT con token estático de dev" → T3 valida JWT HS256 con `sub` = device_id; el registro real va a T8.
-  - Entrega del slice de docs: "Push + PR + merge a main" → PR #4 mergeada, `main` en `6b410a2`.
-- **L6** (defecto propio, encontrado por el worker): las reglas del `.gitignore` no estaban ancladas (`ingest`, `consumer`, ...), así que matcheaban cualquier segmento del path e ignoraban `cmd/ingest/`, `cmd/consumer/`, `internal/ingest/` e `internal/consumer/`. El commit del esqueleto (`e8d6411`) declaraba "cinco servicios Go" y no trackeaba ninguno. Corregido en `4ade0fa` (reglas ancladas a la raíz + los tres `cmd/` que nunca llegaron al repo).
+  - Entrega del slice de docs: "Push + PR + merge a main" → PR #4 mergeada, `main` en `docs: record ADR format and ingestion route corrections in feature doc`.
+- **L6** (defecto propio, encontrado por el worker): las reglas del `.gitignore` no estaban ancladas (`ingest`, `consumer`, ...), así que matcheaban cualquier segmento del path e ignoraban `cmd/ingest/`, `cmd/consumer/`, `internal/ingest/` e `internal/consumer/`. El commit del esqueleto (`feat: monorepo skeleton with five Go services and local compose`) declaraba "cinco servicios Go" y no trackeaba ninguno. Corregido en `fix: anchor binary ignore rules so service sources are tracked` (reglas ancladas a la raíz + los tres `cmd/` que nunca llegaron al repo).
 - **L7**: límite del slice T3 — 6 commits, ~2800 líneas de diff, de las cuales ~1100 son tests (`internal/*/..._test.go` + el suite de integración de 233 líneas) y ~160 `go.sum`. El trabajo de autor revisable son ~1500 líneas: contratos + adaptadores (store/bus) + ingesta + runner del consumer. No se parte más: los tests van con el comportamiento que prueban y el revisable es un pipeline coherente.
 - **L8** (verificación independiente del slice T3, escalado de riesgo item 1):
   - **D1 BLOCKER (corregido)**: la prueba de contigüidad del watermark contaba filas (`COUNT(*)`), no `seq` distintos. Como el dedup permite el mismo `seq` con otro `captured_at`, un duplicado enmascaraba un hueco y el watermark avanzaba sobre un evento nunca persistido → la app habría borrado datos locales inexistentes en el servidor. Reproducido contra Timescale real. Fix: `COUNT(DISTINCT seq)` (`internal/store/store.go`) + regresión `internal/store/watermark_dupseq_integration_test.go`.
