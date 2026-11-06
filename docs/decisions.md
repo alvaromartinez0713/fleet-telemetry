@@ -12,6 +12,7 @@ the feature doc.
 | ADR-003 | Device identity and offline sync contract                 | Accepted | 2026-11-05 |
 | ADR-004 | Failure boundaries: circuit breakers where they matter    | Accepted | 2026-11-05 |
 | ADR-005 | Agent architecture: direct function calling with evals    | Accepted | 2026-11-05 |
+| ADR-006 | HTTP concerns as middleware, one responsibility each      | Accepted | 2026-11-06 |
 
 Diagram of the resulting system: `docs/architecture.excalidraw`
 (preview in `docs/architecture-preview.png`).
@@ -326,3 +327,71 @@ and turns an architectural demonstration into glue code.
 - `odd/tasks/fleet-telemetry.md` (Specs S4; task T6, evals in T6)
 - ADR-004 (breaker and timeout on the LLM client)
 - `docs/architecture.excalidraw` (agent, tools, external LLM)
+
+## ADR-006: HTTP concerns as middleware, one responsibility each
+
+Status: Accepted — 2026-11-06
+
+### Context
+
+The intake grew into one handler that authenticated the device, bounded the
+body, decoded the batch, enforced the batch limit, validated the contract,
+checked the device against the token, stamped `received_at`, produced to the
+bus and rendered every error — eight problem documents written inline. Nothing
+was wrong with the responses; the shape was. A cross-cutting concern inside a
+handler cannot be tested alone, cannot be reused by the next service, and one
+forgotten render or log silently leaks an internal error. The gateway (T4)
+would have started by copying that code.
+
+### Decisions
+
+- **One middleware per cross-cutting concern**: `recoverer`, `requestLogger`,
+  `authenticate`, `limitBody`. Each wraps `http.Handler`, does one thing, and
+  none of them decodes telemetry.
+- **One choke point for failures.** Handlers return an error; `httpx.Errors`
+  logs it and renders the problem exactly once. Two audiences, structurally
+  separated: `ProblemError.Error()` is the user-safe detail that may reach the
+  response, and the internal chain travels only through `Unwrap()` into the
+  logs. Client-class failures are WARN (expected traffic), infrastructure and
+  unknown failures are ERROR, and anything that is not a `ProblemError` renders
+  a generic 500 because we cannot vouch for what it contains.
+- **Problem documents live in `internal/platform/httpx`**, not in the intake, so
+  the gateway reuses one implementation instead of forking a second.
+- **The chain order is explicit in the composition root, with its reason
+  written next to it**: `recoverer` outermost (a panic must be contained before
+  anything looks at the request), `requestLogger` inside it (it observes the
+  final status and the device id that authentication resolved), `authenticate`
+  outside `limitBody` (an unauthenticated caller is rejected before its body is
+  read or counted).
+- **Routing stays outside the route chain.** The mux answers a 405/404 before
+  any identity check, because that is a routing answer and not an identity
+  answer — pinned by an existing test.
+- **A middleware that owns a single failure writes that one problem itself**
+  (the 401 of `authenticate`, the 500 of a recovered panic). It has nothing to
+  delegate, and pretending otherwise would put the same knowledge in two
+  places.
+
+### Consequences and trade-offs
+
+- **A 405 or 404 never requires a token.** Deliberate: an unknown route is not
+  a place to leak whether a token would have been valid.
+- **A panicking request produces no INFO access line**, because `recoverer` is
+  outermost and the unwind passes the logger by design; it does produce the
+  ERROR line with the stack, the method and the path.
+- **Wrapping `http.ResponseWriter` hides net/http's unexported oversized-body
+  hook**, so the recorder unwraps to the original writer; without that, a 413
+  quietly loses its `Connection: close`.
+- **`recoverer` has no test of its own** in this slice — the two authorised
+  tests covered the order and the access line. Its 500 rendering is verified by
+  inspection today; a panic test is a follow-up, not a claim.
+- **Handlers can no longer forget to log or render**: the choke point makes it
+  structurally impossible, at the cost of one indirection when reading a
+  handler.
+
+### References
+
+- `odd/tasks/fleet-telemetry.md` (task T3, Log L11)
+- ADR-002 (what the intake promises), ADR-004 (breaker and timeout discipline)
+- `internal/platform/httpx/errors.go` (the choke point),
+  `internal/ingest/middleware.go` (one concern each),
+  `internal/ingest/server.go` (chain order and why)
