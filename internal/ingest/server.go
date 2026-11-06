@@ -3,9 +3,9 @@
 // the batch to the bus. Contract rules live in internal/contracts; this package
 // only translates HTTP into that contract and back.
 //
-// Each cross-cutting concern is its own middleware (auth.go, middleware.go) and
-// the use case (telemetry.go) contains no plumbing. This file only builds the
-// handler.
+// The router is gin, the one HTTP idiom of the repository. Each cross-cutting
+// concern is its own middleware (auth.go, middleware.go) and the use case
+// (telemetry.go) contains no plumbing. This file only builds the chain.
 package ingest
 
 import (
@@ -13,6 +13,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
 
 	"fleet-telemetry/internal/contracts"
 	"fleet-telemetry/internal/platform/httpx"
@@ -61,8 +63,8 @@ type Server struct {
 	maxBatch int
 }
 
-// NewServer builds the handler. The mux owns routing, so method and path
-// mismatches are answered by net/http (405/404) and never by hand-rolled code.
+// NewServer builds the handler. The engine owns routing, so method and path
+// mismatches are answered by gin (405/404) and never by hand-rolled code.
 func NewServer(auth *Authenticator, producer Producer, opts Options) http.Handler {
 	if opts.Logger == nil {
 		opts.Logger = slog.Default()
@@ -88,36 +90,55 @@ func NewServer(auth *Authenticator, producer Producer, opts Options) http.Handle
 		maxBatch: opts.MaxBatch,
 	}
 
-	// Per-route chain, applied innermost first: the choke point, then the body
-	// limit, then authentication. The choke point is applied first because the use
-	// case returns errors instead of writing problems, and it is the only place
-	// that renders one.
-	//
-	// authenticate sits outside limitBody so an unauthenticated caller is rejected
-	// before its body is read or counted. A middleware that has a single failure of
-	// its own (the 401 here, the 500 of a recovered panic) writes that one problem
-	// directly; it has nothing to delegate.
-	var route http.Handler = httpx.Errors(opts.Logger, s.handleTelemetry)
-	route = limitBody(s.maxBytes, route)
-	route = authenticate(auth, opts.Logger, route)
+	// gin.New, never gin.Default: logging and recovery belong to the two
+	// single-responsibility middlewares below (ADR-006), and gin.Default would
+	// install a second copy of both.
+	engine := gin.New()
 
-	// The mux owns routing and therefore sits outside the route chain: a method or
-	// path mismatch is answered by net/http (405/404) before any identity check,
-	// which is the only way that answer stays a routing answer.
-	mux := http.NewServeMux()
-	mux.Handle("POST "+contracts.RouteTelemetry, route)
+	// Routing stays a routing answer. HandleMethodNotAllowed makes the engine answer
+	// a wrong method itself, through the NoMethod chain, which is the one chain that
+	// runs without the route middlewares: the 405 needs no token, exactly as it did
+	// when the mux owned routing. NoMethod and NoRoute restore net/http's plain text
+	// answer, which is what this endpoint returned before the migration.
+	engine.HandleMethodNotAllowed = true
+	engine.NoMethod(methodNotAllowed)
+	engine.NoRoute(notFound)
 
-	// Global chain, applied innermost first, which together with the route chain
-	// gives this order from the outside: recoverer → requestLogger → mux →
-	// authenticate → limitBody → choke point → use case.
+	// Global chain, in this order:
 	//
 	//   - recoverer is outermost: a panic has to be contained before anything else
 	//     looks at the request, and before the response is touched.
 	//   - requestLogger is just inside it, so it observes the status every layer
 	//     below produces (405, 401, 202, 500) and the device id that authenticate
 	//     resolved.
-	var handler http.Handler = mux
-	handler = requestLogger(opts.Logger, handler)
-	handler = recoverer(opts.Logger, handler)
-	return handler
+	engine.Use(recoverer(opts.Logger), requestLogger(opts.Logger))
+
+	// Route chain, in this order:
+	//
+	//   - authenticate sits outside limitBody so an unauthenticated caller is
+	//     rejected before its body is read or counted.
+	//   - the choke point is innermost, wrapping the use case: the use case reports
+	//     failures with c.Error, and this is the only place that renders one.
+	engine.POST(contracts.RouteTelemetry,
+		authenticate(auth, opts.Logger),
+		limitBody(s.maxBytes),
+		httpx.GinErrors(opts.Logger),
+		s.handleTelemetry,
+	)
+
+	return engine
+}
+
+// methodNotAllowed keeps the routing answer net/http gave before the migration: a
+// wrong method is answered without a token, with the standard text body and the
+// Allow header the engine sets. It is a routing answer, not a problem document,
+// so no adapter rewrites it.
+func methodNotAllowed(c *gin.Context) {
+	http.Error(c.Writer, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+}
+
+// notFound does the same for an unknown path: net/http's plain 404 body instead
+// of gin's, which has no trailing newline.
+func notFound(c *gin.Context) {
+	http.NotFound(c.Writer, c.Request)
 }
