@@ -1,6 +1,8 @@
 // Package httpx holds the HTTP concerns every service shares: the RFC 9457
-// problem document, the error that carries one, and the single choke point that
-// turns a returned error into exactly one rendered response.
+// problem document and the error that carries one. Both are plain net/http, so
+// the contract does not depend on a router; gin.go is the thin adapter that
+// plugs the choke point into a gin chain, which is the one HTTP idiom of this
+// repository.
 package httpx
 
 import (

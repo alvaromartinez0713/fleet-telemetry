@@ -14,6 +14,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-gonic/gin"
+
 	"fleet-telemetry/internal/bus"
 	"fleet-telemetry/internal/config"
 	"fleet-telemetry/internal/ingest"
@@ -28,6 +30,11 @@ const (
 func main() {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(log)
+
+	// gin's debug mode prints a banner and the route table to stdout, behind the
+	// structured logger this service owns (ADR-006). Routing, logging and recovery
+	// are explicit in the intake, so release mode is the honest one.
+	gin.SetMode(gin.ReleaseMode)
 
 	if err := run(log); err != nil {
 		log.Error("ingest failed", "error", err)
