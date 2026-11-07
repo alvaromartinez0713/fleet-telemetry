@@ -1,17 +1,244 @@
 {
   "title": "Telemetry sender app",
-  "brief": "Screens for the app that captures vehicle telemetry (device_id, seq, captured_at, lat/lon, speed_kmh, heading_deg, accuracy_m, mode moving|heartbeat) and sends batches to POST /v1/telemetry in fleet-telemetry. Three directions for the same sender app.",
+  "brief": "Fleet telemetry product family: the FleetGo driver app that captures and sends samples, FleetGo for operations (which unit needs attention), and Fleet Platform for engineering (is the system healthy and why not).",
   "artboards": [
-    { "file": "01-ops-console.html", "title": "Ops console", "tradeoff": "Fleet-wide live view: map, device list, intake feed in one dense dark screen; steep learning curve for non-operators", "width": 1440, "height": 900 },
-    { "file": "03-wire-inspector.html", "title": "Wire inspector", "tradeoff": "Transparent about the contract: JSON payload, dedup, skew and watermark visible; intimidating for non-technical staff", "width": 1440, "height": 900 },
-    { "file": "14-fleet-one.html", "title": "Drive — fleet one system", "tradeoff": "Chosen direction: blue gradient hero shell holding the speed ring, today stats card and delivery timeline", "width": 390, "height": 844 },
-    { "file": "15-queue-fleet-one.html", "title": "Queue — fleet one system", "tradeoff": "Fleet One redesign of the batch queue: summary strip, per-batch cards with detail rows and contract note", "width": 390, "height": 844 },
-    { "file": "16-sync-fleet-one.html", "title": "Sync — fleet one system", "tradeoff": "Fleet One redesign of sync: green status hero, clock and endpoint cards, primary/secondary actions", "width": 390, "height": 844 },
-    { "file": "17-more-fleet-one.html", "title": "More — fleet one system", "tradeoff": "Fleet One redesign of settings: unit card, working System/Light/Dark theme switch, SVG icon rows, scrollable", "width": 390, "height": 844 },
-    { "file": "19-move-tracker.html", "title": "Move tracker (reassignment) — fleet one system", "tradeoff": "Reached from More's Move tracker row: warns the current link releases, keeps the device_id, targets a new unit; cancelable", "width": 390, "height": 844 },
-    { "file": "23-mesh-mark.html", "title": "Mesh mark — chosen brand symbol", "tradeoff": "Refined node mesh: hub + triangle of fleet nodes, accent reporting node; shown at 3 sizes plus lockup", "width": 390, "height": 844 },
-    { "file": "20-splash.html", "title": "Splash — fleet one system", "tradeoff": "Brand entry: mark, wordmark, config check loader; shown while the app decides first-run vs. resume", "width": 390, "height": 844 },
-    { "file": "21-welcome.html", "title": "Welcome — fleet one system", "tradeoff": "First-run only: three value cards and the Set up my tracker CTA that leads into Add tracker; includes data policy note", "width": 390, "height": 844 },
-    { "file": "18-device-setup.html", "title": "Add tracker (first-time setup) — fleet one system", "tradeoff": "Modal wizard for initial pairing: type or scan device code, vehicle type, pick unit; no app nav, unit unknown until chosen", "width": 390, "height": 844 }
+    {
+      "file": "23-mesh-mark.html",
+      "title": "Brand · node-mesh mark",
+      "tradeoff": "The chosen symbol: hub plus a triangle of fleet nodes with one accent reporting node, shown at three sizes and as a lockup",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "20-splash.html",
+      "title": "App · Splash",
+      "tradeoff": "Brand entry while the app decides first run vs. resume",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "21-welcome.html",
+      "title": "App · Welcome",
+      "tradeoff": "First run only: three value cards and the Set up my tracker CTA that leads into Add tracker",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "18-device-setup.html",
+      "title": "App · Add tracker (first-time setup)",
+      "tradeoff": "Mandatory wizard: type or scan the device code, pick vehicle type and unit; no cancel because the app has no home until assigned",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "19-move-tracker.html",
+      "title": "App · Move tracker (reassignment)",
+      "tradeoff": "Same wizard reached from More once running: warns that the current link releases and keeps the device_id",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "14-fleet-one.html",
+      "title": "App · Drive",
+      "tradeoff": "Home: speed ring, buffer meter, today stats, shift action and the delivery timeline",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "15-queue-fleet-one.html",
+      "title": "App · Queue",
+      "tradeoff": "Batch lifecycle, search by batch/device/seq and status chips that filter the list in place",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "16-sync-fleet-one.html",
+      "title": "App · Sync",
+      "tradeoff": "Connection, device clock and endpoint state with one-tap fixes",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "17-more-fleet-one.html",
+      "title": "App · More",
+      "tradeoff": "Unit settings, working System/Light/Dark switch, move-tracker entry and diagnostics",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "25-ops-console-v2.html",
+      "title": "FleetGo Ops · Live map",
+      "tradeoff": "Fleet sidebar with status chips, dark map with clusters and alert pin, alert rail and the Fleet Assistant",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "26-device-detail.html",
+      "title": "FleetGo Ops · Device detail",
+      "tradeoff": "The right rail becomes the unit fiche: live snapshot, signal health (age, gaps, last batch), sample tail and alert history",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "42-ops-assistant.html",
+      "title": "FleetGo Ops · Live map — Assistant tab",
+      "tradeoff": "The Live map with the Assistant tab open: you talk to the agent in the rail and it answers with evidence, the tools it used and one-click actions, without leaving the map",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "43-ops-v2-live.html",
+      "title": "FleetGo Ops v2 · agent-first live (proposal)",
+      "tradeoff": "Proposal, kept beside v1: state rail on top (alerts always visible), agent as a permanent rail below with ⌘K, modes as chips over the map instead of screens; agent proposes actions, the human approves",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "46-ops-v2-alerts.html",
+      "title": "FleetGo Ops v2 · alerts queue (proposal)",
+      "tradeoff": "The Alerts destination the nav promises: a real queue with severity, age, owner and state, multi-select with bulk actions, saved views, and the agent triaging what needs a person versus what can be closed",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "47-platform-v2-alerting.html",
+      "title": "Fleet Platform v2 · alerting & delivery (proposal)",
+      "tradeoff": "The gap Platform had: delivery outcomes per channel (email, push, SMS, webhook), failures, suppressions, time-to-ack, per-rule evaluation health and a persistent agent that answers 'did this alert reach anyone'",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "48-platform-v2-gaps.html",
+      "title": "Fleet Platform v2 · what is missing (proposal)",
+      "tradeoff": "The audit: three things absent entirely (delivery log, per-rule evaluation, retention/export), four that should fold into fewer sections, and the three-surface shape with a persistent agent and a query bar",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "44-ops-v2-settings.html",
+      "title": "FleetGo Ops v2 · settings (proposal)",
+      "tradeoff": "Proposal: rules written in plain language with the agent drafting changes as a diff you approve, the readable rule list kept for audit, watchlist and routing in the same place",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "45-ops-v2-modes.html",
+      "title": "FleetGo Ops v2 · modes, not screens (proposal)",
+      "tradeoff": "Proposal: follow, replay and live as three states of one map with their exit keys, plus the keep/fold/drop ledger for the ten current boards and the rule for what the agent never absorbs",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "33-watchlist.html",
+      "title": "FleetGo Ops · Watchlist",
+      "tradeoff": "Star is membership (per operator), drag order is the pin; the list doubles as map highlight, alert scope and follow group",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "34-follow-mode.html",
+      "title": "FleetGo Ops · Follow mode",
+      "tradeoff": "Camera lock on a device or the watched group, pan pauses follow with Resume, and follow stops after 5 min of stale data",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "32-replay.html",
+      "title": "FleetGo Ops · 24 h replay",
+      "tradeoff": "Timeline scrubber with playhead, speed presets and alert markers; positions rebuilt from stored samples",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "30-alert-detail.html",
+      "title": "FleetGo Ops · Alert detail",
+      "tradeoff": "Incident timeline, ownership, operator notes and the workflow actions for one alert",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "29-alert-rules.html",
+      "title": "FleetGo Ops · Alert rules",
+      "tradeoff": "Rule list and builder, zones, channels, quiet hours, escalation and snooze semantics",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "31-command-palette.html",
+      "title": "FleetGo Ops · Command palette",
+      "tradeoff": "Cmd+K over the console with grouped device, action and navigation results plus the shortcuts sheet",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "28-console-states.html",
+      "title": "FleetGo Ops · Connection & data states",
+      "tradeoff": "State sheet for the Live map: disconnected banner and frozen map, per-device data age with thresholds, empty, error and skeleton loading",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "35-platform-ingest.html",
+      "title": "Fleet Platform · Gateway & ingest",
+      "tradeoff": "Responses by status, latency percentiles, devices with gateway errors and the live schema limits table",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "27-pipeline-health.html",
+      "title": "Fleet Platform · Pipeline",
+      "tradeoff": "Stage funnel with per-hop latency, blocked watermarks, dead-letter, partition lag strip and a pausable live tail",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "38-platform-partitions.html",
+      "title": "Fleet Platform · Partitions",
+      "tradeoff": "Per-partition lag, consumer assignment and the devices behind a hot partition; partition key is device_id, so order is guaranteed per device",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "36-platform-workers.html",
+      "title": "Fleet Platform · Workers",
+      "tradeoff": "Per-worker health, worker log, assistant circuit breaker and tool-call mix",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "39-platform-assistant.html",
+      "title": "Fleet Platform · Assistant",
+      "tradeoff": "The agent on its own screen: recent conversations with the tools they called, tool latency and errors, and the degraded answers it admitted to",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "40-platform-data-health.html",
+      "title": "Fleet Platform · Data health",
+      "tradeoff": "Watermarks, rejected events and dedup in one screen: what blocks a device, what was refused, and how many replays were absorbed instead of stored",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "37-platform-logs.html",
+      "title": "Fleet Platform · Logs & traces",
+      "tradeoff": "Searchable logs with inline trace ids and a span waterfall for one trace",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "03-wire-inspector.html",
+      "title": "Fleet Platform · Payload inspector (request & response)",
+      "tradeoff": "One exchange at a time: request body and headers with line numbers and inline annotations, response status/body, timing per stage and the verdict; annotated vs raw toggle, copy as cURL and replay",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "41-platform-schema.html",
+      "title": "Fleet Platform · Schema & limits",
+      "tradeoff": "The contract table with the exact error each violation returns, plus the runtime surface of the running build; generated, never a drifting document",
+      "width": 1440,
+      "height": 900
+    }
   ]
 }

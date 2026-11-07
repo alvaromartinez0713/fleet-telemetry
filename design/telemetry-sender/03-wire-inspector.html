@@ -2,197 +2,286 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Telemetry Sender — Wire Inspector</title>
+<title>Telemetry Sender — Fleet Platform · Payload inspector</title>
 <style>
   :root {
-    --bg: #fafbfc;
-    --panel: #ffffff;
-    --line: #dde3ea;
-    --text: #17212e;
-    --muted: #5a6a7d;
-    --blue: #0b5cad;
-    --blue-bg: #e9f2fb;
-    --green: #0e7a43;
-    --green-bg: #e6f4ec;
-    --red: #ad2f2a;
-    --red-bg: #fbeceb;
-    --amber: #8a5a0a;
-    --code-bg: #0f1720;
-    --code-text: #d7e2ef;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224, 138, 46, 0.14);
+    --teal: #6faab5; --teal-soft: rgba(111, 170, 181, 0.13);
+    --green: #58b47c; --green-soft: rgba(88, 180, 124, 0.13);
+    --red: #d9604f; --red-soft: rgba(217, 96, 79, 0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --code-bg: #0a1119;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     background: var(--bg); color: var(--text);
     width: 1440px; height: 900px; overflow: hidden;
-    display: grid; grid-template-columns: 1fr 520px;
-    grid-template-rows: 64px 1fr;
+    display: grid; grid-template-columns: 268px 1fr 330px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top top" "list main side";
   }
   header {
-    grid-column: 1 / -1; display: flex; align-items: center; gap: 14px;
-    background: var(--panel); border-bottom: 1px solid var(--line); padding: 0 24px;
+    grid-area: top; display: flex; align-items: center; gap: 14px;
+    padding: 0 18px; background: #0a111b; border-bottom: 1px solid var(--line);
   }
-  header h1 { font-size: 17px; font-weight: 700; }
-  header .ver {
-    font-family: var(--mono); font-size: 12px; color: var(--blue);
-    background: var(--blue-bg); border-radius: 6px; padding: 3px 8px;
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--teal); }
+  .pill {
+    font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px;
+    background: var(--teal-soft); color: var(--teal); display: flex; align-items: center; gap: 6px;
   }
-  header .sync { margin-left: auto; font-size: 13px; color: var(--green); font-weight: 600; }
-  main { padding: 24px; overflow: hidden; display: flex; flex-direction: column; gap: 18px; }
-  /* checks */
-  .checks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-  .check {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-    padding: 14px 16px; display: flex; gap: 10px; align-items: flex-start;
+  .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--teal); }
+  .views { display: flex; gap: 2px; background: #0a111b; border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  .views a { font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 5px 11px; border-radius: 7px; }
+  .views a.on { background: var(--panel-2); color: var(--text); }
+  header .crumb {
+    display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;
+    color: var(--muted); padding: 4px 10px; border-radius: 999px;
+    background: #0a111b; border: 1px solid var(--line);
   }
-  .check .mark { font-size: 15px; font-weight: 700; line-height: 1.2; }
-  .check.ok .mark { color: var(--green); }
-  .check.warn .mark { color: var(--amber); }
-  .check.bad .mark { color: var(--red); }
-  .check h3 { font-size: 13px; font-weight: 650; }
-  .check p { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
-  .check.warn { border-color: #e3c98f; background: #fdf7ea; }
-  .check.bad { border-color: #e5b6b3; background: var(--red-bg); }
-  /* payload */
-  pre.payload {
-    background: var(--code-bg); color: var(--code-text); border-radius: 12px;
-    padding: 20px 24px; font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
-    overflow: hidden; flex: 1;
+  header .crumb b { color: var(--text); font-weight: 800; }
+  header .crumb .sep { color: var(--line); }
+  header .crumb .mstate { color: var(--amber); font-weight: 800; }
+  header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 16px; }
+  header .stat b { color: var(--text); font-weight: 700; font-family: var(--mono); }
+
+  /* exchanges list */
+  aside.list { grid-area: list; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  aside.list .q { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  aside.list .q .inp {
+    display: flex; align-items: center; gap: 8px; background: #0a111b; border: 1px solid var(--line);
+    border-radius: 9px; padding: 8px 10px; font-family: var(--mono); font-size: 10.5px; color: var(--muted);
   }
-  pre.payload .k { color: #8ab4e8; }
-  pre.payload .s { color: #9ece8f; }
-  pre.payload .n { color: #e8c07d; }
-  pre.payload .c { color: #64748b; font-style: italic; }
-  pre.payload .flag { color: #f0a8a4; }
-  .payload-title {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;
+  aside.list h2 { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 11px 14px 6px; }
+  .ex { padding: 9px 14px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; row-gap: 2px; }
+  .ex.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); padding-left: 11px; }
+  .ex .ep { font-family: var(--mono); font-size: 10.5px; font-weight: 700; }
+  .ex .st { font-family: var(--mono); font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 4px; }
+  .ex .st.ok { background: var(--green-soft); color: var(--green); }
+  .ex .st.bad { background: var(--red-soft); color: var(--red); }
+  .ex .st.warn { background: var(--amber-soft); color: var(--amber); }
+  .ex .meta { grid-column: 1 / -1; font-size: 9.5px; color: var(--muted); font-family: var(--mono); }
+
+  /* main payload */
+  main { grid-area: main; display: flex; flex-direction: column; overflow: hidden; }
+  .tabs { display: flex; align-items: center; gap: 2px; background: #0a111b; border-bottom: 1px solid var(--line); padding: 0 12px; flex-shrink: 0; }
+  .tab {
+    font-size: 11px; font-weight: 750; padding: 11px 13px; color: var(--muted); cursor: pointer;
+    border-bottom: 2px solid transparent;
   }
-  .payload-title h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); }
-  .payload-title span { font-family: var(--mono); font-size: 12px; color: var(--code-text); }
-  /* aside */
-  aside { border-left: 1px solid var(--line); background: var(--panel); padding: 24px; overflow: hidden; }
-  aside h2 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
-  .sect { margin-bottom: 20px; }
-  .sect h3 {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;
-    color: var(--muted); margin-bottom: 8px;
+  .tab.on { color: var(--text); border-bottom-color: var(--amber); }
+  .tab .n { font-family: var(--mono); font-size: 9.5px; margin-left: 5px; color: var(--muted); }
+  .tabs .right { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .tbtn {
+    font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); background: var(--panel);
   }
-  table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
-  th { text-align: left; font-weight: 600; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
-  td { padding: 7px 8px; border-bottom: 1px solid var(--line); }
-  td.mono { font-family: var(--mono); font-size: 11.5px; }
-  .tag { font-size: 11px; font-weight: 650; padding: 2px 8px; border-radius: 999px; }
-  .tag.ok { background: var(--green-bg); color: var(--green); }
-  .tag.rej { background: var(--red-bg); color: var(--red); }
-  .tag.retry { background: var(--blue-bg); color: var(--blue); }
+  .tbtn.on { background: var(--panel-2); color: var(--text); border-color: var(--panel-2); }
+  .tbtn.pri { background: var(--amber); border-color: var(--amber); color: #16283e; }
+
+  .payload { flex: 1; overflow: hidden; display: flex; background: var(--code-bg); }
+  .gutter {
+    width: 42px; flex-shrink: 0; padding: 12px 0; border-right: 1px solid #1b2735;
+    font-family: var(--mono); font-size: 10px; color: #3f5570; text-align: right;
+  }
+  .gutter span { display: block; padding: 0 8px 0 0; line-height: 1.65; }
+  .code {
+    flex: 1; padding: 12px 16px; font-family: var(--mono); font-size: 11.5px; line-height: 1.65;
+    overflow: hidden; color: #d7e2ef;
+  }
+  .code .k { color: #8ab4e8; }
+  .code .s { color: #9ece8f; }
+  .code .n { color: #e8c07d; }
+  .code .c { color: #5a7089; font-style: italic; }
+  .code .hl { background: rgba(217, 96, 79, 0.16); box-shadow: -6px 0 0 rgba(217, 96, 79, 0.7); display: inline-block; width: 100%; }
+  .code .ok { background: rgba(88, 180, 124, 0.12); }
+  .gutter .mark { color: var(--red); }
+
+  /* right side */
+  aside.side { grid-area: side; background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .sec { padding: 12px 15px; border-bottom: 1px solid var(--line); }
+  .sec h3 { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 8px; }
+  .kv { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; font-size: 11px; }
+  .kv .k { color: var(--muted); }
+  .kv .v { font-weight: 700; font-family: var(--mono); font-size: 10.5px; }
+  .kv .v.ok { color: var(--green); }
+  .kv .v.bad { color: var(--red); }
+  .kv .v.warn { color: var(--amber); }
+  .hdr { display: grid; grid-template-columns: 92px 1fr; gap: 7px; padding: 4px 0; font-family: var(--mono); font-size: 10px; border-top: 1px solid #1b2735; }
+  .hdr:first-of-type { border-top: none; }
+  .hdr .n { color: var(--teal); }
+  .hdr .val { color: var(--text); word-break: break-all; }
+  .verdict {
+    margin-top: 9px; border-radius: 9px; padding: 9px 11px; font-size: 10.5px; line-height: 1.55;
+    background: var(--red-soft); border: 1px solid var(--red); color: var(--text);
+  }
+  .verdict b { color: var(--red); }
+  .acts { margin-top: auto; padding: 12px 15px; border-top: 1px solid var(--line); background: #0a111b; display: grid; grid-template-columns: 1fr 1fr; gap: 7px; flex-shrink: 0; }
+  .acts .a { text-align: center; font-size: 10.5px; font-weight: 750; padding: 8px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); }
+  .acts .a.pri { background: var(--amber); border-color: var(--amber); color: #16283e; }
+  .acts .a.wide { grid-column: 1 / -1; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
 <header>
-  <h1>Sender Console — Wire Inspector</h1>
-  <span class="ver">schema_version: 1</span>
-  <span class="sync">✓ POST /v1/telemetry · 200 OK · 341 ms</span>
+  <div class="mark">
+    <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>Fleet <span>Platform</span></b>
+  </div>
+  <span class="pill">Inspector</span>
+    <span class="crumb" aria-label="Reached from Logs and traces">
+    Logs &amp; traces <span class="sep">&#8250;</span> <b>exchange #4194</b> <span class="sep">&#8250;</span> <span class="mstate">inspector</span>
+  </span>
+  <div class="stat">
+    <span>Exchange <b>#4194</b></span>
+    <span>trace <b>4bf92f35</b></span>
+    <span>Retention <b>7 d</b></span>
+  </div>
 </header>
 
+<aside class="list">
+  <div class="q">
+    <div class="inp">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      device_id:truck-088
+    </div>
+  </div>
+  <h2>Exchanges</h2>
+  <div class="ex sel">
+    <span class="ep">POST /v1/telemetry</span><span class="st bad">422</span>
+    <span class="meta">12:09:58 &middot; 214 ms &middot; 1 event</span>
+  </div>
+  <div class="ex">
+    <span class="ep">POST /v1/telemetry</span><span class="st ok">202</span>
+    <span class="meta">12:09:41 &middot; 96 ms &middot; 1 event</span>
+  </div>
+  <div class="ex">
+    <span class="ep">POST /v1/telemetry</span><span class="st ok">202</span>
+    <span class="meta">12:09:31 &middot; 88 ms &middot; 1 event</span>
+  </div>
+  <div class="ex">
+    <span class="ep">GET /v1/fleet</span><span class="st ok">200</span>
+    <span class="meta">12:08:02 &middot; 41 ms &middot; portal</span>
+  </div>
+  <div class="ex">
+    <span class="ep">POST /v1/telemetry</span><span class="st warn">429</span>
+    <span class="meta">12:05:44 &middot; 3 ms &middot; retry-after 10 s</span>
+  </div>
+  <div class="ex">
+    <span class="ep">POST /internal/assistant</span><span class="st ok">200</span>
+    <span class="meta">12:04:19 &middot; 640 ms &middot; tool call</span>
+  </div>
+</aside>
+
 <main>
-  <div class="checks" aria-label="Batch validation checks">
-    <div class="check ok">
-      <span class="mark">✓</span>
-      <div><h3>Batch size</h3><p>118 of 500 max events — one POST per flush window.</p></div>
-    </div>
-    <div class="check ok">
-      <span class="mark">✓</span>
-      <div><h3>Dedup key</h3><p>(device_id, captured_at, seq) unique — 0 replays in this batch.</p></div>
-    </div>
-    <div class="check warn">
-      <span class="mark">!</span>
-      <div><h3>Clock skew</h3><p>Device clock +3 min. Tolerance is 5 min — NTP sync recommended.</p></div>
-    </div>
-    <div class="check bad">
-      <span class="mark">✗</span>
-      <div><h3>1 event rejected</h3><p>captured_at beyond accepted skew — retry after time sync, seq preserved.</p></div>
+  <div class="tabs">
+    <span class="tab">Headers<span class="n">4</span></span>
+    <span class="tab on">Request<span class="n">867 B</span></span>
+    <span class="tab">Response<span class="n">312 B</span></span>
+    <span class="tab">Timing</span>
+    <div class="right">
+      <span class="tbtn on">Annotated</span>
+      <span class="tbtn">Raw</span>
+      <span class="tbtn pri">Replay</span>
     </div>
   </div>
 
-  <div class="payload-title">
-    <h2>Wire payload · batch #4193</h2>
-    <span>Content-Type: application/json · 9.4 KB</span>
+  <div class="payload">
+    <div class="gutter">
+      <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+      <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span>
+      <span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span>
+      <span>19</span><span>20</span><span>21</span><span class="mark">22</span><span>23</span><span>24</span>
+    </div>
+    <div class="code">
+      <div><span class="c">// request body &middot; POST /v1/telemetry &middot; application/json</span></div>
+      <div>{</div>
+      <div>&nbsp;&nbsp;<span class="k">"events"</span>: [</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;{</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"device_id"</span>: <span class="s">"truck-088"</span>,</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"seq"</span>: <span class="n">7211</span>,</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"captured_at"</span>: <span class="s">"2026-02-17T12:09:58.441Z"</span>, <span class="c">// device clock</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"lat"</span>: <span class="n">-34.57780</span>,</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"lon"</span>: <span class="n">-58.53112</span>,</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"speed_kmh"</span>: <span class="n">12.0</span>,</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"heading_deg"</span>: <span class="n">88.0</span>,</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"accuracy_m"</span>: <span class="n">3.8</span>,</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"mode"</span>: <span class="s">"moving"</span>,</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"traceparent"</span>: <span class="s">"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"</span>,</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">"schema_version"</span>: <span class="n">1</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+      <div>&nbsp;&nbsp;]</div>
+      <div>}</div>
+      <div>&nbsp;</div>
+      <div><span class="c">// headers sent by the device</span></div>
+      <div><span class="k">Content-Type</span>:  <span class="s">application/json</span></div>
+      <div><span class="k">Authorization</span>: <span class="s">Device 7f2c&hellip;9a1</span></div>
+      <div><span class="k">traceparent</span>:   <span class="s">00-4bf92f35&hellip;-01</span></div>
+      <div><span class="hl"><span class="k">X-Device-Clock</span>: <span class="n">+182 s</span> &nbsp;<span class="c">// skew beyond the 5 min tolerance</span></span></div>
+      <div><span class="k">Content-Length</span>: <span class="n">867</span></div>
+    </div>
   </div>
-  <pre class="payload" aria-label="JSON batch payload"><span class="c">// POST /v1/telemetry — last 3 of 118 events shown</span>
-{
-  <span class="k">"events"</span>: [
-    {
-      <span class="k">"device_id"</span>:       <span class="s">"truck-042"</span>,
-      <span class="k">"seq"</span>:             <span class="n">18401</span>,
-      <span class="k">"captured_at"</span>:     <span class="s">"2026-02-17T12:04:27.180Z"</span>,
-      <span class="k">"lat"</span>:             <span class="n">-34.60371</span>,
-      <span class="k">"lon"</span>:             <span class="n">-58.38160</span>,
-      <span class="k">"speed_kmh"</span>:       <span class="n">66.4</span>,
-      <span class="k">"heading_deg"</span>:     <span class="n">211.0</span>,
-      <span class="k">"accuracy_m"</span>:      <span class="n">4.2</span>,
-      <span class="k">"mode"</span>:            <span class="s">"moving"</span>,
-      <span class="k">"traceparent"</span>:     <span class="s">"00-4bf92f35...-00f067aa...-01"</span>,
-      <span class="k">"schema_version"</span>:  <span class="n">1</span>
-    },
-    {
-      <span class="k">"device_id"</span>:       <span class="s">"van-118"</span>,
-      <span class="k">"seq"</span>:             <span class="n">5640</span>,
-      <span class="k">"captured_at"</span>:     <span class="s">"2026-02-17T12:04:29.002Z"</span>,
-      <span class="k">"lat"</span>:             <span class="n">-34.61152</span>,
-      <span class="k">"lon"</span>:             <span class="n">-58.40215</span>,
-      <span class="c">// speed/heading omitted: device parked</span>
-      <span class="k">"accuracy_m"</span>:      <span class="n">2.9</span>,
-      <span class="k">"mode"</span>:            <span class="s">"heartbeat"</span>,
-      <span class="k">"schema_version"</span>:  <span class="n">1</span>
-    },
-    {
-      <span class="k">"device_id"</span>:       <span class="s">"truck-088"</span>,
-      <span class="k">"seq"</span>:             <span class="n">7211</span>,
-      <span class="k">"captured_at"</span>:     <span class="s">"2026-02-17T12:09:58.441Z"</span><span class="flag">   ← beyond 5 min skew</span>,
-      <span class="k">"lat"</span>:             <span class="n">-34.57780</span>,
-      <span class="k">"lon"</span>:             <span class="n">-58.53112</span>,
-      <span class="k">"speed_kmh"</span>:       <span class="n">12.0</span>,
-      <span class="k">"mode"</span>:            <span class="s">"moving"</span>,
-      <span class="k">"schema_version"</span>:  <span class="n">1</span>
-    }
-  ]
-}</pre>
 </main>
 
-<aside>
-  <h2>Delivery ledger</h2>
-  <div class="sect">
-    <h3>Recent batches</h3>
-    <table>
-      <thead><tr><th>Batch</th><th>Events</th><th>Status</th><th>Latency</th></tr></thead>
-      <tbody>
-        <tr><td class="mono">#4193</td><td>118</td><td><span class="tag ok">accepted</span></td><td>341 ms</td></tr>
-        <tr><td class="mono">#4192</td><td>121</td><td><span class="tag ok">accepted</span></td><td>298 ms</td></tr>
-        <tr><td class="mono">#4191</td><td>117</td><td><span class="tag retry">retry · 503</span></td><td>—</td></tr>
-        <tr><td class="mono">#4190</td><td>120</td><td><span class="tag ok">accepted</span></td><td>312 ms</td></tr>
-      </tbody>
-    </table>
+<aside class="side">
+  <div class="sec">
+    <h3>Verdict</h3>
+    <div class="kv"><span class="k">Status</span><span class="v bad">422 unprocessable</span></div>
+    <div class="kv"><span class="k">Validation</span><span class="v bad">failed</span></div>
+    <div class="kv"><span class="k">Stored</span><span class="v warn">held, not lost</span></div>
+    <div class="verdict">
+      <b>captured_at</b> is 182 s ahead of the server clock; the contract accepts up to 5 min.
+      The event is held with its original seq, so a resend after the clock syncs stays
+      byte-identical and dedup keeps working.
+    </div>
   </div>
-  <div class="sect">
-    <h3>Device watermark</h3>
-    <table>
-      <thead><tr><th>Device</th><th>Last seq</th><th>Gap</th></tr></thead>
-      <tbody>
-        <tr><td class="mono">truck-042</td><td>18 402</td><td>0</td></tr>
-        <tr><td class="mono">van-118</td><td>5 640</td><td>0</td></tr>
-        <tr><td class="mono">truck-088</td><td>7 210</td><td>1 <span class="tag rej">blocked</span></td></tr>
-      </tbody>
-    </table>
+
+  <div class="sec">
+    <h3>Request</h3>
+    <div class="hdr"><span class="n">method</span><span class="val">POST</span></div>
+    <div class="hdr"><span class="n">path</span><span class="val">/v1/telemetry</span></div>
+    <div class="hdr"><span class="n">content-type</span><span class="val">application/json</span></div>
+    <div class="hdr"><span class="n">authorization</span><span class="val">Device 7f2c&hellip;9a1</span></div>
+    <div class="hdr"><span class="n">traceparent</span><span class="val">00-4bf92f35&hellip;-01</span></div>
+    <div class="hdr"><span class="n">content-length</span><span class="val">867</span></div>
   </div>
-  <div class="sect">
-    <h3>Notes</h3>
-    <p style="font-size: 12.5px; color: var(--muted); line-height: 1.55;">
-      A rejected event is retried byte-identical: same captured_at, same seq — the
-      dedup key stays stable (ADR-002). Seq is a uint64 watermark: never resend with
-      a new timestamp, resend as-is.
-    </p>
+
+  <div class="sec">
+    <h3>Response</h3>
+    <div class="hdr"><span class="n">status</span><span class="val" style="color: var(--red)">422</span></div>
+    <div class="hdr"><span class="n">content-type</span><span class="val">application/json</span></div>
+    <div class="hdr"><span class="n">body</span><span class="val">{"error":"unprocessable_event","field":"captured_at","limit":"5m","accepted":0}</span></div>
+    <div class="hdr"><span class="n">size</span><span class="val">312 B</span></div>
+  </div>
+
+  <div class="sec">
+    <h3>Timing</h3>
+    <div class="kv"><span class="k">Total</span><span class="v">214 ms</span></div>
+    <div class="kv"><span class="k">Gateway in</span><span class="v">4 ms</span></div>
+    <div class="kv"><span class="k">Validate</span><span class="v">2 ms</span></div>
+    <div class="kv"><span class="k">Enqueue held</span><span class="v">1 ms</span></div>
+    <div class="kv"><span class="k">Response write</span><span class="v">207 ms</span></div>
+    <div class="kv"><span class="k">Journal publish</span><span class="v" style="color: var(--muted)">skipped</span></div>
+  </div>
+
+  <div class="acts">
+    <span class="a pri">Resend held event</span>
+    <span class="a">Copy as cURL</span>
+    <span class="a">Copy trace id</span>
+    <span class="a">Open in Logs</span>
+    <span class="a wide">Replay against current build &#8250;</span>
   </div>
 </aside>
 </body>

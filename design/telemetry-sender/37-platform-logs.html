@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Platform · Logs &amp; traces</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
+    --text: #e9edf2; --muted: #9aa8b8;
+    --navy: #16283e; --navy-2: #0a111b;
+    --amber: #e08a2e; --amber-soft: rgba(224, 138, 46, 0.14);
+    --teal: #6faab5; --teal-soft: rgba(111, 170, 181, 0.13);
+    --green: #58b47c; --green-soft: rgba(88, 180, 124, 0.13);
+    --red: #d9604f; --red-soft: rgba(217, 96, 79, 0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 210px 1fr 430px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top top" "sidenav main trace";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 14px;
+    padding: 0 18px; background: var(--navy-2); border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--teal); }
+  header .pill {
+    font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px;
+    background: var(--green-soft); color: var(--green); display: flex; align-items: center; gap: 6px;
+  }
+  header .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  header .views { display: flex; gap: 2px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  header .views a { font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 5px 11px; border-radius: 7px; }
+  header .views a.on { background: var(--panel-2); color: var(--text); }
+  header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 16px; }
+  header .stat b { color: var(--text); font-weight: 700; }
+
+  aside.sidenav { grid-area: sidenav; background: var(--panel); border-right: 1px solid var(--line); padding: 12px 10px; }
+  aside.sidenav .grp { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 12px 8px 6px; }
+  aside.sidenav a { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 9px; font-size: 12.5px; font-weight: 650; color: var(--muted); text-decoration: none; margin-bottom: 2px; }
+  aside.sidenav a.on { background: var(--panel-2); color: var(--text); }
+  aside.sidenav a .n { margin-left: auto; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: var(--red); color: #fff; }
+  aside.sidenav a .n.amber { background: var(--amber); color: #16283e; }
+
+  main { grid-area: main; overflow: hidden; display: flex; flex-direction: column; }
+  /* search bar */
+  .sbar { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .sinput {
+    flex: 1; min-width: 260px; display: flex; align-items: center; gap: 9px;
+    background: var(--navy-2); border: 1px solid var(--amber); border-radius: 10px; padding: 9px 12px;
+    font-family: var(--mono); font-size: 11.5px;
+  }
+  .sinput .caret { color: var(--amber); }
+  .fchip {
+    font-size: 10px; font-weight: 750; padding: 5px 10px; border-radius: 7px;
+    background: var(--navy-2); border: 1px solid var(--line); color: var(--muted);
+  }
+  .fchip.on { border-color: var(--teal); color: var(--teal); background: var(--teal-soft); }
+  /* log rows */
+  .logbar { display: flex; align-items: center; gap: 9px; padding: 9px 16px; border-bottom: 1px solid var(--line); font-size: 10.5px; color: var(--muted); }
+  .logbar b { color: var(--text); font-family: var(--mono); font-size: 10.5px; }
+  .logbar .rw { margin-left: auto; display: flex; gap: 6px; }
+  .logs { flex: 1; overflow: hidden; font-family: var(--mono); font-size: 10.5px; }
+  .lrow {
+    display: grid; grid-template-columns: 74px 88px 1fr; gap: 9px; padding: 6px 16px;
+    border-bottom: 1px solid var(--line); align-items: baseline;
+  }
+  .lrow.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); }
+  .lrow .tm { color: var(--muted); }
+  .lrow .sv { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+  .lrow .sv.info { color: var(--teal); }
+  .lrow .sv.warn { color: var(--amber); }
+  .lrow .sv.err { color: var(--red); }
+  .lrow .ms { color: var(--text); line-height: 1.5; }
+  .lrow .ms b { color: var(--amber); font-weight: 700; }
+  .lrow .ms .k { color: var(--teal); }
+  .lrow .ms .dim { color: var(--muted); }
+
+  /* trace panel */
+  aside.trace { grid-area: trace; background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .thead { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .thead .r1 { display: flex; align-items: center; gap: 8px; }
+  .thead .tp { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--teal); }
+  .thead .r2 { font-size: 10.5px; color: var(--muted); margin-top: 4px; font-family: var(--mono); }
+  .thead .r3 { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+  .thead .chipx { font-size: 9.5px; font-weight: 750; padding: 3px 8px; border-radius: 6px; background: var(--navy-2); border: 1px solid var(--line); color: var(--muted); }
+  .thead .chipx.ok { border-color: var(--green); color: var(--green); }
+  .thead .chipx.warn { border-color: var(--amber); color: var(--amber); }
+
+  .water { flex: 1; overflow: hidden; padding: 12px 16px; }
+  .span { position: relative; padding: 0 0 13px 0; }
+  .span .lbl { display: flex; align-items: baseline; gap: 7px; font-size: 11px; margin-bottom: 4px; }
+  .span .lbl .nm { font-weight: 700; }
+  .span .lbl .du { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .span .track { position: relative; height: 17px; background: var(--navy-2); border-radius: 4px; }
+  .span .track i {
+    position: absolute; top: 3px; height: 11px; border-radius: 3px; display: block;
+  }
+  .span .track i.t { background: var(--teal); }
+  .span .track i.a { background: var(--amber); }
+  .span .track i.g { background: var(--green); }
+  .span .track i.r { background: var(--red); }
+  .span.err .lbl .nm { color: var(--red); }
+  .span .detail { font-family: var(--mono); font-size: 9.5px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+  .span .detail b { color: var(--amber); }
+
+  .tfoot { padding: 12px 16px; border-top: 1px solid var(--line); background: var(--navy-2); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex-shrink: 0; }
+  .tfoot .a { text-align: center; font-size: 11px; font-weight: 750; padding: 8px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); }
+  .tfoot .a.pri { background: var(--amber); border-color: var(--amber); color: #16283e; }
+  .tfoot .a.wide { grid-column: 1 / -1; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>Fleet <span>Platform</span></b>
+  </div>
+  <span class="pill">Tracing on</span>
+  <div class="stat">
+    <span>Retention <b>7 d</b></span>
+    <span>Sampled <b>100%</b></span>
+    <span>Index <b>4.2 M lines</b></span>
+  </div>
+</header>
+
+<aside class="sidenav">
+  <div class="grp">Platform</div>
+  <a href="#">Gateway &amp; ingest</a>
+  <a href="#">Pipeline</a>
+  <a href="#">Partitions</a>
+  <a href="#">Workers <span class="n amber">1</span></a>
+  <a href="#">Assistant</a>
+  <div class="grp">Data</div>
+  <a href="#">Data health</a>
+  <a href="#" class="on">Logs &amp; traces</a>
+  <div class="grp">Reference</div>
+  <a href="#">Sender wire</a>
+  <a href="#">Schema &amp; limits</a>
+</aside>
+
+<main>
+  <div class="sbar">
+    <div class="sinput">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa8b8" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      device_id:truck-088 AND level:error<span class="caret">|</span>
+    </div>
+    <span class="fchip on">Last 1 h</span>
+    <span class="fchip">Errors only</span>
+    <span class="fchip">All services</span>
+    <span class="fchip">Live tail</span>
+  </div>
+
+  <div class="logbar">
+    <b>18</b> lines &middot; 3 services &middot; trace ids expanded inline
+    <span class="rw"><span class="fchip">Wrap</span><span class="fchip">Export</span></span>
+  </div>
+
+  <div class="logs">
+    <div class="lrow">
+      <span class="tm">12:09:58</span><span class="sv info">INFO</span>
+      <span class="ms"><span class="k">ingest</span> batch received <span class="dim">device=truck-088 events=1 seq=7211</span> <b>trace 4bf92f35</b></span>
+    </div>
+    <div class="lrow">
+      <span class="tm">12:09:58</span><span class="sv warn">WARN</span>
+      <span class="ms"><span class="k">ingest</span> event held <span class="dim">reason=captured_at_beyond_skew skew=+3m02s tolerance=5m seq=7211</span></span>
+    </div>
+    <div class="lrow sel">
+      <span class="tm">12:09:58</span><span class="sv err">ERROR</span>
+      <span class="ms"><span class="k">gateway</span> <b>422 unprocessable</b> <span class="dim">batch_id=4194 first_violation=captured_at</span> <b>trace 4bf92f35</b></span>
+    </div>
+    <div class="lrow">
+      <span class="tm">12:09:41</span><span class="sv info">INFO</span>
+      <span class="ms"><span class="k">consumer</span> sample stored <span class="dim">seq=7209 watermark 7209 contiguous</span></span>
+    </div>
+    <div class="lrow">
+      <span class="tm">11:04:07</span><span class="sv err">ERROR</span>
+      <span class="ms"><span class="k">consumer</span> <b>watermark blocked</b> <span class="dim">device=truck-042 seq=18397 gap=1 held=true</span> <b>trace 9a1c77d0</b></span>
+    </div>
+    <div class="lrow">
+      <span class="tm">11:04:02</span><span class="sv warn">WARN</span>
+      <span class="ms"><span class="k">alerting</span> evaluation lag 31 s <span class="dim">rules=6 threshold=30s</span></span>
+    </div>
+    <div class="lrow">
+      <span class="tm">10:58:12</span><span class="sv info">INFO</span>
+      <span class="ms"><span class="k">assistant</span> tool call <span class="dim">salud_pipeline() 640 ms ok</span> <b>trace 7c2e019b</b></span>
+    </div>
+    <div class="lrow">
+      <span class="tm">09:52:04</span><span class="sv err">ERROR</span>
+      <span class="ms"><span class="k">ingest</span> <b>422 invalid</b> <span class="dim">device=van-203 reason=lat_out_of_range lat=214.0</span></span>
+    </div>
+    <div class="lrow">
+      <span class="tm">09:12:30</span><span class="sv info">INFO</span>
+      <span class="ms"><span class="k">alerting</span> rule fired <span class="dim">watermark-blocked device=truck-088</span></span>
+    </div>
+    <div class="lrow">
+      <span class="tm">07:40:11</span><span class="sv warn">WARN</span>
+      <span class="ms"><span class="k">gateway</span> rate limited <span class="dim">device=bus-017 429 retry_after=10s</span></span>
+    </div>
+  </div>
+</main>
+
+<aside class="trace">
+  <div class="thead">
+    <div class="r1">
+      <span class="tp">trace 4bf92f35&hellip;f067aa</span>
+    </div>
+    <div class="r2">12:09:58.441 &middot; 5 spans &middot; 214 ms total</div>
+    <div class="r3">
+      <span class="chipx ok">device truck-088</span>
+      <span class="chipx">batch 4194</span>
+      <span class="chipx warn">1 held</span>
+      <span class="chipx">http 422</span>
+    </div>
+  </div>
+
+  <div class="water">
+    <div class="span">
+      <div class="lbl"><span class="nm">gateway &middot; POST /v1/telemetry</span><span class="du">4 ms</span></div>
+      <div class="track"><i class="t" style="left: 0%; width: 8%"></i></div>
+      <div class="detail">202 &rarr; 422 rewritten after intake validation</div>
+    </div>
+    <div class="span">
+      <div class="lbl"><span class="nm">ingest.validate</span><span class="du">2 ms</span></div>
+      <div class="track"><i class="t" style="left: 8%; width: 5%"></i></div>
+      <div class="detail">schema v1 ok &middot; lat/lon ok &middot; <b>captured_at skew 3m02s within 5m</b></div>
+    </div>
+    <div class="span err">
+      <div class="lbl"><span class="nm">ingest.enqueue &middot; held</span><span class="du">1 ms</span></div>
+      <div class="track"><i class="r" style="left: 13%; width: 4%"></i></div>
+      <div class="detail">event written to held queue, <b>not</b> to telemetry.events</div>
+    </div>
+    <div class="span">
+      <div class="lbl"><span class="nm">journal.publish (skipped)</span><span class="du">&mdash;</span></div>
+      <div class="track"><i style="left: 17%; width: 0%"></i></div>
+      <div class="detail">no message produced for this event</div>
+    </div>
+    <div class="span">
+      <div class="lbl"><span class="nm">gateway.response</span><span class="du">207 ms</span></div>
+      <div class="track"><i class="a" style="left: 17%; width: 83%"></i></div>
+      <div class="detail">422 body carries the first violation only, so the device can fix one field at a time</div>
+    </div>
+  </div>
+
+  <div class="tfoot">
+    <span class="a pri">Open held event</span>
+    <span class="a">Copy trace id</span>
+    <span class="a wide">Replay this trace against the current build &#8250;</span>
+  </div>
+</aside>
+</body>
+</html>

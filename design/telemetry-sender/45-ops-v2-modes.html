@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — FleetGo Ops v2 · modes, not screens</title>
+<style>
+  :root {
+    --bg: #0b1119; --panel: #101a29; --panel-2: #16283e; --line: #24425d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); width: 1440px; height: 900px; overflow: hidden; padding: 34px 40px; }
+  .mast { display: flex; align-items: flex-end; gap: 14px; border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 26px; }
+  .mast .mk { display: flex; align-items: center; gap: 9px; }
+  .mast h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.6px; }
+  .mast h1 span { color: var(--amber); }
+  .mast .who { margin-left: auto; font-size: 12px; color: var(--muted); text-align: right; line-height: 1.5; }
+  .mast .who b { color: var(--text); }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 26px; }
+  .m { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+  .m .lbl {
+    display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--line);
+    font-size: 12px; font-weight: 800;
+  }
+  .m .lbl .k { font-family: var(--mono); font-size: 9.5px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  .m .lbl .tag { margin-left: auto; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px; background: var(--teal-soft); color: var(--teal); }
+  .m .canvas { height: 268px; position: relative; background: #08101a; overflow: hidden; }
+  .m .canvas svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .m .bar {
+    position: absolute; left: 10px; right: 10px; top: 10px; display: flex; gap: 5px;
+    background: rgba(8,16,26,0.94); border: 1px solid var(--line); border-radius: 9px; padding: 4px 6px;
+  }
+  .m .bar span { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; padding: 3px 7px; border-radius: 6px; color: var(--muted); }
+  .m .bar span.on { background: var(--panel-2); color: var(--text); }
+  .m .bar span.follow.on { background: var(--amber); color: #16283e; }
+  .m .bar span.replay.on { background: var(--teal); color: #08201f; }
+  .m .say { padding: 11px 14px; font-size: 11.5px; line-height: 1.55; color: var(--muted); border-top: 1px solid var(--line); }
+  .m .say b { color: var(--text); }
+  .m .say .exit { color: var(--amber); font-weight: 750; }
+
+  .rules { display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .box h2 { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); margin-bottom: 11px; }
+  .box ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .box li { display: flex; gap: 9px; font-size: 12px; line-height: 1.55; }
+  .box li .b { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; height: fit-content; flex-shrink: 0; }
+  .box li .b.keep { background: var(--green-soft); color: var(--green); }
+  .box li .b.fold { background: var(--amber-soft); color: var(--amber); }
+  .box li .b.drop { background: var(--red-soft); color: var(--red); }
+  .box li b { color: var(--text); }
+  .box .why { font-size: 11px; color: var(--muted); line-height: 1.6; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 11px; }
+  .box .why b { color: var(--teal); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="mast">
+  <div class="mk">
+    <svg width="30" height="30" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="13" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+  </div>
+  <h1>FleetGo <span>Ops</span> &middot; modes, not screens</h1>
+  <div class="who">
+    <b>What this board argues:</b> follow, replay and device inspection are<br>
+    states of one map &mdash; not three more destinations to learn.
+  </div>
+</div>
+
+<div class="grid">
+  <div class="m">
+    <div class="lbl">Live <span class="k">default</span> <span class="tag">no mode</span></div>
+    <div class="canvas">
+      <svg viewBox="0 0 360 268" aria-hidden="true">
+        <rect width="360" height="268" fill="#08101a"/>
+        <g stroke="#111d2a" stroke-width="1"><path d="M60 0V268 M150 0V268 M250 0V268 M320 0V268"/><path d="M0 60H360 M0 130H360 M0 200H360"/></g>
+        <g stroke="#182636" stroke-width="3"><path d="M170 0 C 190 90 160 180 200 268" fill="none"/></g>
+        <circle cx="200" cy="120" r="9" fill="#e08a2e"/><circle cx="200" cy="120" r="3" fill="#16283e"/>
+        <circle cx="110" cy="180" r="11" fill="#d9604f"/><circle cx="110" cy="180" r="4" fill="#fff"/>
+        <circle cx="280" cy="90" r="7" fill="#58b47c"/><circle cx="280" cy="90" r="2.5" fill="#08101a"/>
+        <circle cx="250" cy="220" r="7" fill="#58b47c"/><circle cx="250" cy="220" r="2.5" fill="#08101a"/>
+      </svg>
+      <div class="bar"><span class="on">Live</span><span>Following</span><span>Replay</span></div>
+    </div>
+    <div class="say">All units in view, camera free. <b>You pan, you zoom, you decide.</b> Nothing is locked.</div>
+  </div>
+
+  <div class="m">
+    <div class="lbl">Following <span class="k">F</span> <span class="tag">camera locked</span></div>
+    <div class="canvas">
+      <svg viewBox="0 0 360 268" aria-hidden="true">
+        <rect width="360" height="268" fill="#08101a"/>
+        <g stroke="#111d2a" stroke-width="1"><path d="M60 0V268 M150 0V268 M250 0V268 M320 0V268"/><path d="M0 60H360 M0 130H360 M0 200H360"/></g>
+        <g stroke="#182636" stroke-width="3"><path d="M150 0 C 170 90 150 180 200 268" fill="none"/></g>
+        <polyline points="130,230 150,200 165,175 180,145 180,134" fill="none" stroke="#e08a2e" stroke-width="2.5" stroke-dasharray="2 5"/>
+        <circle cx="180" cy="134" r="30" fill="none" stroke="#e08a2e" stroke-width="1" stroke-dasharray="3 6" opacity="0.5"/>
+        <circle cx="180" cy="134" r="11" fill="#e08a2e"/><circle cx="180" cy="134" r="4" fill="#16283e"/>
+      </svg>
+      <div class="bar"><span>Live</span><span class="follow on">&#8982; Following</span><span>Replay</span></div>
+    </div>
+    <div class="say">The camera re-centres on every sample. <b>Panning pauses it</b> and offers Resume.
+      <span class="exit">Esc unlocks.</span></div>
+  </div>
+
+  <div class="m">
+    <div class="lbl">Replay <span class="k">R</span> <span class="tag">time travel</span></div>
+    <div class="canvas">
+      <svg viewBox="0 0 360 268" aria-hidden="true">
+        <rect width="360" height="268" fill="#08101a"/>
+        <g stroke="#111d2a" stroke-width="1"><path d="M60 0V268 M150 0V268 M250 0V268 M320 0V268"/><path d="M0 60H360 M0 130H360 M0 200H360"/></g>
+        <g stroke="#182636" stroke-width="3"><path d="M170 0 C 190 90 160 180 200 268" fill="none"/></g>
+        <polyline points="90,200 130,185 170,170 210,150 250,140" fill="none" stroke="#6faab5" stroke-width="2.5" stroke-dasharray="3 5"/>
+        <circle cx="250" cy="140" r="10" fill="#6faab5"/><circle cx="250" cy="140" r="3.5" fill="#08201f"/>
+        <circle cx="130" cy="185" r="5" fill="#6faab5" opacity="0.5"/>
+      </svg>
+      <div class="bar"><span>Live</span><span>Following</span><span class="replay on">&#9654; Replay</span></div>
+      <div style="position: absolute; left: 10px; right: 10px; bottom: 10px; background: #101a29; border: 1px solid #24425d; border-radius: 7px; padding: 5px 8px; display: flex; align-items: center; gap: 6px;">
+        <span style="width: 9px; height: 9px; border-radius: 50%; background: #6faab5; display: block;"></span>
+        <span style="font-family: var(--mono); font-size: 8px; color: #e9edf2;">11:47:12</span>
+        <span style="flex: 1; height: 3px; border-radius: 999px; background: #08101a; position: relative; display: block;">
+          <i style="position: absolute; left: 0; width: 58%; height: 100%; border-radius: 999px; background: #6faab5; display: block;"></i>
+        </span>
+      </div>
+    </div>
+    <div class="say">Positions from stored samples, not a live stream. <b>Scrubbing is physical</b> &mdash;
+      a chat cannot replace dragging time. <span class="exit">Back to live</span> returns.</div>
+  </div>
+</div>
+
+<div class="rules">
+  <div class="box">
+    <h2>What the ten boards become</h2>
+    <ul>
+      <li><span class="b keep">keep</span><div><b>Live map</b> &mdash; the one surface that cannot be language.</div></li>
+      <li><span class="b keep">keep</span><div><b>Assistant</b> &mdash; promoted from a tab to the persistent right rail, ⌘K focused.</div></li>
+      <li><span class="b keep">keep</span><div><b>Settings</b> &mdash; rules list + watchlist + routing in one place.</div></li>
+      <li><span class="b fold">fold</span><div><b>Device detail</b> &mdash; the assistant answers it; a compact snapshot card stays over the map.</div></li>
+      <li><span class="b fold">fold</span><div><b>Alert detail</b> &mdash; the alert is an object in the rail, with its timeline.</div></li>
+      <li><span class="b fold">fold</span><div><b>Alert rules</b> &mdash; the editor becomes conversation; the readable list stays in Settings.</div></li>
+      <li><span class="b fold">fold</span><div><b>Watchlist / Follow / Replay</b> &mdash; modes and a settings row, not destinations.</div></li>
+      <li><span class="b drop">drop</span><div><b>Command palette</b> &mdash; it was a proto-agent; ⌘K now focuses the assistant.</div></li>
+      <li><span class="b drop">drop</span><div><b>States sheet</b> &mdash; a spec note, reachable through the health chip, not a board.</div></li>
+    </ul>
+  </div>
+
+  <div class="box">
+    <h2>What the agent will never absorb</h2>
+    <ul>
+      <li><span class="b keep">rule</span><div><b>The map.</b> Spatial reading is not a conversation.</div></li>
+      <li><span class="b keep">rule</span><div><b>The alert queue.</b> Three open alerts are glanced at, not asked about.</div></li>
+      <li><span class="b keep">rule</span><div><b>The scrubber.</b> Exploring time is physical manipulation.</div></li>
+      <li><span class="b keep">rule</span><div><b>The approval gate.</b> The agent proposes; a human clicks. Always.</div></li>
+      <li><span class="b keep">rule</span><div><b>The audit record.</b> Dispatch and silence are written with who, when and why &mdash; a chat log is not an audit log.</div></li>
+    </ul>
+    <div class="why">
+      <b>The test to apply to every future screen:</b> if the question it answers can be asked in a
+      sentence, it belongs to the agent. If it needs to be <b>seen</b> (space, time, a queue) or
+      <b>proven</b> (bytes, audit), it stays a surface.
+    </div>
+  </div>
+</div>
+</body>
+</html>

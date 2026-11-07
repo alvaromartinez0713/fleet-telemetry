@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Ops Console · Follow mode</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
+    --text: #e9edf2; --muted: #9aa8b8;
+    --navy: #16283e; --navy-2: #0a111b;
+    --amber: #e08a2e; --amber-soft: rgba(224, 138, 46, 0.14);
+    --teal: #6faab5; --teal-soft: rgba(111, 170, 181, 0.13);
+    --green: #58b47c; --green-soft: rgba(88, 180, 124, 0.13);
+    --red: #d9604f; --red-soft: rgba(217, 96, 79, 0.13);
+    --star: #f0b429;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 260px 1fr 400px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top top" "fleet map rail";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 14px;
+    padding: 0 18px; background: var(--navy-2); border-bottom: 1px solid var(--line);
+  }
+  header .mark {
+    display: flex; align-items: center; gap: 9px;
+  }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--amber); }
+  .followpill {
+    font-size: 11px; font-weight: 800; padding: 4px 11px; border-radius: 999px; text-transform: uppercase;
+    letter-spacing: 0.5px; background: var(--amber-soft); color: var(--amber);
+    border: 1px solid var(--amber); display: flex; align-items: center; gap: 6px;
+  }
+  .followpill::before { content: "\2299"; font-size: 11px; }
+  header .views { display: flex; gap: 2px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  header .views a { font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 5px 11px; border-radius: 7px; }
+  header .views a.on { background: var(--panel-2); color: var(--text); }
+  header .cfg {
+    display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 750;
+    text-decoration: none; color: var(--muted); padding: 5px 10px; border-radius: 8px;
+    border: 1px solid var(--line); background: #0a111b;
+  }
+  header .cfg.on { background: var(--panel-2); color: var(--text); border-color: var(--panel-2); }
+  header .crumb {
+    display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;
+    color: var(--muted); padding: 4px 10px; border-radius: 999px;
+    background: #0a111b; border: 1px solid var(--line);
+  }
+  header .crumb b { color: var(--text); font-weight: 800; }
+  header .crumb .sep { color: var(--line); }
+  header .crumb .mstate {
+    color: var(--amber); font-weight: 800;
+    text-transform: none; letter-spacing: 0; background: none; padding: 0; border: none;
+  }
+  header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 14px; }
+  header .stat b { color: var(--text); font-weight: 700; }
+
+  aside.fleet { grid-area: fleet; background: var(--panel); border-right: 1px solid var(--line); overflow: hidden; }
+  aside.fleet h2 { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 13px 14px 7px; font-weight: 800; }
+  .lsearch {
+    display: flex; align-items: center; gap: 8px; background: #0a111b;
+    border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px;
+    font-size: 11px; color: var(--muted); margin: 10px 12px;
+  }
+  .lchips { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 12px 8px; }
+  .lchips .c {
+    font-size: 10px; font-weight: 700; padding: 4px 9px; border-radius: 999px;
+    background: #0a111b; border: 1px solid var(--line); color: var(--muted);
+  }
+  .lchips .c.on { background: var(--panel-2); color: var(--text); border-color: var(--panel-2); }
+  .device {
+    padding: 9px 14px; border-top: 1px solid var(--line);
+    display: grid; grid-template-columns: 1fr auto 14px;
+    column-gap: 8px; row-gap: 2px; align-items: center;
+  }
+  .device.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); padding-left: 11px; }
+  .device .id { font-size: 12px; font-weight: 700; font-family: var(--mono); }
+  .device .spd { font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .device .spd small { font-size: 9px; font-weight: 650; color: var(--muted); margin-left: 2px; }
+  .device .wst { font-size: 13px; color: var(--star); text-align: center; }
+  .device .meta { grid-column: 1 / -1; font-size: 10px; color: var(--muted); }
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+  .dot.mv { background: var(--green); }
+  .dot.al { background: var(--red); }
+  .dot.hb { background: var(--amber); }
+  .star { color: var(--star); }
+
+  main { grid-area: map; position: relative; background: #0a1017; }
+  main svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .attribution { position: absolute; bottom: 8px; right: 10px; font-size: 9px; color: rgba(255,255,255,0.5); }
+  /* follow HUD */
+  .hud {
+    position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 6;
+    display: flex; align-items: center; gap: 11px;
+    background: rgba(16,26,41,0.97); border: 1px solid var(--amber); border-radius: 12px;
+    padding: 9px 13px; box-shadow: 0 10px 26px rgba(0,0,0,0.45);
+  }
+  .hud .lock { color: var(--amber); font-size: 14px; }
+  .hud .t { font-size: 12px; font-weight: 800; }
+  .hud .s { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .hud .unlock {
+    font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 5px 9px; border-radius: 7px; background: var(--navy-2); border: 1px solid var(--line); color: var(--muted);
+  }
+  /* paused toast */
+  .toast {
+    position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6;
+    display: flex; align-items: center; gap: 11px;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 11px;
+    padding: 10px 14px; box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+  }
+  .toast .t { font-size: 11.5px; font-weight: 700; }
+  .toast .resume {
+    font-size: 10.5px; font-weight: 800; padding: 6px 11px; border-radius: 7px;
+    background: var(--amber); color: #16283e;
+  }
+  .toast .dismiss { font-size: 11px; color: var(--muted); }
+
+  aside.rail { grid-area: rail; background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .rhead { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .rhead .r1 { display: flex; align-items: center; gap: 8px; }
+  .rhead .nm { font-size: 15px; font-weight: 800; font-family: var(--mono); }
+  .rhead .badge { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; padding: 3px 8px; border-radius: 5px; background: var(--green-soft); color: var(--green); }
+  .rhead .r2 { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .tabs { display: flex; background: #0a111b; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  .tab {
+    flex: 1; text-align: center; padding: 10px 4px; font-size: 10.5px; font-weight: 750;
+    text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted);
+    border-bottom: 2px solid transparent; cursor: pointer;
+  }
+  .tab.on { color: var(--text); border-bottom-color: var(--amber); }
+  .tab .cnt { background: var(--red); color: #fff; font-size: 9px; padding: 1px 6px; border-radius: 999px; margin-left: 4px; }
+  .sec { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .sec h3 { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 9px; }
+  /* follow control */
+  .followbox { background: var(--navy-2); border: 1px solid var(--line); border-radius: 11px; overflow: hidden; }
+  .frow {
+    display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-top: 1px solid var(--line);
+    font-size: 11.5px; cursor: pointer;
+  }
+  .frow:first-child { border-top: none; }
+  .frow .radio {
+    width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); flex-shrink: 0;
+  }
+  .frow.on { background: rgba(224, 138, 46, 0.08); }
+  .frow.on .radio { border-color: var(--amber); background: var(--amber); box-shadow: inset 0 0 0 3px var(--navy-2); }
+  .frow .lbl { font-weight: 650; }
+  .frow .sub { display: block; font-size: 10px; color: var(--muted); margin-top: 1px; font-weight: 500; }
+  .frow .kbd { margin-left: auto; font-family: var(--mono); font-size: 9.5px; color: var(--muted); }
+  /* options */
+  .opt { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; font-size: 11.5px; }
+  .opt .k { color: var(--muted); }
+  .opt .v { font-weight: 700; font-family: var(--mono); font-size: 11px; }
+  .opt .v.on { color: var(--green); }
+  .note2 {
+    margin-top: 9px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px;
+    padding: 9px 11px; font-size: 10.5px; line-height: 1.6; color: var(--muted);
+  }
+  .note2 b { color: var(--amber); }
+  .nudge {
+    margin-top: 9px; background: var(--red-soft); border: 1px solid var(--red); border-radius: 9px;
+    padding: 9px 11px; font-size: 10.5px; line-height: 1.6; color: var(--text);
+  }
+  .nudge b { color: var(--red); }
+  .racts { margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--navy-2); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex-shrink: 0; }
+  .racts .a { text-align: center; font-size: 11.5px; font-weight: 750; padding: 9px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--line); }
+  .racts .a.pri { background: var(--amber); border-color: var(--amber); color: #16283e; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>FleetGo <span>Ops</span></b>
+  </div>
+  <span class="followpill">Following truck-042</span>
+  <nav class="views" aria-label="Ops views">
+    <a href="#" class="on">Live</a>
+    <a href="#">Alerts</a>
+  </nav>
+  <span class="crumb" aria-label="You are in following mode">
+    Live map <span class="sep">&#8250;</span> <b>truck-042</b> <span class="sep">&#8250;</span> <span class="mstate">following</span>
+  </span>
+  <a href="#" class="cfg" aria-label="Alert rules (configuration)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 17h16M4 7h16"/><circle cx="9" cy="7" r="2.2" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="2.2" fill="currentColor" stroke="none"/></svg> Rules</a>
+  <div class="stat">
+    <span>Camera <b>locked</b></span>
+    <span>Zoom <b>14</b></span>
+    <span>Trail <b>15 min</b></span>
+  </div>
+</header>
+
+<aside class="fleet">
+  <div class="lsearch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> Search device or unit…</div>
+  <div class="lchips"><span class="c on">All 28</span><span class="c">Moving 19</span><span class="c">Alerts 3</span><span class="c">No signal 2</span></div>
+  <h2>Watched</h2>
+  <div class="device sel">
+    <span class="id"><span class="dot mv"></span>truck-042</span><span class="spd">67<small>km/h</small></span><span class="wst">&#9733;</span>
+    <span class="meta">S-42 &middot; following &middot; 4 s ago</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot al"></span>truck-088</span><span class="spd">0<small>km/h</small></span><span class="wst">&#9733;</span>
+    <span class="meta">S-88 &middot; stopped 24 min</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot hb"></span>van-118</span><span class="spd">0<small>km/h</small></span><span class="wst">&#9733;</span>
+    <span class="meta">S-118 &middot; parked</span>
+  </div>
+  <h2>Others</h2>
+  <div class="device">
+    <span class="id"><span class="dot mv"></span>bus-017</span><span class="spd">23<small>km/h</small></span><span class="wst">&#9733;</span>
+    <span class="meta">S-17 &middot; 22 s ago</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot mv"></span>truck-201</span><span class="spd">54<small>km/h</small></span><span class="wst">&#9733;</span>
+    <span class="meta">S-201 &middot; 8 s ago</span>
+  </div>
+</aside>
+
+<main>
+  <svg viewBox="0 0 720 848" aria-hidden="true">
+    <rect width="720" height="848" fill="#0a1017"/>
+    <g stroke="#141d29" stroke-width="1">
+      <path d="M90 0V848 M220 0V848 M370 0V848 M540 0V848 M680 0V848"/>
+      <path d="M0 90H720 M0 210H720 M0 350H720 M0 500H720 M0 650H720 M0 790H720"/>
+    </g>
+    <g stroke="#1b2735" stroke-width="5">
+      <path d="M300 0 C 340 280 285 520 380 848" fill="none"/>
+      <path d="M0 560 H720" fill="none"/>
+    </g>
+    <!-- the followed vehicle, dead centre -->
+    <g transform="translate(360,424)">
+      <circle r="64" fill="none" stroke="#e08a2e" stroke-width="1" stroke-dasharray="3 7" opacity="0.5"/>
+      <circle r="34" fill="rgba(224,138,46,0.16)"/>
+      <circle r="12" fill="#e08a2e"/>
+      <circle r="4.5" fill="#16283e"/>
+    </g>
+    <text x="360" y="358" text-anchor="middle" font-family="system-ui" font-size="12" font-weight="800" fill="#f0a752">truck-042 &middot; 67 km/h</text>
+    <text x="360" y="374" text-anchor="middle" font-family="system-ui" font-size="10" fill="#9aa8b8">214&deg; SW &middot; followed</text>
+    <!-- breadcrumb trail -->
+    <polyline points="250,700 270,620 300,540 330,470 360,424" fill="none" stroke="#e08a2e" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round" opacity="0.85"/>
+    <text x="252" y="720" font-family="system-ui" font-size="9.5" fill="#9aa8b8">trail &middot; 15 min</text>
+    <!-- other watched device, out of frame hint -->
+    <g transform="translate(80,120)"><circle r="8" fill="#d9604f"/><circle r="3" fill="#fff"/></g>
+    <text x="96" y="124" font-family="system-ui" font-size="10" fill="#9aa8b8">&#9733; truck-088 &middot; off-screen</text>
+    <g transform="translate(640,700)"><circle r="8" fill="#58b47c"/><circle r="3" fill="#0a111b"/></g>
+    <text x="560" y="684" font-family="system-ui" font-size="10" fill="#9aa8b8">bus-017</text>
+  </svg>
+
+  <div class="hud">
+    <span class="lock">&#8982;</span>
+    <div>
+      <div class="t">Camera locked on truck-042</div>
+      <div class="s">re-centres on every new sample &middot; zoom 14 &middot; trail 15 min</div>
+    </div>
+    <span class="unlock">Unlock</span>
+  </div>
+
+  <div class="toast">
+    <div class="t">Follow paused &mdash; you moved the map</div>
+    <span class="resume">Resume follow</span>
+    <span class="dismiss">&#10005;</span>
+  </div>
+
+  <span class="attribution">Map data &copy; Google &middot; dark style</span>
+</main>
+
+<aside class="rail">
+  <div class="tabs" role="tablist">
+    <span class="tab" role="tab">Alerts <span class="cnt">3</span></span>
+    <span class="tab on" role="tab" aria-selected="true">Follow</span>
+    <span class="tab" role="tab">Assistant</span>
+  </div>
+  <div class="rhead">
+    <div class="r1">
+      <span class="star">&#9733;</span>
+      <span class="nm">truck-042</span>
+      <span class="badge">Moving</span>
+    </div>
+    <div class="r2">Follow behaviour for this camera &mdash; it never changes what the device sends.</div>
+  </div>
+
+    <div class="sec">
+      <h3>How you got here</h3>
+      <div class="opt"><span class="k">1 &middot; Live map</span><span class="v">default view</span></div>
+      <div class="opt"><span class="k">2 &middot; select a device</span><span class="v">detail in the rail</span></div>
+      <div class="opt"><span class="k">3 &middot; press F</span><span class="v on">camera locked</span></div>
+      <div class="note2" style="margin-top: 7px;">
+        Follow is a <b>mode of the map</b>, not another screen: no new route, no new URL.
+        Esc unlocks, and the mode chip in the header always says which mode you are in.
+      </div>
+    </div>
+
+  <div class="sec">
+    <h3>Follow mode</h3>
+    <div class="followbox">
+      <div class="frow on">
+        <span class="radio"></span>
+        <span class="lbl">This device<span class="sub">camera re-centres on truck-042</span></span>
+        <span class="kbd">F</span>
+      </div>
+      <div class="frow">
+        <span class="radio"></span>
+        <span class="lbl">Watched group<span class="sub">keeps all 4 watched devices in frame</span></span>
+        <span class="kbd">&#8679;F</span>
+      </div>
+      <div class="frow">
+        <span class="radio"></span>
+        <span class="lbl">Off<span class="sub">free pan and zoom</span></span>
+        <span class="kbd">esc</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h3>Behaviour</h3>
+    <div class="opt"><span class="k">Zoom while following</span><span class="v">14</span></div>
+    <div class="opt"><span class="k">Re-centre on</span><span class="v">every sample</span></div>
+    <div class="opt"><span class="k">Show trail</span><span class="v on">15 min</span></div>
+    <div class="opt"><span class="k">Pan pauses follow</span><span class="v on">yes</span></div>
+    <div class="opt"><span class="k">Stop when data is stale</span><span class="v on">after 5 min</span></div>
+    <div class="note2">
+      Panning or zooming <b>pauses</b> the follow instead of fighting the operator's hand —
+      a <b>Resume follow</b> action brings the camera back without re-selecting the device.
+    </div>
+    <div class="nudge">
+      <b>Tracking will stop</b> if truck-042 goes silent for 5 min. The camera stays put and
+      the header turns to &ldquo;tracking lost&rdquo; rather than pretending the pin is current.
+    </div>
+  </div>
+
+  <div class="racts">
+    <span class="a pri">Resume follow</span>
+    <span class="a">Unlock camera</span>
+  </div>
+</aside>
+</body>
+</html>

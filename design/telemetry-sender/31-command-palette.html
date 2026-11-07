@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Ops Console · Command palette</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
+    --text: #e9edf2; --muted: #9aa8b8;
+    --navy: #16283e; --navy-2: #0a111b;
+    --amber: #e08a2e; --amber-soft: rgba(224, 138, 46, 0.14);
+    --teal: #6faab5; --teal-soft: rgba(111, 170, 181, 0.13);
+    --green: #58b47c; --green-soft: rgba(88, 180, 124, 0.13);
+    --red: #d9604f; --red-soft: rgba(217, 96, 79, 0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden; position: relative;
+  }
+  /* dimmed console behind */
+  .backdrop { position: absolute; inset: 0; display: grid; grid-template-columns: 280px 1fr 400px; grid-template-rows: 52px 1fr; grid-template-areas: "top top top" "fleet map rail"; filter: blur(0.6px); opacity: 0.4; }
+  .bhead { grid-area: top; background: var(--navy-2); border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 18px; gap: 14px; }
+  .bhead b { font-size: 15px; font-weight: 800; }
+  .bhead b span { color: var(--amber); }
+  .bfleet { grid-area: fleet; background: var(--panel); border-right: 1px solid var(--line); padding: 12px 14px; }
+  .bfleet .row { height: 34px; border-bottom: 1px solid var(--line); }
+  .bmap { grid-area: map; background: #0a1017; }
+  .brail { grid-area: rail; background: var(--panel); border-left: 1px solid var(--line); }
+  .scrim { position: absolute; inset: 0; background: rgba(6, 10, 16, 0.62); }
+
+  /* palette */
+  .palette {
+    position: absolute; left: 50%; top: 120px; transform: translateX(-50%);
+    width: 640px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  }
+  .pinput {
+    display: flex; align-items: center; gap: 11px; padding: 15px 17px;
+    border-bottom: 1px solid var(--line);
+  }
+  .pinput .q { font-size: 15px; font-weight: 650; flex: 1; }
+  .pinput .q .caret { color: var(--amber); }
+  .pinput .esc { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 3px 7px; }
+  .plist { max-height: 470px; overflow: hidden; }
+  .pgroup { padding: 8px 0 4px; }
+  .pgroup .lbl {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px;
+    color: var(--muted); padding: 4px 17px 6px;
+  }
+  .pitem { display: flex; align-items: center; gap: 11px; padding: 9px 17px; }
+  .pitem .ic {
+    width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 12px;
+    background: var(--navy-2); border: 1px solid var(--line); color: var(--muted);
+  }
+  .pitem .t { font-size: 12.5px; font-weight: 650; }
+  .pitem .t small { color: var(--muted); font-weight: 500; font-size: 11px; margin-left: 7px; }
+  .pitem .hint { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .pitem.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); }
+  .pitem.sel .ic { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
+  .pitem .kbd { font-family: var(--mono); font-size: 9.5px; color: var(--muted); background: var(--navy-2); border: 1px solid var(--line); border-radius: 4px; padding: 2px 5px; }
+  .pfoot {
+    display: flex; align-items: center; gap: 14px; padding: 10px 17px;
+    border-top: 1px solid var(--line); background: var(--navy-2);
+    font-size: 10.5px; color: var(--muted);
+  }
+  .pfoot b { font-family: var(--mono); font-size: 9.5px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; font-weight: 600; }
+  .pfoot .right { margin-left: auto; }
+
+  /* shortcuts sheet */
+  .sheet {
+    position: absolute; right: 28px; bottom: 28px; width: 300px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 13px; overflow: hidden;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  }
+  .sheet h4 {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px;
+    color: var(--muted); padding: 10px 13px; border-bottom: 1px solid var(--line); background: var(--navy-2);
+  }
+  .sheet .row { display: flex; align-items: center; justify-content: space-between; padding: 7px 13px; font-size: 11px; border-top: 1px solid var(--line); }
+  .sheet .row:first-of-type { border-top: none; }
+  .sheet .row .d { color: var(--muted); }
+  .sheet .row kbd {
+    font-family: var(--mono); font-size: 9.5px; color: var(--text); background: var(--navy-2);
+    border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px;
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="backdrop" aria-hidden="true">
+  <div class="bhead" style="display:flex; align-items:center; gap:9px;"><svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg><b>FleetGo <span>Ops</span></b></div>
+  <div class="bfleet"><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div></div>
+  <div class="bmap"></div>
+  <div class="brail"></div>
+</div>
+<div class="scrim" aria-hidden="true"></div>
+
+<div class="palette" role="dialog" aria-label="Command palette">
+  <div class="pinput">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9aa8b8" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <span class="q">s88<span class="caret">|</span></span>
+    <span class="esc">esc</span>
+  </div>
+
+  <div class="plist">
+    <div class="pgroup">
+      <div class="lbl">Devices &middot; 2</div>
+      <div class="pitem sel">
+        <span class="ic">&#9678;</span>
+        <span class="t">truck-088 <small>S-88 &middot; stopped 24 min &middot; critical</small></span>
+        <span class="hint">&#8629; open device</span>
+      </div>
+      <div class="pitem">
+        <span class="ic">&#9678;</span>
+        <span class="t">truck-088 history <small>last 24 h &middot; 3 alerts</small></span>
+        <span class="hint">&#8679;&#8629; replay</span>
+      </div>
+    </div>
+
+    <div class="pgroup">
+      <div class="lbl">Actions on truck-088</div>
+      <div class="pitem">
+        <span class="ic">&#9990;</span>
+        <span class="t">Call driver</span>
+        <span class="hint">&#8984;&#8679;C</span>
+      </div>
+      <div class="pitem">
+        <span class="ic">&#10005;</span>
+        <span class="t">Silence alerts 1 h</span>
+        <span class="hint">&#8984;&#8679;S</span>
+      </div>
+      <div class="pitem">
+        <span class="ic">&#9888;</span>
+        <span class="t">Escalate open alert</span>
+        <span class="hint">&#8984;&#8679;E</span>
+      </div>
+    </div>
+
+    <div class="pgroup">
+      <div class="lbl">Go to</div>
+      <div class="pitem">
+        <span class="ic">&#9636;</span>
+        <span class="t">Live map</span>
+        <span class="hint"><b class="kbd">g</b> then <b class="kbd">l</b></span>
+      </div>
+      <div class="pitem">
+        <span class="ic">&#9637;</span>
+        <span class="t">Pipeline health</span>
+        <span class="hint"><b class="kbd">g</b> then <b class="kbd">p</b></span>
+      </div>
+      <div class="pitem">
+        <span class="ic">&#9888;</span>
+        <span class="t">Alert rules</span>
+        <span class="hint"><b class="kbd">g</b> then <b class="kbd">a</b></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pfoot">
+    <span><b>&#8593;</b><b>&#8595;</b> move</span>
+    <span><b>&#8629;</b> run</span>
+    <span><b>esc</b> close</span>
+    <span class="right">Typos tolerated &middot; matches device id, unit, plate and command</span>
+  </div>
+</div>
+
+<div class="sheet" aria-label="Keyboard shortcuts">
+  <h4>Shortcuts</h4>
+  <div class="row"><span class="d">Command palette</span><kbd>&#8984;K</kbd></div>
+  <div class="row"><span class="d">Focus search</span><kbd>/</kbd></div>
+  <div class="row"><span class="d">Next / prev alert</span><kbd>j</kbd><kbd>k</kbd></div>
+  <div class="row"><span class="d">Acknowledge alert</span><kbd>a</kbd></div>
+  <div class="row"><span class="d">Silence 1 h</span><kbd>s</kbd></div>
+  <div class="row"><span class="d">Toggle replay bar</span><kbd>r</kbd></div>
+  <div class="row"><span class="d">Zoom map</span><kbd>+</kbd><kbd>&minus;</kbd></div>
+  <div class="row"><span class="d">Show this sheet</span><kbd>?</kbd></div>
+</div>
+</body>
+</html>
