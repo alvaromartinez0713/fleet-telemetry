@@ -115,6 +115,27 @@
       "height": 900
     },
     {
+      "file": "49-platform-v2-ingest.html",
+      "title": "Fleet Platform v2 · ingest & pipeline (proposal)",
+      "tradeoff": "One surface instead of three sections: gateway outcomes, stage funnel with partitions inside it, live schema limits, and a read-only agent that explains a spike and cites the panels it read",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "50-platform-v2-runtime.html",
+      "title": "Fleet Platform v2 · runtime (proposal)",
+      "tradeoff": "Workers, per-rule evaluation, delivery by channel and the notification log on one surface; the agent answers whether an escalation ever left the building",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "51-platform-agent-contract.html",
+      "title": "Fleet Platform v2 · agent contract, read-only (proposal)",
+      "tradeoff": "The evaluation asked for: what the platform agent can do (all reads, correlate, explain, build queries, cite), what it can never do (no resend, no replay, no config, no infra verbs) and how it stays honest",
+      "width": 1440,
+      "height": 900
+    },
+    {
       "file": "44-ops-v2-settings.html",
       "title": "FleetGo Ops v2 · settings (proposal)",
       "tradeoff": "Proposal: rules written in plain language with the agent drafting changes as a diff you approve, the readable rule list kept for audit, watchlist and routing in the same place",
