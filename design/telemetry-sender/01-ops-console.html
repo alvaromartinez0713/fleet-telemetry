@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Ops Console</title>
+<style>
+  :root {
+    --bg: #0e1521;
+    --panel: #131d2e;
+    --panel-2: #182438;
+    --line: #24344d;
+    --text: #e8eef7;
+    --muted: #9db0c8;
+    --green: #4ade80;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --blue: #60a5fa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 300px 1fr 380px;
+    grid-template-rows: 56px 1fr;
+    grid-template-areas: "top top top" "fleet map feed";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 16px;
+    padding: 0 20px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  header h1 { font-size: 16px; font-weight: 650; letter-spacing: 0.2px; }
+  header .pill {
+    font-size: 12px; padding: 3px 10px; border-radius: 999px;
+    background: rgba(74, 222, 128, 0.12); color: var(--green);
+    border: 1px solid rgba(74, 222, 128, 0.35);
+  }
+  header .stat { margin-left: auto; font-size: 12px; color: var(--muted); }
+  header .stat b { color: var(--text); font-weight: 600; }
+  /* Fleet list */
+  aside.fleet {
+    grid-area: fleet; border-right: 1px solid var(--line); background: var(--panel);
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  aside.fleet h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--muted); padding: 14px 16px 8px;
+  }
+  .device {
+    padding: 10px 16px; border-top: 1px solid var(--line); cursor: default;
+    display: grid; grid-template-columns: 1fr auto; row-gap: 3px;
+  }
+  .device.selected { background: var(--panel-2); border-left: 3px solid var(--blue); padding-left: 13px; }
+  .device .id { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .device .meta { font-size: 11px; color: var(--muted); grid-column: 1 / -1; }
+  .device .speed { font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+  .dot.moving { background: var(--green); }
+  .dot.heartbeat { background: var(--amber); }
+  .dot.stale { background: var(--red); }
+  /* Map */
+  main.map { grid-area: map; position: relative; background: #0b111c; }
+  main.map svg { width: 100%; height: 100%; display: block; }
+  main.map .legend {
+    position: absolute; bottom: 16px; left: 16px; font-size: 11px; color: var(--muted);
+    background: rgba(19, 29, 46, 0.9); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 12px; display: flex; gap: 14px;
+  }
+  /* Live feed */
+  section.feed {
+    grid-area: feed; border-left: 1px solid var(--line); background: var(--panel);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  section.feed h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--muted); padding: 14px 16px 8px; display: flex; justify-content: space-between;
+  }
+  section.feed h2 span { color: var(--green); }
+  .event {
+    padding: 9px 16px; border-top: 1px solid var(--line);
+    font-size: 12px; line-height: 1.45; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .event b { color: var(--text); font-weight: 600; }
+  .event .t { float: right; font-size: 11px; }
+  .event.accepted .t { color: var(--green); }
+  .event.rejected .t { color: var(--red); }
+  .event code { color: var(--blue); font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Fleet Sender — Ops Console</h1>
+  <span class="pill">● /v1/telemetry · 12.4 msg/s</span>
+  <span class="stat">Fleet <b>28 devices</b> · Batch fill <b>94 avg / 500 max</b> · Dedup hits <b>3</b></span>
+</header>
+
+<aside class="fleet" aria-label="Device fleet">
+  <h2>Devices</h2>
+  <div class="device selected">
+    <span class="id"><span class="dot moving"></span>truck-042</span>
+    <span class="speed">67 km/h</span>
+    <span class="meta">Seq 18 401 · Ruta 3 · Acc 4.2 m</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot moving"></span>bus-017</span>
+    <span class="speed">23 km/h</span>
+    <span class="meta">Seq 9 118 · Av. 9 de Julio · Acc 6.8 m</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot moving"></span>van-203</span>
+    <span class="speed">48 km/h</span>
+    <span class="meta">Seq 22 907 · Acc 3.1 m</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot heartbeat"></span>van-118</span>
+    <span class="speed">0 km/h</span>
+    <span class="meta">Parked · Depot Sur · heartbeat</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot heartbeat"></span>truck-009</span>
+    <span class="speed">0 km/h</span>
+    <span class="meta">Idle 2h 14m · heartbeat</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot stale"></span>truck-088</span>
+    <span class="speed">—</span>
+    <span class="meta">No signal · last seen 09:41</span>
+  </div>
+</aside>
+
+<main class="map" aria-label="Live fleet map">
+  <svg viewBox="0 0 1060 844" role="img" aria-label="Mock city map with live device positions">
+    <rect width="1060" height="844" fill="#0b111c"/>
+    <!-- street grid -->
+    <g stroke="#1a2638" stroke-width="3">
+      <path d="M120 0 V844 M320 0 V844 M560 0 V844 M780 0 V844 M960 0 V844"/>
+      <path d="M0 120 H1060 M0 300 H1060 M0 470 H1060 M0 620 H1060 M0 760 H1060"/>
+    </g>
+    <g stroke="#21304a" stroke-width="6">
+      <path d="M460 0 C 500 300 430 500 520 844" fill="none"/>
+      <path d="M0 640 H1060" fill="none"/>
+    </g>
+    <!-- park / water -->
+    <rect x="600" y="140" width="140" height="120" rx="12" fill="#12202e"/>
+    <ellipse cx="180" cy="720" rx="110" ry="60" fill="#0e1a2a"/>
+    <!-- device routes -->
+    <polyline points="320,300 460,330 520,470 460,620 320,640" fill="none"
+      stroke="#60a5fa" stroke-width="4" stroke-dasharray="2 8" stroke-linecap="round" opacity="0.9"/>
+    <polyline points="780,120 780,300 700,470 780,620" fill="none"
+      stroke="#4ade80" stroke-width="4" stroke-dasharray="2 8" stroke-linecap="round" opacity="0.7"/>
+    <!-- device dots -->
+    <g>
+      <circle cx="320" cy="300" r="9" fill="#60a5fa"/>
+      <circle cx="320" cy="300" r="16" fill="none" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="2"/>
+      <text x="336" y="296" fill="#e8eef7" font-size="12" font-family="system-ui">truck-042</text>
+      <circle cx="700" cy="470" r="7" fill="#4ade80"/>
+      <text x="714" y="466" fill="#9db0c8" font-size="12" font-family="system-ui">bus-017</text>
+      <circle cx="780" cy="620" r="7" fill="#4ade80"/>
+      <text x="794" y="616" fill="#9db0c8" font-size="12" font-family="system-ui">van-203</text>
+      <circle cx="600" cy="260" r="7" fill="#fbbf24"/>
+      <text x="614" y="256" fill="#9db0c8" font-size="12" font-family="system-ui">van-118</text>
+      <circle cx="960" cy="760" r="7" fill="#f87171"/>
+      <text x="974" y="756" fill="#f87171" font-size="12" font-family="system-ui">truck-088</text>
+    </g>
+  </svg>
+  <div class="legend">
+    <span>● moving</span><span style="color:#fbbf24">● heartbeat</span>
+    <span style="color:#f87171">● no signal</span><span>— telemetry trace</span>
+  </div>
+</main>
+
+<section class="feed" aria-label="Intake feed">
+  <h2>Intake feed <span>accepted 99.7%</span></h2>
+  <div class="event accepted"><b>truck-042</b> seq 18 402 · 67 km/h · hdg 214° <span class="t">12:04:31</span></div>
+  <div class="event accepted"><b>bus-017</b> seq 9 119 · 23 km/h · acc 6.8 m <span class="t">12:04:31</span></div>
+  <div class="event rejected"><b>truck-088</b> <code>captured_at beyond 5 min skew</code> <span class="t">12:04:30</span></div>
+  <div class="event accepted"><b>van-203</b> seq 22 908 · 48 km/h · hdg 097° <span class="t">12:04:30</span></div>
+  <div class="event accepted"><b>van-118</b> seq 5 640 · heartbeat · 0.0 km/h <span class="t">12:04:29</span></div>
+  <div class="event rejected"><b>truck-042</b> <code>seq replayed · dedup key hit</code> <span class="t">12:04:29</span></div>
+  <div class="event accepted"><b>bus-017</b> seq 9 118 · 25 km/h · acc 7.1 m <span class="t">12:04:28</span></div>
+  <div class="event accepted"><b>truck-009</b> seq 3 212 · heartbeat · parked <span class="t">12:04:28</span></div>
+  <div class="event accepted"><b>van-203</b> seq 22 907 · 47 km/h · acc 3.1 m <span class="t">12:04:27</span></div>
+  <div class="event accepted"><b>truck-042</b> seq 18 401 · 66 km/h · hdg 211° <span class="t">12:04:27</span></div>
+</section>
+</body>
+</html>

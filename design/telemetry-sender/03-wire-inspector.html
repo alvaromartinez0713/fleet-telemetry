@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Wire Inspector</title>
+<style>
+  :root {
+    --bg: #fafbfc;
+    --panel: #ffffff;
+    --line: #dde3ea;
+    --text: #17212e;
+    --muted: #5a6a7d;
+    --blue: #0b5cad;
+    --blue-bg: #e9f2fb;
+    --green: #0e7a43;
+    --green-bg: #e6f4ec;
+    --red: #ad2f2a;
+    --red-bg: #fbeceb;
+    --amber: #8a5a0a;
+    --code-bg: #0f1720;
+    --code-text: #d7e2ef;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 1fr 520px;
+    grid-template-rows: 64px 1fr;
+  }
+  header {
+    grid-column: 1 / -1; display: flex; align-items: center; gap: 14px;
+    background: var(--panel); border-bottom: 1px solid var(--line); padding: 0 24px;
+  }
+  header h1 { font-size: 17px; font-weight: 700; }
+  header .ver {
+    font-family: var(--mono); font-size: 12px; color: var(--blue);
+    background: var(--blue-bg); border-radius: 6px; padding: 3px 8px;
+  }
+  header .sync { margin-left: auto; font-size: 13px; color: var(--green); font-weight: 600; }
+  main { padding: 24px; overflow: hidden; display: flex; flex-direction: column; gap: 18px; }
+  /* checks */
+  .checks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .check {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px; display: flex; gap: 10px; align-items: flex-start;
+  }
+  .check .mark { font-size: 15px; font-weight: 700; line-height: 1.2; }
+  .check.ok .mark { color: var(--green); }
+  .check.warn .mark { color: var(--amber); }
+  .check.bad .mark { color: var(--red); }
+  .check h3 { font-size: 13px; font-weight: 650; }
+  .check p { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  .check.warn { border-color: #e3c98f; background: #fdf7ea; }
+  .check.bad { border-color: #e5b6b3; background: var(--red-bg); }
+  /* payload */
+  pre.payload {
+    background: var(--code-bg); color: var(--code-text); border-radius: 12px;
+    padding: 20px 24px; font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
+    overflow: hidden; flex: 1;
+  }
+  pre.payload .k { color: #8ab4e8; }
+  pre.payload .s { color: #9ece8f; }
+  pre.payload .n { color: #e8c07d; }
+  pre.payload .c { color: #64748b; font-style: italic; }
+  pre.payload .flag { color: #f0a8a4; }
+  .payload-title {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;
+  }
+  .payload-title h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); }
+  .payload-title span { font-family: var(--mono); font-size: 12px; color: var(--code-text); }
+  /* aside */
+  aside { border-left: 1px solid var(--line); background: var(--panel); padding: 24px; overflow: hidden; }
+  aside h2 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .sect { margin-bottom: 20px; }
+  .sect h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-weight: 600; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 8px; border-bottom: 1px solid var(--line); }
+  td.mono { font-family: var(--mono); font-size: 11.5px; }
+  .tag { font-size: 11px; font-weight: 650; padding: 2px 8px; border-radius: 999px; }
+  .tag.ok { background: var(--green-bg); color: var(--green); }
+  .tag.rej { background: var(--red-bg); color: var(--red); }
+  .tag.retry { background: var(--blue-bg); color: var(--blue); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sender Console — Wire Inspector</h1>
+  <span class="ver">schema_version: 1</span>
+  <span class="sync">✓ POST /v1/telemetry · 200 OK · 341 ms</span>
+</header>
+
+<main>
+  <div class="checks" aria-label="Batch validation checks">
+    <div class="check ok">
+      <span class="mark">✓</span>
+      <div><h3>Batch size</h3><p>118 of 500 max events — one POST per flush window.</p></div>
+    </div>
+    <div class="check ok">
+      <span class="mark">✓</span>
+      <div><h3>Dedup key</h3><p>(device_id, captured_at, seq) unique — 0 replays in this batch.</p></div>
+    </div>
+    <div class="check warn">
+      <span class="mark">!</span>
+      <div><h3>Clock skew</h3><p>Device clock +3 min. Tolerance is 5 min — NTP sync recommended.</p></div>
+    </div>
+    <div class="check bad">
+      <span class="mark">✗</span>
+      <div><h3>1 event rejected</h3><p>captured_at beyond accepted skew — retry after time sync, seq preserved.</p></div>
+    </div>
+  </div>
+
+  <div class="payload-title">
+    <h2>Wire payload · batch #4193</h2>
+    <span>Content-Type: application/json · 9.4 KB</span>
+  </div>
+  <pre class="payload" aria-label="JSON batch payload"><span class="c">// POST /v1/telemetry — last 3 of 118 events shown</span>
+{
+  <span class="k">"events"</span>: [
+    {
+      <span class="k">"device_id"</span>:       <span class="s">"truck-042"</span>,
+      <span class="k">"seq"</span>:             <span class="n">18401</span>,
+      <span class="k">"captured_at"</span>:     <span class="s">"2026-02-17T12:04:27.180Z"</span>,
+      <span class="k">"lat"</span>:             <span class="n">-34.60371</span>,
+      <span class="k">"lon"</span>:             <span class="n">-58.38160</span>,
+      <span class="k">"speed_kmh"</span>:       <span class="n">66.4</span>,
+      <span class="k">"heading_deg"</span>:     <span class="n">211.0</span>,
+      <span class="k">"accuracy_m"</span>:      <span class="n">4.2</span>,
+      <span class="k">"mode"</span>:            <span class="s">"moving"</span>,
+      <span class="k">"traceparent"</span>:     <span class="s">"00-4bf92f35...-00f067aa...-01"</span>,
+      <span class="k">"schema_version"</span>:  <span class="n">1</span>
+    },
+    {
+      <span class="k">"device_id"</span>:       <span class="s">"van-118"</span>,
+      <span class="k">"seq"</span>:             <span class="n">5640</span>,
+      <span class="k">"captured_at"</span>:     <span class="s">"2026-02-17T12:04:29.002Z"</span>,
+      <span class="k">"lat"</span>:             <span class="n">-34.61152</span>,
+      <span class="k">"lon"</span>:             <span class="n">-58.40215</span>,
+      <span class="c">// speed/heading omitted: device parked</span>
+      <span class="k">"accuracy_m"</span>:      <span class="n">2.9</span>,
+      <span class="k">"mode"</span>:            <span class="s">"heartbeat"</span>,
+      <span class="k">"schema_version"</span>:  <span class="n">1</span>
+    },
+    {
+      <span class="k">"device_id"</span>:       <span class="s">"truck-088"</span>,
+      <span class="k">"seq"</span>:             <span class="n">7211</span>,
+      <span class="k">"captured_at"</span>:     <span class="s">"2026-02-17T12:09:58.441Z"</span><span class="flag">   ← beyond 5 min skew</span>,
+      <span class="k">"lat"</span>:             <span class="n">-34.57780</span>,
+      <span class="k">"lon"</span>:             <span class="n">-58.53112</span>,
+      <span class="k">"speed_kmh"</span>:       <span class="n">12.0</span>,
+      <span class="k">"mode"</span>:            <span class="s">"moving"</span>,
+      <span class="k">"schema_version"</span>:  <span class="n">1</span>
+    }
+  ]
+}</pre>
+</main>
+
+<aside>
+  <h2>Delivery ledger</h2>
+  <div class="sect">
+    <h3>Recent batches</h3>
+    <table>
+      <thead><tr><th>Batch</th><th>Events</th><th>Status</th><th>Latency</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">#4193</td><td>118</td><td><span class="tag ok">accepted</span></td><td>341 ms</td></tr>
+        <tr><td class="mono">#4192</td><td>121</td><td><span class="tag ok">accepted</span></td><td>298 ms</td></tr>
+        <tr><td class="mono">#4191</td><td>117</td><td><span class="tag retry">retry · 503</span></td><td>—</td></tr>
+        <tr><td class="mono">#4190</td><td>120</td><td><span class="tag ok">accepted</span></td><td>312 ms</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="sect">
+    <h3>Device watermark</h3>
+    <table>
+      <thead><tr><th>Device</th><th>Last seq</th><th>Gap</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">truck-042</td><td>18 402</td><td>0</td></tr>
+        <tr><td class="mono">van-118</td><td>5 640</td><td>0</td></tr>
+        <tr><td class="mono">truck-088</td><td>7 210</td><td>1 <span class="tag rej">blocked</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="sect">
+    <h3>Notes</h3>
+    <p style="font-size: 12.5px; color: var(--muted); line-height: 1.55;">
+      A rejected event is retried byte-identical: same captured_at, same seq — the
+      dedup key stays stable (ADR-002). Seq is a uint64 watermark: never resend with
+      a new timestamp, resend as-is.
+    </p>
+  </div>
+</aside>
+</body>
+</html>

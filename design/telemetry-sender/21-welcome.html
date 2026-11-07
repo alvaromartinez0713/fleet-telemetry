@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Fleet One · Welcome</title>
+<style>
+  :root {
+    --bg: #f3f4f1; --card: #ffffff; --line: #e3e4df; --info: #3e7480; --info-soft: #e6efef; --text: #1c2530; --muted: #6d756e;
+    --brand: #c06f18; --brand-deep: #9a5a14; --brand-soft: #f4ead9;
+    --bg-hero: linear-gradient(160deg, #f3f4f1 0%, #fbeedd 60%, #f2e2c8 100%);
+    --green: #3d8455; --green-soft: #e5efe7; --green-dark: #2e6b43;
+    --shadow: 0 8px 24px rgba(26, 36, 52, 0.06);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); width: 390px; height: 844px; overflow: hidden; }
+  .phone {
+    display: flex; flex-direction: column; height: 844px; padding: 0 20px;
+    background: var(--bg-hero);
+  }
+  .statusbar { display: flex; justify-content: space-between; padding: 14px 6px 6px; font-size: 13px; font-weight: 600; }
+  .mark {
+    margin: 26px auto 0; width: 72px; height: 72px; border-radius: 22px;
+    background: #16283e;
+    box-shadow: 0 12px 28px rgba(22, 40, 62, 0.3);
+    display: flex; align-items: center; justify-content: center;
+  }
+  h1 { text-align: center; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-top: 18px; }
+  h1 span { color: var(--brand); }
+  .sub { text-align: center; font-size: 13.5px; color: var(--muted); line-height: 1.55; margin: 8px 12px 0; }
+  /* value cards */
+  .values { margin-top: 26px; display: flex; flex-direction: column; gap: 10px; }
+  .value {
+    display: flex; align-items: center; gap: 13px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 13px 15px; box-shadow: var(--shadow);
+  }
+  .value .ic {
+    width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .value .ic.b { background: var(--brand-soft); color: var(--brand-deep); }
+  .value .ic.g { background: var(--green-soft); color: var(--green-dark); }
+  .value .t { font-size: 13.5px; font-weight: 700; }
+  .value .s { font-size: 11.5px; color: var(--muted); margin-top: 1px; line-height: 1.45; }
+  /* CTA */
+  .cta { margin-top: auto; margin-bottom: 18px; }
+  .primary {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; background: var(--brand); color: #fff; border: none; border-radius: 16px;
+    padding: 15px; font: inherit; font-size: 15px; font-weight: 750;
+    box-shadow: 0 8px 20px rgba(154, 90, 20, 0.28); cursor: pointer;
+  }
+  .terms {
+    text-align: center; font-size: 10.5px; color: var(--muted); margin-top: 12px; line-height: 1.5;
+  }
+  .terms a { color: var(--brand-deep); font-weight: 650; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="phone" role="application" aria-label="Welcome screen">
+  <div class="statusbar"><span>9:41</span><span>📶 ⌖ ▮</span></div>
+
+  <div class="mark" role="img" aria-label="FleetGo logo">
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#16283e"/>
+    </svg>
+  </div>
+  <h1>Welcome to Fleet<span>Go</span></h1>
+  <p class="sub">The app that sends your vehicle's telemetry. One setup, then it works on its own — you drive, we handle the data.</p>
+
+  <div class="values">
+    <div class="value">
+      <span class="ic b">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+      </span>
+      <div><div class="t">One device code</div><div class="s">Type the code printed on the tracker label — that links it to your vehicle.</div></div>
+    </div>
+    <div class="value">
+      <span class="ic g">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11L9.5 22 19 9.5h-6.5L13 2z"/></svg>
+      </span>
+      <div><div class="t">Then it runs itself</div><div class="s">Samples every 10 s, batches up to 500, resends on its own — no daily tasks for you.</div></div>
+    </div>
+    <div class="value">
+      <span class="ic g">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </span>
+      <div><div class="t">Nothing gets lost</div><div class="s">Offline? Samples wait in the queue and send when signal returns.</div></div>
+    </div>
+  </div>
+
+  <div class="cta">
+    <button class="primary" type="button">
+      Set up my tracker
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+    </button>
+    <p class="terms">By continuing you accept the fleet data policy:<br>location samples are sent to your operator while the shift is active.</p>
+  </div>
+</div>
+</body>
+</html>
