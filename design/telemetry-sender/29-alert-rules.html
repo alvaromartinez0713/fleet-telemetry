@@ -39,6 +39,7 @@
   header .views { display: flex; gap: 2px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
   header .views a { font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 5px 11px; border-radius: 7px; }
   header .views a.on { background: var(--panel-2); color: var(--text); }
+  header .vsep { width: 1px; height: 14px; background: var(--line); margin: 0 4px; }
   header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 16px; }
   header .stat b { color: var(--text); font-weight: 700; }
 
@@ -149,7 +150,9 @@
   <span class="pill">Live · SSE</span>
   <nav class="views" aria-label="Ops views">
     <a href="#">Live</a>
-    <a href="#" class="on">Alerts</a>
+    <a href="#">Alerts</a>
+    <span class="vsep" aria-hidden="true"></span>
+    <a href="#" class="on">Rules</a>
   </nav>
   <div class="stat">
     <span>Rules <b>6</b></span>

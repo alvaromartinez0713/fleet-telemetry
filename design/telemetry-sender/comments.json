@@ -778,9 +778,20 @@
       "excerpt": "Alerts",
       "comment": "Esta confuso esto de alert usa dos pantallas esta de alert detail y alert rules",
       "createdAt": "2026-11-07T04:32:40.069Z",
-      "status": "open",
+      "status": "resolved",
       "sentAt": "2026-11-07T04:32:46.820Z",
-      "resolvedAt": null
+      "resolvedAt": "2026-11-07T04:34:38.642Z"
+    },
+    {
+      "id": "ciy7ggc0",
+      "file": "00-family-sheet.html",
+      "selector": "body",
+      "excerpt": "FLEET TELEMETRY · PRODUCT FAMILY · VERTICAL SHEET Three products, one data pipeline The same telemetry travels through all three: the driver app captures and sends it, FleetGo Ops turns it into decisions about vehicles, and Fleet Platform explains what the system itself is doing. Nothing is duplicat",
+      "comment": "Eliminar esto mejor gastando token innecesarios",
+      "createdAt": "2026-11-07T04:34:03.169Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:35:23.674Z",
+      "resolvedAt": "2026-11-07T04:35:37.370Z"
     }
   ]
 }
