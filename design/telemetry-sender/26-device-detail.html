@@ -347,17 +347,15 @@
     </div>
 
     <div class="sec">
-      <h3>Data integrity <span class="why">the reason to trust this pin</span></h3>
-      <div class="kv"><span class="k">Position</span><span class="v mono">&minus;34.6037, &minus;58.3816</span></div>
-      <div class="kv"><span class="k">Seq</span><span class="v mono">18 401</span></div>
-      <div class="kv"><span class="k">Watermark</span><span class="v mono">18 401</span></div>
-      <div class="kv"><span class="k">Gaps</span><span class="v good">0 &middot; contiguous</span></div>
-      <div class="kv"><span class="k">Dedup hits today</span><span class="v">3</span></div>
-      <div class="kv"><span class="k">Last batch</span><span class="v good">#4193 &middot; accepted 341 ms</span></div>
+      <h3>Signal health <span style="font-size: 9px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--teal);">enough to trust the pin</span></h3>
+      <div class="kv"><span class="k">Last sample</span><span class="v mono">4 s ago</span></div>
+      <div class="kv"><span class="k">Gaps in sequence</span><span class="v good">0 &middot; contiguous</span></div>
+      <div class="kv"><span class="k">Last batch</span><span class="v good">#4193 &middot; accepted</span></div>
       <div class="kv"><span class="k">Clock drift</span><span class="v warn">+3 min &middot; within 5 min</span></div>
-      <div class="integrity">
-        Every sample is deduped by <b>device + captured_at + seq</b>. A gap here means
-        the device's watermark is blocked and later samples queue behind it.
+      <div class="kv"><span class="k">Position</span><span class="v mono">&minus;34.6037, &minus;58.3816</span></div>
+      <div style="margin-top: 9px; display: flex; align-items: center; gap: 8px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px; font-size: 10.5px; color: var(--muted); line-height: 1.5;">
+        <span style="color: var(--teal); font-weight: 700;">&#8594;</span>
+        <span>Sequence numbers, watermarks, dedup ratios and dead-letter live in <b style="color: var(--teal);">Platform &middot; Data health</b> &mdash; this panel only answers &ldquo;is the pin current?&rdquo;</span>
       </div>
     </div>
 

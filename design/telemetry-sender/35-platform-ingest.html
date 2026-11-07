@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Platform · Gateway &amp; ingest</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
+    --text: #e9edf2; --muted: #9aa8b8;
+    --navy: #16283e; --navy-2: #0a111b;
+    --amber: #e08a2e; --amber-soft: rgba(224, 138, 46, 0.14);
+    --teal: #6faab5; --teal-soft: rgba(111, 170, 181, 0.13);
+    --green: #58b47c; --green-soft: rgba(88, 180, 124, 0.13);
+    --red: #d9604f; --red-soft: rgba(217, 96, 79, 0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 210px 1fr; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top" "sidenav main";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 14px;
+    padding: 0 18px; background: var(--navy-2); border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--teal); }
+  header .pill {
+    font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px;
+    background: var(--green-soft); color: var(--green); display: flex; align-items: center; gap: 6px;
+  }
+  header .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  header .views { display: flex; gap: 2px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  header .views a { font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 5px 11px; border-radius: 7px; }
+  header .views a.on { background: var(--panel-2); color: var(--text); }
+  header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 16px; }
+  header .stat b { color: var(--text); font-weight: 700; }
+  header .stat b.warn { color: var(--amber); }
+
+  aside.sidenav { grid-area: sidenav; background: var(--panel); border-right: 1px solid var(--line); padding: 12px 10px; }
+  aside.sidenav .grp { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 12px 8px 6px; }
+  aside.sidenav a { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 9px; font-size: 12.5px; font-weight: 650; color: var(--muted); text-decoration: none; margin-bottom: 2px; }
+  aside.sidenav a.on { background: var(--panel-2); color: var(--text); }
+  aside.sidenav a .n { margin-left: auto; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: var(--red); color: #fff; }
+  aside.sidenav a .n.amber { background: var(--amber); color: #16283e; }
+
+  main { grid-area: main; overflow: hidden; display: flex; flex-direction: column; padding: 16px 18px 0; gap: 14px; }
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; flex-shrink: 0; }
+  .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 12px 13px; }
+  .kpi .k { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); }
+  .kpi .v { font-size: 22px; font-weight: 800; letter-spacing: -0.6px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .kpi .v small { font-size: 11px; font-weight: 650; color: var(--muted); margin-left: 2px; letter-spacing: 0; }
+  .kpi .v.good { color: var(--green); }
+  .kpi .v.warn { color: var(--amber); }
+  .kpi .sub { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+  .cols { display: grid; grid-template-columns: 1.05fr 1fr; gap: 14px; flex: 1; min-height: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; }
+  .card > h2 {
+    font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px;
+    color: var(--muted); padding: 12px 15px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .card > h2 .hint { font-size: 9.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--teal); margin-left: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  th { text-align: left; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); padding: 8px 15px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  td { padding: 9px 15px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  td.mono { font-family: var(--mono); font-size: 10.5px; }
+  .scroll { overflow: auto; flex: 1; }
+  .tag { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 5px; }
+  .tag.ok { background: var(--green-soft); color: var(--green); }
+  .tag.warn { background: var(--amber-soft); color: var(--amber); }
+  .tag.bad { background: var(--red-soft); color: var(--red); }
+  .tag.info { background: var(--teal-soft); color: var(--teal); }
+  /* status code bars */
+  .codes { padding: 12px 15px; display: flex; flex-direction: column; gap: 9px; }
+  .code { display: flex; align-items: center; gap: 10px; font-size: 11.5px; }
+  .code .st { font-family: var(--mono); font-size: 10.5px; width: 46px; flex-shrink: 0; font-weight: 700; }
+  .code .track { flex: 1; height: 8px; border-radius: 999px; background: var(--navy-2); overflow: hidden; }
+  .code .track i { display: block; height: 100%; border-radius: 999px; }
+  .code .n { width: 74px; text-align: right; font-variant-numeric: tabular-nums; font-size: 11px; }
+  .code .n small { color: var(--muted); font-size: 10px; }
+  /* sparkline block */
+  .lat { padding: 11px 15px 14px; }
+  .lat svg { display: block; width: 100%; }
+  .lat .legend { display: flex; gap: 14px; font-size: 10px; color: var(--muted); margin-top: 6px; }
+  .lat .legend span::before { content: ""; display: inline-block; width: 8px; height: 2px; margin-right: 5px; vertical-align: 3px; }
+  .lat .legend .p50::before { background: var(--teal); }
+  .lat .legend .p95::before { background: var(--amber); }
+  .lat .legend .p99::before { background: var(--red); }
+  .note2 { padding: 11px 15px; font-size: 10.5px; line-height: 1.6; color: var(--muted); border-top: 1px solid var(--line); }
+  .note2 b { color: var(--teal); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>FleetGo <span>Platform</span></b>
+  </div>
+  <span class="pill">Gateway · healthy</span>
+  <nav class="views" aria-label="Platform sections">
+    <a href="#" class="on">Ingest</a>
+    <a href="#">Pipeline</a>
+    <a href="#">Data</a>
+    <a href="#">Workers</a>
+    <a href="#">Logs</a>
+  </nav>
+  <div class="stat">
+    <span>Build <b>v1.4.2</b></span>
+    <span>Schema <b>v1</b></span>
+    <span>Region <b>south-1</b></span>
+  </div>
+</header>
+
+<aside class="sidenav">
+  <div class="grp">Platform</div>
+  <a href="#" class="on">Gateway &amp; ingest</a>
+  <a href="#">Pipeline</a>
+  <a href="#">Partitions</a>
+  <a href="#">Workers <span class="n amber">1</span></a>
+  <a href="#">Assistant</a>
+  <div class="grp">Data</div>
+  <a href="#">Watermarks <span class="n">1</span></a>
+  <a href="#">Rejected <span class="n amber">3</span></a>
+  <a href="#">Dedup</a>
+  <a href="#">Logs &amp; traces</a>
+  <div class="grp">Reference</div>
+  <a href="#">Sender wire</a>
+  <a href="#">Schema &amp; limits</a>
+</aside>
+
+<main>
+  <div class="kpis">
+    <div class="kpi">
+      <div class="k">Requests / s</div>
+      <div class="v">1.2<small>rps</small></div>
+      <div class="sub">28 devices · 1 POST per 10 s</div>
+    </div>
+    <div class="kpi">
+      <div class="k">2xx rate</div>
+      <div class="v good">99.7<small>%</small></div>
+      <div class="sub">1 240 118 batched events</div>
+    </div>
+    <div class="kpi">
+      <div class="k">4xx rate</div>
+      <div class="v warn">0.26<small>%</small></div>
+      <div class="sub">mostly skew + bad mode</div>
+    </div>
+    <div class="kpi">
+      <div class="k">5xx rate</div>
+      <div class="v">0<small>%</small></div>
+      <div class="sub">last 5xx 3 d ago</div>
+    </div>
+    <div class="kpi">
+      <div class="k">p95 latency</div>
+      <div class="v">210<small>ms</small></div>
+      <div class="sub">gateway → 202 ack</div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="card">
+      <h2>Responses by status <span class="hint">gateway decides before the journal</span></h2>
+      <div class="codes">
+        <div class="code">
+          <span class="st" style="color: var(--green)">202</span>
+          <span class="track"><i style="width: 96%; background: var(--green)"></i></span>
+          <span class="n">1 236 902 <small>accepted</small></span>
+        </div>
+        <div class="code">
+          <span class="st" style="color: var(--amber)">422</span>
+          <span class="track"><i style="width: 3%; background: var(--amber)"></i></span>
+          <span class="n">3 109 <small>invalid event</small></span>
+        </div>
+        <div class="code">
+          <span class="st" style="color: var(--amber)">413</span>
+          <span class="track"><i style="width: 1.4%; background: var(--amber)"></i></span>
+          <span class="n">107 <small>batch &gt; 500</small></span>
+        </div>
+        <div class="code">
+          <span class="st" style="color: var(--teal)">429</span>
+          <span class="track"><i style="width: 0.6%; background: var(--teal)"></i></span>
+          <span class="n">51 <small>rate limited</small></span>
+        </div>
+        <div class="code">
+          <span class="st" style="color: var(--red)">401</span>
+          <span class="track"><i style="width: 0.3%; background: var(--red)"></i></span>
+          <span class="n">12 <small>bad device token</small></span>
+        </div>
+        <div class="code">
+          <span class="st" style="color: var(--red)">5xx</span>
+          <span class="track"><i style="width: 0.1%; background: var(--red)"></i></span>
+          <span class="n">0 <small>none today</small></span>
+        </div>
+      </div>
+      <div class="note2">
+        A <b>422</b> is per batch: the whole batch is refused with the first violation, so the
+        device retries byte-identical. A <b>401</b> means the device token does not match the
+        assigned tracker &mdash; it never reaches validation.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Latency <span class="hint">gateway response, 24 h</span></h2>
+      <div class="lat">
+        <svg height="120" viewBox="0 0 400 120" preserveAspectRatio="none">
+          <g stroke="#1b2735" stroke-width="1"><path d="M0 30H400 M0 60H400 M0 90H400"/></g>
+          <polyline points="0,96 30,94 60,97 90,92 120,95 150,90 180,93 210,88 240,91 270,86 300,89 330,84 360,87 400,85" fill="none" stroke="#6faab5" stroke-width="1.6"/>
+          <polyline points="0,62 30,58 60,64 90,55 120,60 150,52 180,57 210,48 240,54 270,44 300,50 330,42 360,47 400,44" fill="none" stroke="#e08a2e" stroke-width="1.8"/>
+          <polyline points="0,30 30,26 60,34 90,22 120,28 150,18 180,26 210,14 240,22 270,10 300,18 330,8 360,14 400,12" fill="none" stroke="#d9604f" stroke-width="1.6" stroke-dasharray="3 3"/>
+        </svg>
+        <div class="legend"><span class="p50">p50 84 ms</span><span class="p95">p95 210 ms</span><span class="p99">p99 640 ms</span></div>
+      </div>
+      <div class="note2">
+        The p99 spike at 11:04 lines up with the clock-skew burst from four devices:
+        validation still answers, but the batch is refused and retried.
+      </div>
+    </div>
+  </div>
+
+  <div class="cols" style="flex: 0 0 250px;">
+    <div class="card">
+      <h2>Devices with gateway errors <span class="hint">last 24 h</span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Device</th><th>Owner unit</th><th>Errors</th><th>Status</th><th>Last</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">truck-088</td><td class="mono">S-88</td><td>2</td><td><span class="tag warn">422 skew</span></td><td class="mono">12:09</td></tr>
+            <tr><td class="mono">van-203</td><td class="mono">S-203</td><td>1</td><td><span class="tag bad">422 lat range</span></td><td class="mono">09:52</td></tr>
+            <tr><td class="mono">truck-141</td><td class="mono">S-141</td><td>12</td><td><span class="tag bad">401 token</span></td><td class="mono">08:15</td></tr>
+            <tr><td class="mono">bus-017</td><td class="mono">S-17</td><td>51</td><td><span class="tag info">429 limited</span></td><td class="mono">07:40</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Schema &amp; limits <span class="hint">what this build accepts</span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Rule</th><th>Value</th><th>Enforced</th></tr></thead>
+          <tbody>
+            <tr><td>Schema version</td><td class="mono">1</td><td><span class="tag ok">strict</span></td></tr>
+            <tr><td>Max batch size</td><td class="mono">500 events</td><td><span class="tag ok">413</span></td></tr>
+            <tr><td>Clock skew tolerance</td><td class="mono">5 min</td><td><span class="tag ok">422</span></td></tr>
+            <tr><td>Device id max</td><td class="mono">64 bytes</td><td><span class="tag ok">422</span></td></tr>
+            <tr><td>Seq range</td><td class="mono">uint63</td><td><span class="tag ok">422</span></td></tr>
+            <tr><td>Modes</td><td class="mono">moving | heartbeat</td><td><span class="tag ok">422</span></td></tr>
+          </tbody>
+        </table>
+        <div class="note2" style="border-top: none;">
+          Every value here comes from the <b>contracts</b> package &mdash; this table is the
+          live build, not a document that drifts.
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

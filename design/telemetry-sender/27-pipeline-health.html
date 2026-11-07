@@ -154,13 +154,15 @@
       <circle cx="24" cy="25" r="6" fill="#fff"/>
       <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
     </svg>
-    <b>FleetGo <span>Ops</span></b>
+    <b>FleetGo <span>Platform</span></b>
   </div>
   <span class="pill">Live · SSE</span>
-  <nav class="views" aria-label="Ops views">
-    <a href="#">Live</a>
+  <nav class="views" aria-label="Platform sections">
+    <a href="#">Ingest</a>
     <a href="#" class="on">Pipeline</a>
-    <a href="#">Alerts</a>
+    <a href="#">Data</a>
+    <a href="#">Workers</a>
+    <a href="#">Logs</a>
   </nav>
   <div class="stat">
     <span>Uptime <b>14 d 6 h</b></span>
@@ -171,16 +173,20 @@
 </header>
 
 <aside class="sidenav">
-  <div class="grp">Pipeline</div>
-  <a href="#" class="on">Overview</a>
-  <a href="#">Ingest</a>
-  <a href="#">Journal</a>
-  <a href="#">Consumers</a>
-  <div class="grp">Data health</div>
+  <div class="grp">Platform</div>
+  <a href="#">Gateway &amp; ingest</a>
+  <a href="#" class="on">Pipeline</a>
+  <a href="#">Partitions</a>
+  <a href="#">Workers <span class="n amber">1</span></a>
+  <a href="#">Assistant</a>
+  <div class="grp">Data</div>
   <a href="#">Watermarks <span class="n">1</span></a>
   <a href="#">Rejected <span class="n amber">3</span></a>
   <a href="#">Dedup</a>
-  <a href="#">Clock skew <span class="n teal">5</span></a>
+  <a href="#">Logs &amp; traces</a>
+  <div class="grp">Reference</div>
+  <a href="#">Sender wire</a>
+  <a href="#">Schema &amp; limits</a>
 </aside>
 
 <main>
