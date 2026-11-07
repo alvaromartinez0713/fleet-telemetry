@@ -1,174 +1,167 @@
 {
   "title": "Telemetry sender app",
-  "brief": "Screens for the app that captures vehicle telemetry (device_id, seq, captured_at, lat/lon, speed_kmh, heading_deg, accuracy_m, mode moving|heartbeat) and sends batches to POST /v1/telemetry in fleet-telemetry. Three directions for the same sender app.",
+  "brief": "Fleet telemetry product family: the FleetGo driver app that captures and sends samples, FleetGo for operations (which unit needs attention), and Fleet Platform for engineering (is the system healthy and why not).",
   "artboards": [
     {
-      "file": "37-platform-logs.html",
-      "title": "Platform — logs & traces",
-      "tradeoff": "Searchable logs by device_id/level with inline trace ids plus a span waterfall for one trace; correlates a held event with its full path",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "36-platform-workers.html",
-      "title": "Platform — workers & assistant",
-      "tradeoff": "Per-worker health (consumer, alerting, assistant), worker log, assistant circuit breaker and tool-call mix; makes a degraded worker visible instead of inferred",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "35-platform-ingest.html",
-      "title": "Platform — gateway & ingest",
-      "tradeoff": "Responses by status (202/422/413/429/401), latency percentiles, devices with gateway errors and the live schema limits table; the first question of any incident",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "30-alert-detail.html",
-      "title": "Ops console — alert detail and workflow",
-      "tradeoff": "Alert instance view: timeline (fired, notified, ack, note), who has it, operator notes thread, and actions (escalate, reassign, resolve, silence, false positive) with the alert context pinned on the map",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "31-command-palette.html",
-      "title": "Ops console — command palette and shortcuts",
-      "tradeoff": "Cmd+K palette over the dimmed console: grouped device / action / navigation results with keyboard hints, plus the shortcuts sheet",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "32-replay.html",
-      "title": "Ops console — 24 h replay",
-      "tradeoff": "Timeline scrubber with playhead, play/pause, speed and alert markers; positions rebuilt from stored samples with seq gaps shown as dashed jumps",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "33-watchlist.html",
-      "title": "Ops console — watchlist (star + manual order)",
-      "tradeoff": "One Watched concept instead of separate star and pin: star is membership (per operator, server-saved), drag order is the pin; the list doubles as map highlight, alert scope and follow group",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "34-follow-mode.html",
-      "title": "Ops console — follow mode",
-      "tradeoff": "Camera lock on a device or the watched group, with pan-pauses-follow plus Resume, trail window, and a stop-follow rule when the device goes stale",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "27-pipeline-health.html",
-      "title": "Platform — pipeline & data health",
-      "tradeoff": "Stage funnel, blocked watermarks, dead-letter, partition lag and a pausable live tail; moved out of the Ops console because it answers engineering questions",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "28-console-states.html",
-      "title": "Ops console — connection and data states",
-      "tradeoff": "State sheet: SSE disconnected banner, per-device data age with thresholds, empty, error and skeleton loading; explicit so the operator never guesses freshness",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "29-alert-rules.html",
-      "title": "Ops console — alert rules and routing",
-      "tradeoff": "Rule list plus detail editor: condition builder, scope, channels, quiet hours, escalation and dedupe semantics; the configuration side of the alerting module",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "26-device-detail.html",
-      "title": "Ops console — device detail drill-down",
-      "tradeoff": "Right rail becomes the unit fiche: live snapshot, signal health (age, gaps, last batch), sample tail and alert history; deep sequence and dedup numbers intentionally left to Platform",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "25-ops-console-v2.html",
-      "title": "Ops console v2 — alerts, assistant and map",
-      "tradeoff": "Dark operations desk: fleet sidebar with status chips, Google-Maps-style dark map with clusters and alert pin, alert rail with actions, and the Fleet Assistant (T6) panel",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "01-ops-console.html",
-      "title": "Ops console (v1)",
-      "tradeoff": "First direction, kept for comparison; lighter, no alerts or assistant",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "03-wire-inspector.html",
-      "title": "Platform — sender wire (device-facing contract)",
-      "tradeoff": "The wire as the device sees it: payload shape, dedup key, skew and held events; one section of the Platform console, not a standalone tool",
-      "width": 1440,
-      "height": 900
-    },
-    {
-      "file": "14-fleet-one.html",
-      "title": "Drive — fleet one system",
-      "tradeoff": "Chosen direction: blue gradient hero shell holding the speed ring, today stats card and delivery timeline",
-      "width": 390,
-      "height": 844
-    },
-    {
-      "file": "15-queue-fleet-one.html",
-      "title": "Queue — fleet one system",
-      "tradeoff": "Fleet One redesign of the batch queue: summary strip, per-batch cards with detail rows and contract note",
-      "width": 390,
-      "height": 844
-    },
-    {
-      "file": "16-sync-fleet-one.html",
-      "title": "Sync — fleet one system",
-      "tradeoff": "Fleet One redesign of sync: green status hero, clock and endpoint cards, primary/secondary actions",
-      "width": 390,
-      "height": 844
-    },
-    {
-      "file": "17-more-fleet-one.html",
-      "title": "More — fleet one system",
-      "tradeoff": "Fleet One redesign of settings: unit card, working System/Light/Dark theme switch, SVG icon rows, scrollable",
-      "width": 390,
-      "height": 844
-    },
-    {
-      "file": "19-move-tracker.html",
-      "title": "Move tracker (reassignment) — fleet one system",
-      "tradeoff": "Reached from More's Move tracker row: warns the current link releases, keeps the device_id, targets a new unit; cancelable",
-      "width": 390,
-      "height": 844
-    },
-    {
       "file": "23-mesh-mark.html",
-      "title": "Mesh mark — chosen brand symbol",
-      "tradeoff": "Refined node mesh: hub + triangle of fleet nodes, accent reporting node; shown at 3 sizes plus lockup",
+      "title": "Brand · node-mesh mark",
+      "tradeoff": "The chosen symbol: hub plus a triangle of fleet nodes with one accent reporting node, shown at three sizes and as a lockup",
       "width": 390,
       "height": 844
     },
     {
       "file": "20-splash.html",
-      "title": "Splash — fleet one system",
-      "tradeoff": "Brand entry: mark, wordmark, config check loader; shown while the app decides first-run vs. resume",
+      "title": "App · Splash",
+      "tradeoff": "Brand entry while the app decides first run vs. resume",
       "width": 390,
       "height": 844
     },
     {
       "file": "21-welcome.html",
-      "title": "Welcome — fleet one system",
-      "tradeoff": "First-run only: three value cards and the Set up my tracker CTA that leads into Add tracker; includes data policy note",
+      "title": "App · Welcome",
+      "tradeoff": "First run only: three value cards and the Set up my tracker CTA that leads into Add tracker",
       "width": 390,
       "height": 844
     },
     {
       "file": "18-device-setup.html",
-      "title": "Add tracker (first-time setup) — fleet one system",
-      "tradeoff": "Modal wizard for initial pairing: type or scan device code, vehicle type, pick unit; no app nav, unit unknown until chosen",
+      "title": "App · Add tracker (first-time setup)",
+      "tradeoff": "Mandatory wizard: type or scan the device code, pick vehicle type and unit; no cancel because the app has no home until assigned",
       "width": 390,
       "height": 844
+    },
+    {
+      "file": "19-move-tracker.html",
+      "title": "App · Move tracker (reassignment)",
+      "tradeoff": "Same wizard reached from More once running: warns that the current link releases and keeps the device_id",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "14-fleet-one.html",
+      "title": "App · Drive",
+      "tradeoff": "Home: speed ring, buffer meter, today stats, shift action and the delivery timeline",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "15-queue-fleet-one.html",
+      "title": "App · Queue",
+      "tradeoff": "Batch lifecycle, search by batch/device/seq and status chips that filter the list in place",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "16-sync-fleet-one.html",
+      "title": "App · Sync",
+      "tradeoff": "Connection, device clock and endpoint state with one-tap fixes",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "17-more-fleet-one.html",
+      "title": "App · More",
+      "tradeoff": "Unit settings, working System/Light/Dark switch, move-tracker entry and diagnostics",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "25-ops-console-v2.html",
+      "title": "FleetGo Ops · Live map",
+      "tradeoff": "Fleet sidebar with status chips, dark map with clusters and alert pin, alert rail and the Fleet Assistant",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "26-device-detail.html",
+      "title": "FleetGo Ops · Device detail",
+      "tradeoff": "The right rail becomes the unit fiche: live snapshot, signal health (age, gaps, last batch), sample tail and alert history",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "33-watchlist.html",
+      "title": "FleetGo Ops · Watchlist",
+      "tradeoff": "Star is membership (per operator), drag order is the pin; the list doubles as map highlight, alert scope and follow group",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "34-follow-mode.html",
+      "title": "FleetGo Ops · Follow mode",
+      "tradeoff": "Camera lock on a device or the watched group, pan pauses follow with Resume, and follow stops after 5 min of stale data",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "32-replay.html",
+      "title": "FleetGo Ops · 24 h replay",
+      "tradeoff": "Timeline scrubber with playhead, speed presets and alert markers; positions rebuilt from stored samples",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "30-alert-detail.html",
+      "title": "FleetGo Ops · Alert detail",
+      "tradeoff": "Incident timeline, ownership, operator notes and the workflow actions for one alert",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "29-alert-rules.html",
+      "title": "FleetGo Ops · Alert rules",
+      "tradeoff": "Rule list and builder, zones, channels, quiet hours, escalation and snooze semantics",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "31-command-palette.html",
+      "title": "FleetGo Ops · Command palette",
+      "tradeoff": "Cmd+K over the console with grouped device, action and navigation results plus the shortcuts sheet",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "28-console-states.html",
+      "title": "FleetGo Ops · States",
+      "tradeoff": "Disconnected banner, data age per device, empty, error and skeleton loading",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "35-platform-ingest.html",
+      "title": "Fleet Platform · Gateway & ingest",
+      "tradeoff": "Responses by status, latency percentiles, devices with gateway errors and the live schema limits table",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "27-pipeline-health.html",
+      "title": "Fleet Platform · Pipeline & data health",
+      "tradeoff": "Stage funnel, blocked watermarks, dead-letter, partition lag and a pausable live tail",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "36-platform-workers.html",
+      "title": "Fleet Platform · Workers & assistant",
+      "tradeoff": "Per-worker health, worker log, assistant circuit breaker and tool-call mix",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "37-platform-logs.html",
+      "title": "Fleet Platform · Logs & traces",
+      "tradeoff": "Searchable logs with inline trace ids and a span waterfall for one trace",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "03-wire-inspector.html",
+      "title": "Fleet Platform · Sender wire",
+      "tradeoff": "The device-facing contract: payload shape, dedup key, skew and held events",
+      "width": 1440,
+      "height": 900
     }
   ]
 }
