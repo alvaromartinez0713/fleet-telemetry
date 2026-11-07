@@ -132,6 +132,24 @@
   .snap .v.warn { color: var(--amber); }
   /* sections */
   .sec { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .body { overflow-y: auto; }
+  /* per-device sample tail */
+  .tailctl { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .btn {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 3px 8px; border-radius: 5px; border: 1px solid var(--line); color: var(--muted); background: var(--navy-2);
+  }
+  .btn.on { background: var(--amber); border-color: var(--amber); color: #16283e; }
+  .btn.follow { margin-left: auto; color: var(--teal); border-color: var(--teal); }
+  .tsample {
+    display: grid; grid-template-columns: 58px 44px 46px 1fr; gap: 6px; align-items: baseline;
+    padding: 4px 0; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 10px;
+  }
+  .tsample:first-of-type { border-top: none; }
+  .tsample .tm { color: var(--muted); }
+  .tsample .sq { color: var(--muted); text-align: right; }
+  .tsample .sp { color: var(--text); text-align: right; }
+  .tsample .vd { text-align: right; }
   .sec h3 {
     font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted);
     font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
@@ -347,6 +365,38 @@
       <div class="kv"><span class="k">Driving time</span><span class="v">5 h 40 m</span></div>
       <div class="kv"><span class="k">Samples sent</span><span class="v">1 240</span></div>
       <div class="kv"><span class="k">Lost</span><span class="v good">0</span></div>
+    </div>
+
+    <div class="sec">
+      <h3>Last samples <span style="font-size: 9px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--teal);">filtered to this device</span></h3>
+      <div class="tailctl">
+        <span class="btn on">&#10074;&#10074; Pause</span>
+        <span class="btn">Rejected</span>
+        <span class="btn follow">following</span>
+      </div>
+      <div class="tsample">
+        <span class="tm">12:04:31</span><span class="sq">18 401</span><span class="sp">67</span>
+        <span class="vd"><span class="tag ok">ok</span></span>
+      </div>
+      <div class="tsample">
+        <span class="tm">12:04:21</span><span class="sq">18 400</span><span class="sp">66</span>
+        <span class="vd"><span class="tag info">dedup</span></span>
+      </div>
+      <div class="tsample">
+        <span class="tm">12:04:11</span><span class="sq">18 399</span><span class="sp">64</span>
+        <span class="vd"><span class="tag ok">ok</span></span>
+      </div>
+      <div class="tsample">
+        <span class="tm">12:04:01</span><span class="sq">18 398</span><span class="sp">61</span>
+        <span class="vd"><span class="tag ok">ok</span></span>
+      </div>
+      <div class="tsample">
+        <span class="tm">11:04:07</span><span class="sq">18 396</span><span class="sp">—</span>
+        <span class="vd"><span class="tag warn">skew</span></span>
+      </div>
+      <div style="font-size: 10px; color: var(--muted); line-height: 1.5; margin-top: 7px;">
+        Seq 18 397 missing: rejected for skew at 11:04 and recovered on resend.
+      </div>
     </div>
 
     <div class="sec">

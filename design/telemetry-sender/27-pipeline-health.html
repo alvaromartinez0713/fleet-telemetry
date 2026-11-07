@@ -64,6 +64,28 @@
   .kpi .sub { font-size: 10px; color: var(--muted); margin-top: 5px; }
 
   .cols { display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px; flex: 1; min-height: 0; }
+  /* live tail */
+  .tailctl { display: flex; align-items: center; gap: 7px; padding: 9px 14px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  .btn {
+    font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); background: var(--navy-2);
+  }
+  .btn.on { background: var(--amber); border-color: var(--amber); color: #16283e; }
+  .follow { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--teal); }
+  .tail { flex: 1; overflow: hidden; font-family: var(--mono); font-size: 10.5px; }
+  .trow2 { display: grid; grid-template-columns: 62px 1fr 54px 74px; gap: 7px; padding: 5px 14px; border-bottom: 1px solid var(--line); align-items: baseline; }
+  .trow2 .tm { color: var(--muted); font-size: 10px; }
+  .trow2 .dv { color: var(--text); }
+  .trow2 .sq { color: var(--muted); text-align: right; font-size: 10px; }
+  .trow2 .vd { text-align: right; }
+  .trow2.rej { background: rgba(217, 96, 79, 0.06); }
+  .trow2.ddp { background: rgba(111, 170, 181, 0.06); }
+  .trow2.paused { background: rgba(224, 138, 46, 0.08); }
+  .tailfoot {
+    padding: 8px 14px; border-top: 1px solid var(--line); background: var(--navy-2);
+    font-size: 10px; color: var(--amber); display: flex; align-items: center; gap: 7px; flex-shrink: 0;
+  }
+  .tailfoot .mono { font-family: var(--mono); }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; }
   .card > h2 {
     font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px;
@@ -242,6 +264,18 @@
           <div class="rt"><div class="r">210 ms</div><div class="l">p95</div></div>
         </div>
       </div>
+          <div style="border-top: 1px solid var(--line); padding: 10px 15px 12px;">
+        <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin-bottom: 7px;">Partition lag</div>
+        <div style="display: flex; gap: 6px; align-items: flex-end; height: 34px;">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;"><i style="height: 8px; border-radius: 3px; background: var(--green); display: block;"></i><span style="font-family: var(--mono); font-size: 8.5px; color: var(--muted);">p0</span></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;"><i style="height: 12px; border-radius: 3px; background: var(--green); display: block;"></i><span style="font-family: var(--mono); font-size: 8.5px; color: var(--muted);">p1</span></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;"><i style="height: 7px; border-radius: 3px; background: var(--green); display: block;"></i><span style="font-family: var(--mono); font-size: 8.5px; color: var(--muted);">p2</span></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;"><i style="height: 34px; border-radius: 3px; background: var(--amber); display: block;"></i><span style="font-family: var(--mono); font-size: 8.5px; color: var(--amber);">p3</span></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;"><i style="height: 10px; border-radius: 3px; background: var(--green); display: block;"></i><span style="font-family: var(--mono); font-size: 8.5px; color: var(--muted);">p4</span></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;"><i style="height: 8px; border-radius: 3px; background: var(--green); display: block;"></i><span style="font-family: var(--mono); font-size: 8.5px; color: var(--muted);">p5</span></div>
+        </div>
+        <div style="font-size: 10px; color: var(--muted); margin-top: 7px; line-height: 1.45;">p3 carries the clock-drift devices &middot; draining since 11:04</div>
+      </div>
     </div>
 
     <div class="card">
@@ -287,18 +321,44 @@
         </div>
       </div>
     </div>
+
     <div class="card">
-      <h2>Partitions <span class="hint">lag per consumer</span></h2>
-      <div class="parts">
-        <div class="part"><span class="nm">p0</span><span class="track"><i style="width:12%"></i></span><span class="lag">0.1 s</span></div>
-        <div class="part"><span class="nm">p1</span><span class="track"><i style="width:18%"></i></span><span class="lag">0.2 s</span></div>
-        <div class="part"><span class="nm">p2</span><span class="track"><i style="width:9%"></i></span><span class="lag">0.1 s</span></div>
-        <div class="part"><span class="nm">p3</span><span class="track"><i class="warn" style="width:64%"></i></span><span class="lag">1.4 s</span></div>
-        <div class="part"><span class="nm">p4</span><span class="track"><i style="width:14%"></i></span><span class="lag">0.2 s</span></div>
-        <div class="part"><span class="nm">p5</span><span class="track"><i style="width:11%"></i></span><span class="lag">0.1 s</span></div>
-        <div style="font-size: 10.5px; color: var(--muted); line-height: 1.55; margin-top: 6px;">
-          p3 carries the devices with clock drift; lag follows the skew spike at 11:04 and is draining.
+      <h2>Live tail <span class="hint">filtered feed &middot; pause to read</span></h2>
+      <div class="tailctl">
+        <span class="btn on">&#10074;&#10074; Pause</span>
+        <span class="btn">All</span>
+        <span class="btn on">Rejected</span>
+        <span class="btn">Dedup</span>
+        <span class="follow">follow: truck-088</span>
+      </div>
+      <div class="tail">
+        <div class="trow2 paused">
+          <span class="tm">12:09:58</span><span class="dv">truck-088</span><span class="sq">7211</span>
+          <span class="vd"><span class="tag warn">held</span></span>
         </div>
+        <div class="trow2 rej">
+          <span class="tm">12:09:58</span><span class="dv">truck-088</span><span class="sq">7210</span>
+          <span class="vd"><span class="tag bad">skew</span></span>
+        </div>
+        <div class="trow2">
+          <span class="tm">12:09:41</span><span class="dv">truck-088</span><span class="sq">7209</span>
+          <span class="vd"><span class="tag ok">ok</span></span>
+        </div>
+        <div class="trow2">
+          <span class="tm">12:04:31</span><span class="dv">truck-042</span><span class="sq">18401</span>
+          <span class="vd"><span class="tag ok">ok</span></span>
+        </div>
+        <div class="trow2 ddp">
+          <span class="tm">12:04:29</span><span class="dv">truck-042</span><span class="sq">18400</span>
+          <span class="vd"><span class="tag info">dedup</span></span>
+        </div>
+        <div class="trow2">
+          <span class="tm">12:04:29</span><span class="dv">van-118</span><span class="sq">5640</span>
+          <span class="vd"><span class="tag ok">ok</span></span>
+        </div>
+      </div>
+      <div class="tailfoot">
+        <span class="mono">&#9208; paused at 12:09:58</span> &middot; 41 new events buffered &middot; same view opens filtered from a device fiche
       </div>
     </div>
   </div>
