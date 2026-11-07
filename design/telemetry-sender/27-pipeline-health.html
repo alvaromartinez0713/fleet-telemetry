@@ -269,21 +269,24 @@
     </div>
   </div>
 
-  <div class="cols" style="flex: 0 0 250px;">
+  <div class="cols" style="flex: 0 0 235px;">
     <div class="card">
-      <h2>Rejected today <span class="hint">3 events &middot; all recoverable</span></h2>
+      <h2>Dead-letter &amp; held <span class="hint">nothing is silently dropped</span></h2>
       <div class="scroll">
         <table>
-          <thead><tr><th>When</th><th>Device</th><th>Seq</th><th>Rule</th><th>State</th><th></th></tr></thead>
+          <thead><tr><th>Event</th><th>Device</th><th>Seq</th><th>Why</th><th>Held since</th><th>Next try</th><th></th></tr></thead>
           <tbody>
-            <tr><td class="mono">12:09</td><td class="mono">truck-088</td><td class="mono">7 211</td><td>captured_at &gt; 5 min skew</td><td><span class="tag warn">held</span></td><td><span class="rowact">Resend</span></td></tr>
-            <tr><td class="mono">11:04</td><td class="mono">truck-042</td><td class="mono">18 396</td><td>captured_at &gt; 5 min skew</td><td><span class="tag ok">recovered</span></td><td></td></tr>
-            <tr><td class="mono">09:52</td><td class="mono">van-203</td><td class="mono">22 912</td><td>lat outside [-90, 90]</td><td><span class="tag ok">dropped</span></td><td></td></tr>
+            <tr><td class="mono">e_9f12</td><td class="mono">truck-088</td><td class="mono">7 211</td><td><span class="tag warn">skew &gt; 5 min</span></td><td class="mono">12:09</td><td class="mono">on clock sync</td><td><span class="rowact">Resend</span></td></tr>
+            <tr><td class="mono">e_9f08</td><td class="mono">van-203</td><td class="mono">22 912</td><td><span class="tag bad">lat out of range</span></td><td class="mono">09:52</td><td>— <span style="color: var(--muted)">dropped</span></td><td></td></tr>
           </tbody>
         </table>
+        <div style="padding: 12px 15px; font-size: 10.5px; line-height: 1.6; color: var(--muted);">
+          Held events keep their original <b style="color: var(--teal)">seq</b> and
+          <b style="color: var(--teal)">captured_at</b> — resending is byte-identical, so dedup stays stable.
+          Dropped events failed validation permanently and never reach the journal.
+        </div>
       </div>
     </div>
-
     <div class="card">
       <h2>Partitions <span class="hint">lag per consumer</span></h2>
       <div class="parts">

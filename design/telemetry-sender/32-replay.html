@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Ops Console · Replay</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
+    --text: #e9edf2; --muted: #9aa8b8;
+    --navy: #16283e; --navy-2: #0a111b;
+    --amber: #e08a2e; --amber-soft: rgba(224, 138, 46, 0.14);
+    --teal: #6faab5; --teal-soft: rgba(111, 170, 181, 0.13);
+    --green: #58b47c; --green-soft: rgba(88, 180, 124, 0.13);
+    --red: #d9604f; --red-soft: rgba(217, 96, 79, 0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 280px 1fr 400px; grid-template-rows: 52px 1fr 128px;
+    grid-template-areas: "top top top" "fleet map rail" "timeline timeline timeline";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 14px;
+    padding: 0 18px; background: var(--navy-2); border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--amber); }
+  .mode {
+    font-size: 11px; font-weight: 800; padding: 4px 11px; border-radius: 999px;
+    background: var(--amber-soft); color: var(--amber); display: flex; align-items: center; gap: 6px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .mode::before { content: "&#9654;"; font-size: 8px; }
+  header .views { display: flex; gap: 2px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  header .views a { font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 5px 11px; border-radius: 7px; }
+  header .views a.on { background: var(--panel-2); color: var(--text); }
+  header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 16px; }
+  header .stat b { color: var(--text); font-weight: 700; }
+  header .stat b.mono { font-family: var(--mono); }
+
+  aside.fleet { grid-area: fleet; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  aside.fleet h2 { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 13px 14px 7px; font-weight: 800; }
+  .device { padding: 9px 14px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; row-gap: 2px; }
+  .device.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); padding-left: 11px; }
+  .device .id { font-size: 12px; font-weight: 700; font-family: var(--mono); }
+  .device .spd { font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums; }
+  .device .meta { grid-column: 1 / -1; font-size: 10px; color: var(--muted); }
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; background: var(--line); }
+  .dot.hot { background: var(--amber); }
+
+  main { grid-area: map; position: relative; background: #0a1017; }
+  main svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .attribution { position: absolute; bottom: 8px; right: 10px; font-size: 9px; color: rgba(255,255,255,0.5); }
+  .replaycard {
+    position: absolute; left: 14px; top: 14px; z-index: 5;
+    background: rgba(16,26,41,0.96); border: 1px solid var(--amber); border-radius: 12px;
+    padding: 11px 13px; font-size: 11.5px; line-height: 1.55;
+  }
+  .replaycard .t { font-weight: 800; font-size: 12px; margin-bottom: 3px; }
+  .replaycard b { color: var(--amber); font-family: var(--mono); }
+  .replaycard .s { color: var(--muted); }
+
+  aside.rail { grid-area: rail; background: var(--panel); border-left: 1px solid var(--line); overflow: hidden; display: flex; flex-direction: column; }
+  aside.rail h2 {
+    font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted);
+    padding: 13px 16px 8px; font-weight: 800; display: flex; justify-content: space-between;
+  }
+  aside.rail h2 .at { font-family: var(--mono); text-transform: none; letter-spacing: 0; color: var(--amber); font-size: 10px; }
+  .ev { padding: 9px 16px; border-top: 1px solid var(--line); display: flex; gap: 10px; font-size: 11.5px; }
+  .ev .t { font-family: var(--mono); font-size: 10px; color: var(--muted); width: 46px; flex-shrink: 0; padding-top: 1px; }
+  .ev .w { font-weight: 700; }
+  .ev .d { font-size: 10.5px; color: var(--muted); margin-top: 2px; line-height: 1.45; }
+  .ev.past { opacity: 0.45; }
+  .ev.now { background: var(--amber-soft); box-shadow: inset 3px 0 0 var(--amber); }
+  .sev { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; }
+  .sev.crit { background: var(--red-soft); color: var(--red); }
+  .sev.warn { background: var(--amber-soft); color: var(--amber); }
+  .sev.info { background: var(--teal-soft); color: var(--teal); }
+  .sev.ok { background: var(--green-soft); color: var(--green); }
+
+  /* timeline bar */
+  section.timeline {
+    grid-area: timeline; background: var(--panel); border-top: 1px solid var(--line);
+    padding: 12px 18px; display: flex; flex-direction: column; gap: 9px;
+  }
+  .trow { display: flex; align-items: center; gap: 12px; }
+  .play {
+    width: 34px; height: 34px; border-radius: 50%; background: var(--amber); color: #16283e;
+    display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
+  }
+  .clock { font-family: var(--mono); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .clock small { display: block; font-size: 9.5px; color: var(--muted); font-weight: 600; letter-spacing: 0.5px; }
+  .speed { display: flex; gap: 4px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+  .speed span { font-size: 10.5px; font-weight: 750; padding: 4px 8px; border-radius: 6px; color: var(--muted); }
+  .speed span.on { background: var(--panel-2); color: var(--text); }
+  .live {
+    margin-left: auto; font-size: 11px; font-weight: 800; padding: 7px 13px; border-radius: 9px;
+    background: var(--green-soft); color: var(--green); border: 1px solid var(--green);
+  }
+  /* the track */
+  .track { position: relative; height: 40px; margin: 0 4px; }
+  .track .rail-line {
+    position: absolute; left: 0; right: 0; top: 20px; height: 6px; border-radius: 999px;
+    background: var(--navy-2); border: 1px solid var(--line);
+  }
+  .track .played { position: absolute; left: 0; width: 58%; top: 20px; height: 6px; border-radius: 999px; background: var(--amber); }
+  .track .cursor {
+    position: absolute; left: 58%; top: 10px; width: 3px; height: 26px; background: var(--text);
+    border-radius: 2px; box-shadow: 0 0 0 3px rgba(233, 237, 242, 0.15);
+  }
+  .marker {
+    position: absolute; top: 13px; width: 2px; height: 20px; border-radius: 2px;
+  }
+  .marker.crit { background: var(--red); }
+  .marker.warn { background: var(--amber); }
+  .marker.info { background: var(--teal); }
+  .marker .tip {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px;
+    font-size: 9.5px; padding: 2px 6px; white-space: nowrap; color: var(--text); font-family: var(--mono);
+  }
+  .ticks { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 9.5px; color: var(--muted); padding: 0 4px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+  </div>
+  <b>FleetGo <span>Ops</span></b>
+  <span class="mode">Replay</span>
+  <nav class="views" aria-label="Ops views">
+    <a href="#" class="on">Live</a>
+    <a href="#">Pipeline</a>
+    <a href="#">Alerts</a>
+  </nav>
+  <div class="stat">
+    <span>Reading <b class="mono">2026-02-17 11:47:12</b></span>
+    <span>Scope <b>4 devices</b></span>
+  </div>
+</header>
+
+<aside class="fleet">
+  <h2>Replaying</h2>
+  <div class="device sel">
+    <span class="id"><span class="dot hot"></span>truck-088</span><span class="spd">0 km/h</span>
+    <span class="meta">S-88 &middot; stopped since 11:38</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot"></span>truck-042</span><span class="spd">64 km/h</span>
+    <span class="meta">S-42 &middot; Ruta 3</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot"></span>bus-017</span><span class="spd">28 km/h</span>
+    <span class="meta">S-17 &middot; corridor</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot"></span>van-118</span><span class="spd">0 km/h</span>
+    <span class="meta">S-118 &middot; parked</span>
+  </div>
+  <h2>Recorded</h2>
+  <div class="device">
+    <span class="id">window</span><span class="spd">24 h</span>
+    <span class="meta">1.07 M samples &middot; 0 gaps &middot; 6 dedup replays</span>
+  </div>
+</aside>
+
+<main>
+  <svg viewBox="0 0 760 720" aria-hidden="true">
+    <rect width="760" height="720" fill="#0a1017"/>
+    <g stroke="#141d29" stroke-width="1">
+      <path d="M90 0V720 M220 0V720 M370 0V720 M540 0V720 M690 0V720"/>
+      <path d="M0 90H760 M0 210H760 M0 350H760 M0 500H760 M0 650H760"/>
+    </g>
+    <g stroke="#1b2735" stroke-width="4">
+      <path d="M300 0 C 340 240 280 440 380 720" fill="none"/>
+      <path d="M0 580 H760" fill="none"/>
+    </g>
+    <rect x="60" y="330" width="180" height="140" rx="10" fill="#1a1420" stroke="#3a2430"/>
+    <text x="150" y="404" text-anchor="middle" font-family="system-ui" font-size="10" fill="#d9604f" font-weight="700">CRITICAL ZONE</text>
+    <!-- traced path of truck-088 across the replay window -->
+    <polyline points="470,180 430,240 400,300 360,340 300,370 230,382 170,392"
+      fill="none" stroke="#e08a2e" stroke-width="3" stroke-linecap="round" stroke-dasharray="4 6"/>
+    <circle cx="170" cy="392" r="9" fill="#d9604f"/>
+    <circle cx="170" cy="392" r="3.5" fill="#fff"/>
+    <text x="186" y="388" font-family="system-ui" font-size="11" font-weight="800" fill="#f2a49a">11:47 &middot; stopped</text>
+    <!-- other devices at that instant -->
+    <g transform="translate(470,470)"><circle r="8" fill="#58b47c"/><circle r="3" fill="#0a111b"/></g>
+    <text x="484" y="474" font-family="system-ui" font-size="10" fill="#9aa8b8">truck-042</text>
+    <g transform="translate(600,240)"><circle r="8" fill="#58b47c"/><circle r="3" fill="#0a111b"/></g>
+    <text x="614" y="244" font-family="system-ui" font-size="10" fill="#9aa8b8">bus-017</text>
+    <g transform="translate(660,560)"><circle r="7" fill="#e08a2e"/><circle r="2.5" fill="#16283e"/></g>
+    <text x="674" y="564" font-family="system-ui" font-size="10" fill="#9aa8b8">van-118</text>
+    <text x="150" y="330" text-anchor="middle" font-family="system-ui" font-size="9.5" fill="#9aa8b8">Zona Norte</text>
+  </svg>
+  <div class="replaycard">
+    <div class="t">Replaying 11:40 &rarr; 11:47</div>
+    <div class="s">Positions reconstructed from stored samples &mdash; not a live stream.
+      Seq gaps render as a dashed jump, so a hole in the data is visible.</div>
+  </div>
+  <span class="attribution">Map data &copy; Google &middot; dark style</span>
+</main>
+
+<aside class="rail">
+  <h2>Events in window <span class="at">11:40&ndash;11:47</span></h2>
+  <div class="ev past">
+    <span class="t">11:38</span>
+    <div><div class="w"><span class="sev info">Mode</span> last movement</div><div class="d">mode moving &rarr; stopped at north gate</div></div>
+  </div>
+  <div class="ev past">
+    <span class="t">11:40</span>
+    <div><div class="w"><span class="sev crit">Alert</span> stopped in zone</div><div class="d">rule fired &middot; 20 min threshold</div></div>
+  </div>
+  <div class="ev past">
+    <span class="t">11:44</span>
+    <div><div class="w"><span class="sev ok">Ack</span> M. Rivas</div><div class="d">escalation cancelled</div></div>
+  </div>
+  <div class="ev past">
+    <span class="t">11:45</span>
+    <div><div class="w"><span class="sev info">Note</span> &ldquo;loading at the north gate&rdquo;</div><div class="d">operator comment on the alert</div></div>
+  </div>
+  <div class="ev past">
+    <span class="t">11:46</span>
+    <div><div class="w"><span class="sev warn">Clock</span> 1 event rejected</div><div class="d">captured_at beyond 5 min &middot; held</div></div>
+  </div>
+  <div class="ev now">
+    <span class="t">11:47</span>
+    <div><div class="w">Playhead</div><div class="d">reading position at this moment</div></div>
+  </div>
+</aside>
+
+<section class="timeline">
+  <div class="trow">
+    <span class="play">&#10074;&#10074;</span>
+    <span class="clock">11:47:12<small>2026-02-17 &middot; local</small></span>
+    <span class="speed">
+      <span>1&times;</span><span class="on">4&times;</span><span>16&times;</span><span>60&times;</span>
+    </span>
+    <span style="font-size: 11px; color: var(--muted); margin-left: 6px;">Jump to</span>
+    <span class="speed"><span>Alert</span><span>Shift start</span><span class="on">Now</span></span>
+    <span class="live">&#9679; Back to live</span>
+  </div>
+  <div class="track">
+    <div class="rail-line"></div>
+    <div class="played"></div>
+    <div class="marker crit" style="left: 18%;"><span class="tip">11:40 alert</span></div>
+    <div class="marker info" style="left: 33%;"><span class="tip">11:44 ack</span></div>
+    <div class="marker warn" style="left: 47%;"></div>
+    <div class="marker crit" style="left: 72%;"></div>
+    <div class="marker info" style="left: 88%;"></div>
+    <div class="cursor"></div>
+  </div>
+  <div class="ticks">
+    <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>24:00</span>
+  </div>
+</section>
+</body>
+</html>

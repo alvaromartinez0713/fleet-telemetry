@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Ops Console · Alert detail</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
+    --text: #e9edf2; --muted: #9aa8b8;
+    --navy: #16283e; --navy-2: #0a111b;
+    --amber: #e08a2e; --amber-soft: rgba(224, 138, 46, 0.14);
+    --teal: #6faab5; --teal-soft: rgba(111, 170, 181, 0.13);
+    --green: #58b47c; --green-soft: rgba(88, 180, 124, 0.13);
+    --red: #d9604f; --red-soft: rgba(217, 96, 79, 0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 280px 1fr 430px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top top" "fleet main detail";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 14px;
+    padding: 0 18px; background: var(--navy-2); border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--amber); }
+  header .pill {
+    font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px;
+    background: var(--green-soft); color: var(--green); display: flex; align-items: center; gap: 6px;
+  }
+  header .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  header .views { display: flex; gap: 2px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  header .views a { font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 5px 11px; border-radius: 7px; }
+  header .views a.on { background: var(--panel-2); color: var(--text); }
+  header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 16px; }
+  header .stat b { color: var(--text); font-weight: 700; }
+
+  aside.fleet { grid-area: fleet; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  aside.fleet h2 { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 13px 14px 7px; font-weight: 800; }
+  .al { padding: 11px 14px; border-top: 1px solid var(--line); cursor: pointer; }
+  .al.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--red); padding-left: 11px; }
+  .al .r1 { display: flex; align-items: center; gap: 7px; }
+  .al .sev { font-size: 8.5px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+  .al .sev.crit { background: var(--red); color: #fff; }
+  .al .sev.warn { background: var(--amber); color: #16283e; }
+  .al .sev.info { background: var(--teal-soft); color: var(--teal); }
+  .al .ttl { font-size: 12px; font-weight: 700; }
+  .al .meta { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+  .al .state { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 5px; display: inline-block; padding: 2px 6px; border-radius: 4px; }
+  .al .state.open { background: var(--red-soft); color: var(--red); }
+  .al .state.ack { background: var(--amber-soft); color: var(--amber); }
+  .al .state.res { background: var(--green-soft); color: var(--green); }
+
+  main { grid-area: main; position: relative; display: flex; flex-direction: column; overflow: hidden; }
+  .mapwrap { flex: 1; position: relative; background: #0a1017; }
+  .mapwrap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .mapwrap .attribution { position: absolute; bottom: 6px; right: 8px; font-size: 9px; color: rgba(255,255,255,0.5); }
+  /* alert context on map */
+  .ctx {
+    position: absolute; left: 14px; top: 14px; z-index: 5;
+    background: rgba(16,26,41,0.96); border: 1px solid var(--red); border-radius: 12px;
+    padding: 11px 13px; max-width: 330px;
+  }
+  .ctx .t { font-size: 12.5px; font-weight: 750; }
+  .ctx .s { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+  .ctx .s b { color: var(--red); }
+
+  aside.detail { grid-area: detail; background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .dhead { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .dhead .r1 { display: flex; align-items: center; gap: 8px; }
+  .dhead .sev { font-size: 9px; font-weight: 800; letter-spacing: 0.7px; text-transform: uppercase; padding: 3px 8px; border-radius: 5px; background: var(--red); color: #fff; }
+  .dhead .nm { font-size: 14px; font-weight: 800; }
+  .dhead .close { margin-left: auto; color: var(--muted); font-size: 13px; }
+  .dhead .r2 { font-size: 11px; color: var(--muted); margin-top: 5px; }
+  .dhead .r2 b { color: var(--text); }
+  .chips { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+  .chip { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: var(--navy-2); border: 1px solid var(--line); color: var(--muted); }
+  .chip.on { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
+
+  .body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  .sec { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .sec h3 { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 9px; }
+  /* timeline of the alert */
+  .tl { position: relative; padding-left: 20px; }
+  .tl::before { content: ""; position: absolute; left: 5px; top: 4px; bottom: 6px; width: 2px; background: var(--line); }
+  .ev { position: relative; padding: 5px 0 9px; }
+  .ev .node {
+    position: absolute; left: -19px; top: 6px; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--panel); border: 2px solid var(--line);
+  }
+  .ev.fired .node { border-color: var(--red); background: var(--red); }
+  .ev.notified .node { border-color: var(--amber); }
+  .ev.ack .node { border-color: var(--green); background: var(--green); }
+  .ev .when { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .ev .what { font-size: 11.5px; font-weight: 700; margin-top: 1px; }
+  .ev .det { font-size: 10.5px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+
+  /* notes */
+  .notes { display: flex; flex-direction: column; gap: 8px; }
+  .note { background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; }
+  .note .who { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--teal); }
+  .note .txt { font-size: 11.5px; line-height: 1.55; margin-top: 3px; }
+  .note .when { font-family: var(--mono); font-size: 9.5px; color: var(--muted); margin-top: 4px; }
+  .noteinput {
+    display: flex; align-items: center; gap: 8px; background: var(--navy-2);
+    border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 11.5px; color: var(--muted);
+  }
+  .noteinput .send { margin-left: auto; font-size: 10px; font-weight: 800; color: var(--amber); }
+
+  /* who is on it */
+  .kv { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; font-size: 11.5px; }
+  .kv .k { color: var(--muted); }
+  .kv .v { font-weight: 700; }
+  .kv .v.mono { font-family: var(--mono); font-size: 11px; }
+
+  .acts { margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--navy-2); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex-shrink: 0; }
+  .acts .a { text-align: center; font-size: 11.5px; font-weight: 750; padding: 9px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); }
+  .acts .a.pri { background: var(--amber); border-color: var(--amber); color: #16283e; }
+  .acts .a.good { background: var(--green); border-color: var(--green); color: #06100a; }
+  .acts .a.wide { grid-column: 1 / -1; }
+  .acts .a.quiet { color: var(--muted); font-weight: 650; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+  </div>
+  <b>FleetGo <span>Ops</span></b>
+  <span class="pill">Live · SSE</span>
+  <nav class="views" aria-label="Ops views">
+    <a href="#">Live</a>
+    <a href="#">Pipeline</a>
+    <a href="#" class="on">Alerts</a>
+  </nav>
+  <div class="stat">
+    <span>Open <b>1</b></span>
+    <span>Acknowledged <b>1</b></span>
+    <span>On call <b>M. Rivas</b></span>
+  </div>
+</header>
+
+<aside class="fleet">
+  <h2>Alerts</h2>
+  <div class="al sel">
+    <div class="r1"><span class="sev crit">Critical</span><span class="ttl">Stopped in zone</span></div>
+    <div class="meta">truck-088 &middot; S-88 &middot; 24 min</div>
+    <span class="state ack">Acknowledged</span>
+  </div>
+  <div class="al">
+    <div class="r1"><span class="sev crit">Critical</span><span class="ttl">Silence too long</span></div>
+    <div class="meta">van-203 &middot; S-203 &middot; 2 h 15 m</div>
+    <span class="state open">Open</span>
+  </div>
+  <div class="al">
+    <div class="r1"><span class="sev warn">Warning</span><span class="ttl">Clock skew rejected</span></div>
+    <div class="meta">truck-042 &middot; S-42 &middot; 5 events</div>
+    <span class="state ack">Acknowledged</span>
+  </div>
+  <div class="al">
+    <div class="r1"><span class="sev info">Info</span><span class="ttl">Route deviation</span></div>
+    <div class="meta">bus-017 &middot; S-17 &middot; resolved 11:52</div>
+    <span class="state res">Resolved</span>
+  </div>
+  <h2>Resolved today</h2>
+  <div class="al">
+    <div class="r1"><span class="sev warn">Warning</span><span class="ttl">Watermark blocked</span></div>
+    <div class="meta">truck-088 &middot; cleared 09:12</div>
+    <span class="state res">Resolved</span>
+  </div>
+</aside>
+
+<main>
+  <div class="mapwrap">
+    <svg viewBox="0 0 700 848" aria-hidden="true">
+      <rect width="700" height="848" fill="#0a1017"/>
+      <g stroke="#141d29" stroke-width="1">
+        <path d="M80 0V848 M210 0V848 M360 0V848 M520 0V848 M650 0V848"/>
+        <path d="M0 90H700 M0 210H700 M0 350H700 M0 500H700 M0 650H700 M0 780H700"/>
+      </g>
+      <g stroke="#1b2735" stroke-width="4">
+        <path d="M280 0 C 320 280 260 520 360 848" fill="none"/>
+        <path d="M0 680 H700" fill="none"/>
+      </g>
+      <rect x="420" y="120" width="180" height="150" rx="10" fill="#0e1a20"/>
+      <rect x="60" y="380" width="180" height="150" rx="10" fill="#1a1420" stroke="#3a2430"/>
+      <text x="150" y="460" text-anchor="middle" font-family="system-ui" font-size="10" fill="#d9604f" font-weight="700">CRITICAL ZONE</text>
+      <text x="150" y="476" text-anchor="middle" font-family="system-ui" font-size="9" fill="#9aa8b8">Zona Norte</text>
+      <!-- the stopped vehicle -->
+      <g transform="translate(150,420)">
+        <circle r="26" fill="rgba(217,96,79,0.18)"/>
+        <circle r="13" fill="#d9604f"/>
+        <circle r="5" fill="#fff"/>
+      </g>
+      <text x="150" y="356" text-anchor="middle" font-family="system-ui" font-size="11.5" font-weight="800" fill="#f2a49a">truck-088 &middot; 0 km/h</text>
+      <text x="150" y="372" text-anchor="middle" font-family="system-ui" font-size="10" fill="#9aa8b8">stopped 24 min</text>
+      <!-- route it should follow -->
+      <polyline points="430,200 380,300 330,420 300,560 330,700" fill="none" stroke="#e08a2e" stroke-width="2.5" stroke-dasharray="3 8" opacity="0.6"/>
+      <text x="345" y="300" font-family="system-ui" font-size="9.5" fill="#9aa8b8" transform="rotate(-60 345 300)">route Ruta 3</text>
+    </svg>
+    <div class="ctx">
+      <div class="t">Alert context</div>
+      <div class="s">Tracker reported <b>mode = moving</b> until 11:38, then no movement for
+        <b>24 minutes</b> inside Zona Norte. Last position accuracy 3.8 m.</div>
+    </div>
+    <span class="attribution">Map data &copy; Google &middot; dark style</span>
+  </div>
+</main>
+
+<aside class="detail">
+  <div class="dhead">
+    <div class="r1">
+      <span class="sev">Critical</span>
+      <span class="nm">Stopped in critical zone</span>
+      <span class="close">&#10005;</span>
+    </div>
+    <div class="r2"><b>truck-088</b> &middot; S-88 &middot; AB 555 FG &middot; rule <b>Stopped in critical zone</b> &middot; fired 11:40</div>
+    <div class="chips">
+      <span class="chip on">Acknowledged</span>
+      <span class="chip">Assigned: M. Rivas</span>
+      <span class="chip">1 note</span>
+      <span class="chip">Not silenced</span>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="sec">
+      <h3>Alert timeline</h3>
+      <div class="tl">
+        <div class="ev fired">
+          <span class="node"></span>
+          <div class="when">11:40:12</div>
+          <div class="what">Rule fired</div>
+          <div class="det">stopped &gt; 20 min inside Zona Norte (critical)</div>
+        </div>
+        <div class="ev notified">
+          <span class="node"></span>
+          <div class="when">11:40:14</div>
+          <div class="what">Notified &middot; email + push</div>
+          <div class="det">ops@logistica-sur.com &middot; 4 dispatchers</div>
+        </div>
+        <div class="ev ack">
+          <span class="node"></span>
+          <div class="when">11:44:02</div>
+          <div class="what">Acknowledged by M. Rivas</div>
+          <div class="det">escalation cancelled &middot; 1 min before SMS</div>
+        </div>
+        <div class="ev">
+          <span class="node"></span>
+          <div class="when">11:45:30</div>
+          <div class="what">Note added</div>
+          <div class="det">&ldquo;Called the driver — loading at the north gate.&rdquo;</div>
+        </div>
+        <div class="ev">
+          <span class="node"></span>
+          <div class="when">&#8212;</div>
+          <div class="what" style="color: var(--muted)">Still open &middot; 24 min</div>
+          <div class="det">auto-resolves when the device reports mode = moving</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>Who has it</h3>
+      <div class="kv"><span class="k">Assigned to</span><span class="v">M. Rivas (dispatch)</span></div>
+      <div class="kv"><span class="k">Acknowledged</span><span class="v mono">11:44:02</span></div>
+      <div class="kv"><span class="k">Escalates at</span><span class="v mono">11:45:12 &middot; cancelled</span></div>
+      <div class="kv"><span class="k">Silenced</span><span class="v">no</span></div>
+      <div class="kv"><span class="k">Rule fired 24 h</span><span class="v">3 &middot; same device 1</span></div>
+    </div>
+
+    <div class="sec">
+      <h3>Operator notes</h3>
+      <div class="notes">
+        <div class="note">
+          <div class="who">M. Rivas</div>
+          <div class="txt">Called the driver — loading at the north gate, will move in ~10 min.
+            Not an incident.</div>
+          <div class="when">11:45:30</div>
+        </div>
+        <div class="noteinput">
+          Add a note for the next shift…
+          <span class="send">POST</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="acts">
+      <span class="a pri">Escalate</span>
+      <span class="a">Reassign</span>
+      <span class="a good">Resolve now</span>
+      <span class="a">Silence 1 h</span>
+      <span class="a wide quiet">Open device truck-088 in Live &#8250;</span>
+      <span class="a wide quiet">Mark as false positive</span>
+    </div>
+  </div>
+</aside>
+</body>
+</html>
