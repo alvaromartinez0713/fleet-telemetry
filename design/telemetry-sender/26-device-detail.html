@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Ops Console · Device detail</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
+    --text: #e9edf2; --muted: #9aa8b8;
+    --navy: #16283e; --navy-2: #0a111b;
+    --amber: #e08a2e; --amber-soft: rgba(224, 138, 46, 0.14);
+    --teal: #6faab5; --teal-soft: rgba(111, 170, 181, 0.13);
+    --green: #58b47c; --green-soft: rgba(88, 180, 124, 0.13);
+    --red: #d9604f; --red-soft: rgba(217, 96, 79, 0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 280px 1fr 400px;
+    grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top top" "fleet map right";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 14px;
+    padding: 0 18px; background: var(--navy-2); border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--amber); }
+  header .pill {
+    font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px;
+    background: var(--green-soft); color: var(--green); display: flex; align-items: center; gap: 6px;
+  }
+  header .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  header .views { display: flex; gap: 2px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  header .views a {
+    font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted);
+    padding: 5px 11px; border-radius: 7px;
+  }
+  header .views a.on { background: var(--panel-2); color: var(--text); }
+  header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 16px; }
+  header .stat b { color: var(--text); font-weight: 700; }
+
+  aside.fleet { grid-area: fleet; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  aside.fleet .bar { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  aside.fleet .search {
+    display: flex; align-items: center; gap: 8px; background: var(--navy-2);
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 11px;
+    font-size: 12px; color: var(--muted);
+  }
+  aside.fleet .chips { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .chip {
+    font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+    background: var(--navy-2); border: 1px solid var(--line); color: var(--muted); cursor: pointer;
+  }
+  .chip.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .chip.r.on { background: var(--red); border-color: var(--red); color: #fff; }
+  aside.fleet h2 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 12px 14px 6px; font-weight: 750; }
+  .device { padding: 10px 14px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; row-gap: 3px; }
+  .device.sel { background: var(--panel-2); border-left: 3px solid var(--amber); padding-left: 11px; }
+  .device .id { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .device .meta { font-size: 10.5px; color: var(--muted); grid-column: 1 / -1; }
+  .device .spd { font-size: 12.5px; font-weight: 750; font-variant-numeric: tabular-nums; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .dot.mv { background: var(--green); }
+  .dot.hb { background: var(--amber); }
+  .dot.st { background: var(--red); }
+  .dot.al { background: var(--red); box-shadow: 0 0 0 3px var(--red-soft); }
+
+  main.map { grid-area: map; position: relative; background: #0a1017; display: flex; flex-direction: column; }
+  .gmap { flex: 1; position: relative; overflow: hidden; }
+  .gmap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .gmap .attribution { position: absolute; bottom: 6px; right: 8px; font-size: 9px; color: rgba(255, 255, 255, 0.5); }
+  .gmap .controls { position: absolute; right: 12px; top: 14px; display: flex; flex-direction: column; gap: 6px; z-index: 5; }
+  .gmap .controls span {
+    width: 34px; height: 34px; border-radius: 9px; background: rgba(255, 255, 255, 0.92); color: #333;
+    display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  .gmap .layers { position: absolute; bottom: 14px; left: 14px; z-index: 5; display: flex; gap: 8px; }
+  /* selected-device map card */
+  .mapcard {
+    position: absolute; left: 14px; top: 14px; z-index: 6;
+    background: rgba(16, 26, 41, 0.96); border: 1px solid var(--line); border-radius: 14px;
+    padding: 11px 13px; display: flex; align-items: center; gap: 11px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+  .mapcard .av {
+    width: 34px; height: 34px; border-radius: 10px; background: var(--amber);
+    display: flex; align-items: center; justify-content: center; font-size: 15px; color: #16283e; flex-shrink: 0;
+  }
+  .mapcard .t { font-size: 12.5px; font-weight: 750; }
+  .mapcard .s { font-size: 10.5px; color: var(--muted); margin-top: 1px; }
+  .mapcard .follow {
+    margin-left: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    background: var(--amber-soft); color: var(--amber); border: 1px solid var(--amber);
+    padding: 3px 8px; border-radius: 6px;
+  }
+
+  section.rail { grid-area: right; background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  /* rail tabs */
+  .tabs { display: flex; background: var(--navy-2); border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  .tab {
+    flex: 1; text-align: center; padding: 10px 4px; font-size: 10.5px; font-weight: 750;
+    text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .tab.on { color: var(--text); border-bottom-color: var(--amber); }
+  .tab .cnt { background: var(--red); color: #fff; font-size: 9px; padding: 1px 6px; border-radius: 999px; margin-left: 4px; }
+  .rail .body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  /* device fiche header */
+  .fichead { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .fichead .r1 { display: flex; align-items: center; gap: 8px; }
+  .fichead .dev { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.2px; }
+  .fichead .badge {
+    font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px;
+    padding: 3px 8px; border-radius: 6px; background: var(--green-soft); color: var(--green);
+  }
+  .fichead .badge.amber { background: var(--amber-soft); color: var(--amber); }
+  .fichead .close { margin-left: auto; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .fichead .r2 { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+  /* snapshot grid */
+  .snap { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); }
+  .snap .c { background: var(--panel); padding: 12px 16px; }
+  .snap .v { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
+  .snap .v small { font-size: 10.5px; color: var(--muted); font-weight: 650; margin-left: 3px; }
+  .snap .k { font-size: 9.5px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-top: 2px; }
+  .snap .v.good { color: var(--green); }
+  .snap .v.warn { color: var(--amber); }
+  /* sections */
+  .sec { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .sec h3 {
+    font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted);
+    font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+  }
+  .sec h3 .why { font-size: 9px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--teal); }
+  .kv { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; font-size: 12px; }
+  .kv .k { color: var(--muted); }
+  .kv .v { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kv .v.mono { font-family: var(--mono); font-size: 11.5px; font-weight: 600; }
+  .kv .v.good { color: var(--green); }
+  .kv .v.warn { color: var(--amber); }
+  .kv .v.info { color: var(--teal); }
+  /* integrity note */
+  .integrity {
+    margin-top: 8px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 11px; font-size: 10.5px; line-height: 1.5; color: var(--muted);
+  }
+  .integrity b { color: var(--teal); }
+  /* history rows */
+  .hist { display: flex; gap: 9px; padding: 7px 0; font-size: 11.5px; border-top: 1px solid var(--line); }
+  .hist:first-of-type { border-top: none; padding-top: 0; }
+  .hist .when { font-family: var(--mono); font-size: 10px; color: var(--muted); width: 62px; flex-shrink: 0; padding-top: 1px; }
+  .hist .what b { font-weight: 700; }
+  .hist .what small { display: block; color: var(--muted); font-size: 10px; margin-top: 1px; }
+  .hist .st { margin-left: auto; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 5px; height: fit-content; flex-shrink: 0; }
+  .hist .st.ok { background: var(--green-soft); color: var(--green); }
+  .hist .st.warn { background: var(--amber-soft); color: var(--amber); }
+  .hist .st.info { background: var(--teal-soft); color: var(--teal); }
+  /* actions */
+  .actions { margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--navy-2); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex-shrink: 0; }
+  .actions .a {
+    text-align: center; font-size: 11.5px; font-weight: 750; padding: 9px; border-radius: 10px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text); cursor: pointer;
+  }
+  .actions .a.pri { background: var(--amber); border-color: var(--amber); color: #16283e; }
+  .actions .a.wide { grid-column: 1 / -1; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+  </div>
+  <b>FleetGo <span>Ops</span></b>
+  <span class="pill">Live · SSE</span>
+  <nav class="views" aria-label="Ops views">
+    <a href="#" class="on">Live</a>
+    <a href="#">Pipeline</a>
+    <a href="#">Alerts</a>
+  </nav>
+  <div class="stat">
+    <span>Fleet <b>28</b></span>
+    <span>Moving <b>19</b></span>
+    <span>Alerts <b>3</b></span>
+    <span>Ingest <b>12.4/s</b></span>
+  </div>
+</header>
+
+<aside class="fleet">
+  <div class="bar">
+    <div class="search">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      Search device, unit, plate…
+    </div>
+    <div class="chips" role="group" aria-label="Fleet status filters">
+      <span class="chip on">All 28</span>
+      <span class="chip">Moving 19</span>
+      <span class="chip">Parked 7</span>
+      <span class="chip r on">Alerts 3</span>
+      <span class="chip">No signal 2</span>
+    </div>
+  </div>
+  <h2>Devices</h2>
+  <div class="device sel">
+    <span class="id"><span class="dot mv"></span>truck-042</span>
+    <span class="spd">67 km/h</span>
+    <span class="meta">S-42 · Ruta 3 · seq 18 401 · acc 4.2 m</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot mv"></span>bus-017</span>
+    <span class="spd">23 km/h</span>
+    <span class="meta">S-17 · Av. 9 de Julio · seq 9 118</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot al"></span>truck-088</span>
+    <span class="spd">0 km/h</span>
+    <span class="meta">S-88 · stopped 24 min · Zona Norte</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot hb"></span>van-118</span>
+    <span class="spd">0 km/h</span>
+    <span class="meta">S-118 · parked · heartbeat</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot st"></span>van-203</span>
+    <span class="spd">—</span>
+    <span class="meta">S-203 · last seen 09:41</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot mv"></span>truck-201</span>
+    <span class="spd">54 km/h</span>
+    <span class="meta">S-201 · Ruta 8 · seq 44 210</span>
+  </div>
+</aside>
+
+<main class="map" aria-label="Fleet map">
+  <div class="gmap">
+    <svg viewBox="0 0 760 848" aria-hidden="true">
+      <rect width="760" height="848" fill="#0a1017"/>
+      <g stroke="#141d29" stroke-width="1">
+        <path d="M90 0V848 M220 0V848 M370 0V848 M540 0V848 M690 0V848"/>
+        <path d="M0 90H760 M0 210H760 M0 350H760 M0 500H760 M0 650H760 M0 780H760"/>
+      </g>
+      <g stroke="#1b2735" stroke-width="4">
+        <path d="M300 0 C 340 280 280 520 380 848" fill="none"/>
+        <path d="M0 680 H760" fill="none"/>
+      </g>
+      <rect x="450" y="120" width="180" height="150" rx="10" fill="#0e1a20"/>
+      <ellipse cx="150" cy="740" rx="130" ry="70" fill="#0c1620"/>
+      <rect x="80" y="80" width="90" height="90" rx="8" fill="#101a24"/>
+      <g font-family="system-ui" font-size="11" font-weight="700" text-anchor="middle">
+        <circle cx="370" cy="300" r="26" fill="#e08a2e" fill-opacity="0.92"/>
+        <text x="370" y="304" fill="#16283e">12</text>
+        <circle cx="540" cy="500" r="20" fill="#58b47c" fill-opacity="0.92"/>
+        <text x="540" y="504" fill="#0a111b">7</text>
+        <circle cx="220" cy="430" r="16" fill="#6faab5" fill-opacity="0.92"/>
+        <text x="220" y="434" fill="#0a111b">4</text>
+      </g>
+      <g transform="translate(300,600)">
+        <circle r="22" fill="rgba(217,96,79,0.25)"/>
+        <circle r="12" fill="#d9604f"/>
+        <circle r="4.5" fill="#fff"/>
+      </g>
+      <text x="300" y="640" text-anchor="middle" font-family="system-ui" font-size="11" font-weight="700" fill="#f2a49a">truck-088</text>
+      <!-- selected device: highlighted -->
+      <polyline points="380,380 420,460 460,530 500,600" fill="none" stroke="#e08a2e" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/>
+      <g transform="translate(500,600)">
+        <circle r="20" fill="rgba(224,138,46,0.22)"/>
+        <circle r="10" fill="#e08a2e"/>
+        <circle r="4" fill="#16283e"/>
+      </g>
+      <text x="500" y="636" text-anchor="middle" font-family="system-ui" font-size="11" font-weight="800" fill="#f0a752">truck-042</text>
+    </svg>
+    <div class="mapcard">
+      <span class="av">&#9678;</span>
+      <div>
+        <div class="t">truck-042 · 67 km/h</div>
+        <div class="s">S-42 · 214&deg; SW · acc 4.2 m</div>
+      </div>
+      <span class="follow">Following</span>
+    </div>
+    <div class="controls"><span>+</span><span>&minus;</span><span>&#8982;</span></div>
+    <div class="layers">
+      <span class="chip on">Traffic</span>
+      <span class="chip">Heatmap</span>
+      <span class="chip">Clusters</span>
+    </div>
+    <span class="attribution">Map data &copy; Google &middot; dark style</span>
+  </div>
+</main>
+
+<section class="rail">
+  <div class="tabs" role="tablist">
+    <span class="tab" role="tab">Alerts <span class="cnt">3</span></span>
+    <span class="tab on" role="tab" aria-selected="true">Device</span>
+    <span class="tab" role="tab">Assistant</span>
+  </div>
+
+  <div class="body">
+    <div class="fichead">
+      <div class="r1">
+        <span class="dev">truck-042</span>
+        <span class="badge">Moving</span>
+        <span class="close" aria-label="Close device panel">&#10005;</span>
+      </div>
+      <div class="r2">Unit S-42 &middot; AB 910 DE &middot; Ruta 3 &middot; Turn 3 (07:00&ndash;15:00)</div>
+    </div>
+
+    <div class="snap">
+      <div class="c"><div class="v">67<small>km/h</small></div><div class="k">Speed</div></div>
+      <div class="c"><div class="v">214&deg;<small>SW</small></div><div class="k">Heading</div></div>
+      <div class="c"><div class="v good">4.2<small>m</small></div><div class="k">GPS accuracy</div></div>
+      <div class="c"><div class="v">4<small>s ago</small></div><div class="k">Last sample</div></div>
+    </div>
+
+    <div class="sec">
+      <h3>Data integrity <span class="why">the reason to trust this pin</span></h3>
+      <div class="kv"><span class="k">Position</span><span class="v mono">&minus;34.6037, &minus;58.3816</span></div>
+      <div class="kv"><span class="k">Seq</span><span class="v mono">18 401</span></div>
+      <div class="kv"><span class="k">Watermark</span><span class="v mono">18 401</span></div>
+      <div class="kv"><span class="k">Gaps</span><span class="v good">0 &middot; contiguous</span></div>
+      <div class="kv"><span class="k">Dedup hits today</span><span class="v">3</span></div>
+      <div class="kv"><span class="k">Last batch</span><span class="v good">#4193 &middot; accepted 341 ms</span></div>
+      <div class="kv"><span class="k">Clock drift</span><span class="v warn">+3 min &middot; within 5 min</span></div>
+      <div class="integrity">
+        Every sample is deduped by <b>device + captured_at + seq</b>. A gap here means
+        the device's watermark is blocked and later samples queue behind it.
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>Shift so far</h3>
+      <div class="kv"><span class="k">Distance</span><span class="v">312 km</span></div>
+      <div class="kv"><span class="k">Driving time</span><span class="v">5 h 40 m</span></div>
+      <div class="kv"><span class="k">Samples sent</span><span class="v">1 240</span></div>
+      <div class="kv"><span class="k">Lost</span><span class="v good">0</span></div>
+    </div>
+
+    <div class="sec">
+      <h3>Recent activity</h3>
+      <div class="hist">
+        <span class="when">12:04</span>
+        <div class="what"><b>Batch #4193 accepted</b><small>118 events &middot; 200 OK &middot; 341 ms</small></div>
+        <span class="st ok">Ok</span>
+      </div>
+      <div class="hist">
+        <span class="when">11:52</span>
+        <div class="what"><b>Route deviation cleared</b><small>back on Ruta 3 corridor</small></div>
+        <span class="st info">Info</span>
+      </div>
+      <div class="hist">
+        <span class="when">11:04</span>
+        <div class="what"><b>Clock skew warning</b><small>1 sample rejected &middot; resend after sync</small></div>
+        <span class="st warn">Warn</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <span class="a pri">Call driver</span>
+      <span class="a">Silence 1 h</span>
+      <span class="a wide">Open this device in Queue &#8250;</span>
+    </div>
+  </div>
+</section>
+</body>
+</html>

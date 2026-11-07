@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Ops Console · Pipeline health</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
+    --text: #e9edf2; --muted: #9aa8b8;
+    --navy: #16283e; --navy-2: #0a111b;
+    --amber: #e08a2e; --amber-soft: rgba(224, 138, 46, 0.14);
+    --teal: #6faab5; --teal-soft: rgba(111, 170, 181, 0.13);
+    --green: #58b47c; --green-soft: rgba(88, 180, 124, 0.13);
+    --red: #d9604f; --red-soft: rgba(217, 96, 79, 0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 210px 1fr; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top" "sidenav main";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 14px;
+    padding: 0 18px; background: var(--navy-2); border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--amber); }
+  header .pill {
+    font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px;
+    background: var(--green-soft); color: var(--green); display: flex; align-items: center; gap: 6px;
+  }
+  header .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  header .views { display: flex; gap: 2px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  header .views a { font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 5px 11px; border-radius: 7px; }
+  header .views a.on { background: var(--panel-2); color: var(--text); }
+  header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 16px; }
+  header .stat b { color: var(--text); font-weight: 700; }
+  header .stat b.warn { color: var(--amber); }
+
+  aside.sidenav { grid-area: sidenav; background: var(--panel); border-right: 1px solid var(--line); padding: 12px 10px; }
+  aside.sidenav .grp { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 12px 8px 6px; }
+  aside.sidenav a {
+    display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 9px;
+    font-size: 12.5px; font-weight: 650; color: var(--muted); text-decoration: none; margin-bottom: 2px;
+  }
+  aside.sidenav a.on { background: var(--panel-2); color: var(--text); }
+  aside.sidenav a .n { margin-left: auto; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: var(--red); color: #fff; }
+  aside.sidenav a .n.amber { background: var(--amber); color: #16283e; }
+  aside.sidenav a .n.teal { background: var(--teal-soft); color: var(--teal); }
+
+  main { grid-area: main; overflow: hidden; display: flex; flex-direction: column; padding: 16px 18px 0; gap: 14px; }
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 12px 13px; }
+  .kpi .k { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); }
+  .kpi .v { font-size: 22px; font-weight: 800; letter-spacing: -0.6px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .kpi .v small { font-size: 11px; font-weight: 650; color: var(--muted); margin-left: 2px; letter-spacing: 0; }
+  .kpi .v.good { color: var(--green); }
+  .kpi .v.warn { color: var(--amber); }
+  .kpi svg { display: block; margin-top: 7px; }
+  .kpi .sub { font-size: 10px; color: var(--muted); margin-top: 5px; }
+
+  .cols { display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px; flex: 1; min-height: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; }
+  .card > h2 {
+    font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px;
+    color: var(--muted); padding: 12px 15px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .card > h2 .hint { font-size: 9.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--teal); margin-left: auto; }
+
+  /* stages funnel */
+  .stages { padding: 14px 15px; display: flex; flex-direction: column; gap: 0; }
+  .stage { display: flex; align-items: center; gap: 12px; padding: 9px 0; position: relative; }
+  .stage .box {
+    width: 42px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.4px; flex-shrink: 0;
+  }
+  .stage .box.b { background: var(--teal-soft); color: var(--teal); }
+  .stage .box.g { background: var(--green-soft); color: var(--green); }
+  .stage .box.a { background: var(--amber-soft); color: var(--amber); }
+  .stage .body2 { flex: 1; min-width: 0; }
+  .stage .nm { font-size: 12.5px; font-weight: 700; }
+  .stage .dt { font-size: 10.5px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+  .stage .rt { text-align: right; flex-shrink: 0; }
+  .stage .rt .r { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stage .rt .l { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stage .link { position: absolute; left: 20px; bottom: -5px; width: 2px; height: 10px; background: var(--line); }
+  .stage .link.bad { background: var(--red); }
+
+  /* tables */
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  th {
+    text-align: left; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--muted); padding: 8px 15px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel);
+  }
+  td { padding: 9px 15px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  td.mono { font-family: var(--mono); font-size: 10.5px; }
+  .tag { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 5px; }
+  .tag.bad { background: var(--red-soft); color: var(--red); }
+  .tag.warn { background: var(--amber-soft); color: var(--amber); }
+  .tag.ok { background: var(--green-soft); color: var(--green); }
+  .tag.info { background: var(--teal-soft); color: var(--teal); }
+  .scroll { overflow: auto; flex: 1; }
+  .rowact { font-size: 10px; font-weight: 750; color: var(--amber); cursor: pointer; }
+
+  /* partition bars */
+  .parts { padding: 10px 15px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .part { display: flex; align-items: center; gap: 9px; font-size: 11px; }
+  .part .nm { width: 26px; font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
+  .part .track { flex: 1; height: 7px; border-radius: 999px; background: var(--navy-2); overflow: hidden; }
+  .part .track i { display: block; height: 100%; border-radius: 999px; background: var(--green); }
+  .part .track i.warn { background: var(--amber); }
+  .part .lag { width: 62px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; flex-shrink: 0; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+  </div>
+  <b>FleetGo <span>Ops</span></b>
+  <span class="pill">Live · SSE</span>
+  <nav class="views" aria-label="Ops views">
+    <a href="#">Live</a>
+    <a href="#" class="on">Pipeline</a>
+    <a href="#">Alerts</a>
+  </nav>
+  <div class="stat">
+    <span>Uptime <b>14 d 6 h</b></span>
+    <span>Schema <b>v1</b></span>
+    <span>Batch max <b>500</b></span>
+    <span>Repairs <b class="warn">2</b></span>
+  </div>
+</header>
+
+<aside class="sidenav">
+  <div class="grp">Pipeline</div>
+  <a href="#" class="on">Overview</a>
+  <a href="#">Ingest</a>
+  <a href="#">Journal</a>
+  <a href="#">Consumers</a>
+  <div class="grp">Data health</div>
+  <a href="#">Watermarks <span class="n">1</span></a>
+  <a href="#">Rejected <span class="n amber">3</span></a>
+  <a href="#">Dedup</a>
+  <a href="#">Clock skew <span class="n teal">5</span></a>
+</aside>
+
+<main>
+  <div class="kpis">
+    <div class="kpi">
+      <div class="k">Ingest rate</div>
+      <div class="v">12.4<small>ev/s</small></div>
+      <svg width="100%" height="22" viewBox="0 0 100 22" preserveAspectRatio="none"><polyline points="0,15 10,13 20,16 30,11 40,12 50,8 60,10 70,7 80,9 90,6 100,8" fill="none" stroke="#58b47c" stroke-width="1.6"/></svg>
+    </div>
+    <div class="kpi">
+      <div class="k">Accepted</div>
+      <div class="v good">99.7<small>%</small></div>
+      <div class="sub">1 240 118 events today</div>
+    </div>
+    <div class="kpi">
+      <div class="k">Rejected</div>
+      <div class="v warn">3</div>
+      <div class="sub">clock skew &middot; retried</div>
+    </div>
+    <div class="kpi">
+      <div class="k">Latency p95</div>
+      <div class="v">210<small>ms</small></div>
+      <svg width="100%" height="22" viewBox="0 0 100 22" preserveAspectRatio="none"><polyline points="0,12 10,10 20,14 30,9 40,11 50,13 60,8 70,10 80,7 90,9 100,6" fill="none" stroke="#6faab5" stroke-width="1.6"/></svg>
+    </div>
+    <div class="kpi">
+      <div class="k">Dedup hits</div>
+      <div class="v">0.42<small>%</small></div>
+      <div class="sub">replays absorbed, not stored</div>
+    </div>
+    <div class="kpi">
+      <div class="k">Consumer lag</div>
+      <div class="v good">0.2<small>s</small></div>
+      <div class="sub">6 partitions</div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="card">
+      <h2>Stage funnel <span class="hint">/v1/telemetry &rarr; telemetry.events &rarr; Postgres</span></h2>
+      <div class="stages">
+        <div class="stage">
+          <span class="box b">DEV</span>
+          <div class="body2">
+            <div class="nm">Devices posting</div>
+            <div class="dt">28 devices &middot; batches &le; 500 events</div>
+          </div>
+          <div class="rt"><div class="r">12.4/s</div><div class="l">in</div></div>
+          <span class="link"></span>
+        </div>
+        <div class="stage">
+          <span class="box b">INT</span>
+          <div class="body2">
+            <div class="nm">Intake validation</div>
+            <div class="dt">schema v1 &middot; skew &le; 5 min &middot; lat/lon range</div>
+          </div>
+          <div class="rt"><div class="r">99.7%</div><div class="l">pass</div></div>
+          <span class="link bad"></span>
+        </div>
+        <div class="stage">
+          <span class="box a">JRN</span>
+          <div class="body2">
+            <div class="nm">Journal &middot; telemetry.events</div>
+            <div class="dt">key = device_id &middot; 6 partitions</div>
+          </div>
+          <div class="rt"><div class="r">0.2 s</div><div class="l">lag</div></div>
+          <span class="link"></span>
+        </div>
+        <div class="stage">
+          <span class="box g">CON</span>
+          <div class="body2">
+            <div class="nm">Consumer &middot; dedup + watermark</div>
+            <div class="dt">key (device, captured_at, seq)</div>
+          </div>
+          <div class="rt"><div class="r">12.3/s</div><div class="l">stored</div></div>
+          <span class="link"></span>
+        </div>
+        <div class="stage">
+          <span class="box g">DB</span>
+          <div class="body2">
+            <div class="nm">Postgres &middot; telemetry_events</div>
+            <div class="dt">watermark per device &middot; FIFO</div>
+          </div>
+          <div class="rt"><div class="r">210 ms</div><div class="l">p95</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Watermarks blocked <span class="hint">a gap stalls that device</span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Device</th><th>Watermark</th><th>Gap</th><th>Held</th><th>Reason</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="mono">truck-088</td>
+              <td class="mono">7 210</td>
+              <td><span class="tag bad">1</span></td>
+              <td class="mono">7 211</td>
+              <td><span class="tag warn">skew</span></td>
+              <td><span class="rowact">Resend</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="padding: 14px 15px; font-size: 11px; line-height: 1.6; color: var(--muted);">
+          Seq 7 211 was rejected for <b style="color: var(--amber)">captured_at beyond 5 min</b>.
+          The device watermark stays at 7 210, so every later sample of truck-088 queues behind it
+          until the held event is resent byte-identical (same seq, same captured_at).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols" style="flex: 0 0 250px;">
+    <div class="card">
+      <h2>Rejected today <span class="hint">3 events &middot; all recoverable</span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>When</th><th>Device</th><th>Seq</th><th>Rule</th><th>State</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="mono">12:09</td><td class="mono">truck-088</td><td class="mono">7 211</td><td>captured_at &gt; 5 min skew</td><td><span class="tag warn">held</span></td><td><span class="rowact">Resend</span></td></tr>
+            <tr><td class="mono">11:04</td><td class="mono">truck-042</td><td class="mono">18 396</td><td>captured_at &gt; 5 min skew</td><td><span class="tag ok">recovered</span></td><td></td></tr>
+            <tr><td class="mono">09:52</td><td class="mono">van-203</td><td class="mono">22 912</td><td>lat outside [-90, 90]</td><td><span class="tag ok">dropped</span></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Partitions <span class="hint">lag per consumer</span></h2>
+      <div class="parts">
+        <div class="part"><span class="nm">p0</span><span class="track"><i style="width:12%"></i></span><span class="lag">0.1 s</span></div>
+        <div class="part"><span class="nm">p1</span><span class="track"><i style="width:18%"></i></span><span class="lag">0.2 s</span></div>
+        <div class="part"><span class="nm">p2</span><span class="track"><i style="width:9%"></i></span><span class="lag">0.1 s</span></div>
+        <div class="part"><span class="nm">p3</span><span class="track"><i class="warn" style="width:64%"></i></span><span class="lag">1.4 s</span></div>
+        <div class="part"><span class="nm">p4</span><span class="track"><i style="width:14%"></i></span><span class="lag">0.2 s</span></div>
+        <div class="part"><span class="nm">p5</span><span class="track"><i style="width:11%"></i></span><span class="lag">0.1 s</span></div>
+        <div style="font-size: 10.5px; color: var(--muted); line-height: 1.55; margin-top: 6px;">
+          p3 carries the devices with clock drift; lag follows the skew spike at 11:04 and is draining.
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

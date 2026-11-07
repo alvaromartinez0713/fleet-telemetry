@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Ops Console · States</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
+    --text: #e9edf2; --muted: #9aa8b8;
+    --navy: #16283e; --navy-2: #0a111b;
+    --amber: #e08a2e; --amber-soft: rgba(224, 138, 46, 0.14);
+    --teal: #6faab5; --teal-soft: rgba(111, 170, 181, 0.13);
+    --green: #58b47c; --green-soft: rgba(88, 180, 124, 0.13);
+    --red: #d9604f; --red-soft: rgba(217, 96, 79, 0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: flex; flex-direction: column; padding: 20px 22px;
+  }
+  .title { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+  .title h1 { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; }
+  .title p { font-size: 12px; color: var(--muted); }
+  .grid {
+    flex: 1; min-height: 0; display: grid; gap: 14px;
+    grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr 1fr;
+    margin-top: 14px;
+  }
+  .block { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+  .block > h2 {
+    font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px;
+    color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .block > h2 .why { font-size: 9.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--teal); margin-left: auto; }
+  .block .pad { padding: 14px; flex: 1; min-height: 0; }
+
+  /* 1 · SSE disconnected banner (full width) */
+  .banner {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 13px;
+    background: var(--amber-soft); border: 1px solid var(--amber); border-radius: 12px;
+    padding: 12px 15px;
+  }
+  .banner .ic {
+    width: 34px; height: 34px; border-radius: 10px; background: var(--amber); color: #16283e;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .banner .t { font-size: 13px; font-weight: 750; }
+  .banner .s { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .banner .s b { color: var(--amber); }
+  .banner .retry {
+    margin-left: auto; font-size: 11.5px; font-weight: 800; padding: 8px 14px; border-radius: 9px;
+    background: var(--amber); color: #16283e; flex-shrink: 0;
+  }
+  .banner .meta { font-family: var(--mono); font-size: 10.5px; color: var(--muted); text-align: right; flex-shrink: 0; margin-left: 6px; }
+
+  /* 2 · stale device rows */
+  .rows { display: flex; flex-direction: column; }
+  .row { display: grid; grid-template-columns: 1fr auto; row-gap: 3px; padding: 9px 0; border-top: 1px solid var(--line); }
+  .row:first-child { border-top: none; }
+  .row .id { font-size: 12.5px; font-weight: 700; font-family: var(--mono); }
+  .row .spd { font-size: 12.5px; font-weight: 750; font-variant-numeric: tabular-nums; }
+  .row .meta { grid-column: 1 / -1; font-size: 10.5px; color: var(--muted); }
+  .row.fresh .age { color: var(--green); }
+  .row.aging { background: rgba(224, 138, 46, 0.05); }
+  .row.aging .age { color: var(--amber); font-weight: 750; }
+  .row.stale { background: rgba(217, 96, 79, 0.05); }
+  .row.stale .id, .row.stale .spd { color: var(--muted); }
+  .row.stale .age { color: var(--red); font-weight: 750; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .dot.g { background: var(--green); }
+  .dot.a { background: var(--amber); }
+  .dot.r { background: var(--red); }
+  .dot.d { background: var(--line); }
+  .stalebadge {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 2px 6px; border-radius: 5px; background: var(--red-soft); color: var(--red);
+  }
+
+  /* 3 · empty */
+  .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 9px; }
+  .empty .ic {
+    width: 46px; height: 46px; border-radius: 14px; background: var(--navy-2); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center; font-size: 19px; color: var(--muted);
+  }
+  .empty .t { font-size: 13.5px; font-weight: 750; }
+  .empty .s { font-size: 11.5px; color: var(--muted); line-height: 1.55; max-width: 250px; }
+  .empty .cta {
+    margin-top: 3px; font-size: 11.5px; font-weight: 750; padding: 7px 14px; border-radius: 9px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+  }
+
+  /* 4 · error */
+  .err { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 9px; }
+  .err .ic {
+    width: 46px; height: 46px; border-radius: 14px; background: var(--red-soft); border: 1px solid var(--red);
+    display: flex; align-items: center; justify-content: center; font-size: 19px; color: var(--red);
+  }
+  .err .t { font-size: 13.5px; font-weight: 750; }
+  .err .s { font-size: 11.5px; color: var(--muted); line-height: 1.55; max-width: 270px; }
+  .err .code { font-family: var(--mono); font-size: 10.5px; color: var(--muted); background: var(--navy-2); border: 1px solid var(--line); border-radius: 7px; padding: 5px 9px; }
+  .err .cta { margin-top: 3px; font-size: 11.5px; font-weight: 750; padding: 7px 14px; border-radius: 9px; background: var(--red); color: #fff; }
+
+  /* 5 · skeleton loading */
+  .skel { display: flex; flex-direction: column; gap: 9px; }
+  .skel .l { height: 13px; border-radius: 6px; background: linear-gradient(90deg, var(--panel-2) 0%, #1d3251 50%, var(--panel-2) 100%); }
+  .skel .l.w1 { width: 46%; }
+  .skel .l.w2 { width: 88%; }
+  .skel .l.w3 { width: 70%; }
+  .skel .l.w4 { width: 95%; }
+  .skel .l.w5 { width: 62%; }
+  .skel .cap { font-size: 10.5px; color: var(--muted); font-family: var(--mono); margin-top: 4px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="title">
+  <h1>Console states</h1>
+  <p>The four states the live view must handle explicitly — never leave the operator guessing whether data is fresh.</p>
+</div>
+
+<div class="grid">
+  <div class="banner" role="status">
+    <span class="ic">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 2l20 20"/><path d="M8.5 16.4a5 5 0 0 1 7 0"/><path d="M5 12.9a10 10 0 0 1 3.2-2.1"/><path d="M19 12.9a10 10 0 0 0-3.2-2.1"/><path d="M12 20h.01"/></svg>
+    </span>
+    <div>
+      <div class="t">Live connection lost — showing last known positions</div>
+      <div class="s">The map and counters are frozen at the moment the stream dropped. <b>Do not dispatch on this view</b> until it reconnects.</div>
+    </div>
+    <div class="meta">last delta<br>12:04:31</div>
+    <span class="retry">Reconnect</span>
+  </div>
+
+  <div class="block">
+    <h2>Data age per device <span class="why">age is part of the reading</span></h2>
+    <div class="pad rows">
+      <div class="row fresh">
+        <span class="id"><span class="dot g"></span>truck-042</span><span class="spd">67 km/h</span>
+        <span class="meta">S-42 &middot; <span class="age">4 s ago</span> &middot; streaming</span>
+      </div>
+      <div class="row aging">
+        <span class="id"><span class="dot a"></span>bus-017</span><span class="spd">23 km/h</span>
+        <span class="meta">S-17 &middot; <span class="age">45 s ago</span> &middot; late, still moving</span>
+      </div>
+      <div class="row stale">
+        <span class="id"><span class="dot r"></span>van-203</span><span class="spd">—</span>
+        <span class="meta">S-203 &middot; <span class="age">2 h 15 m ago</span> &middot; last seq 22 907 &middot; <span class="stalebadge">stale</span></span>
+      </div>
+      <div class="row">
+        <span class="id"><span class="dot d"></span>truck-077</span><span class="spd">—</span>
+        <span class="meta">S-77 &middot; <span style="color: var(--muted)">never reported</span> &middot; assigned 3 d ago</span>
+      </div>
+      <div style="font-size: 10.5px; color: var(--muted); line-height: 1.55; margin-top: auto; padding-top: 10px;">
+        Thresholds: <b style="color: var(--green)">&le; 15 s</b> fresh &middot;
+        <b style="color: var(--amber)">15 s – 5 min</b> late &middot;
+        <b style="color: var(--red)">&gt; 5 min</b> stale (matches the accepted clock skew).
+      </div>
+    </div>
+  </div>
+
+  <div class="block">
+    <h2>Empty <span class="why">no telemetry received yet</span></h2>
+    <div class="pad empty">
+      <span class="ic">&#9678;</span>
+      <div class="t">No samples from unit S-88 yet</div>
+      <div class="s">The tracker is assigned but has not posted. Check that it is powered and the device code matches the label.</div>
+      <span class="cta">Check device assignment</span>
+    </div>
+  </div>
+
+  <div class="block">
+    <h2>Error <span class="why">request failed, not empty</span></h2>
+    <div class="pad err">
+      <span class="ic">&#9888;</span>
+      <div class="t">Could not load the fleet</div>
+      <div class="s">The live API answered with an error. The last snapshot is kept so you do not lose context.</div>
+      <span class="code">GET /v1/fleet &rarr; 503 service_unavailable</span>
+      <span class="cta">Retry</span>
+    </div>
+  </div>
+
+  <div class="block">
+    <h2>Loading <span class="why">skeleton, never a spinner</span></h2>
+    <div class="pad">
+      <div class="skel">
+        <div class="l w1"></div>
+        <div class="l w2"></div>
+        <div class="l w3"></div>
+        <div class="l w4"></div>
+        <div class="l w5"></div>
+        <div class="cap">first paint &middot; REST snapshot, then SSE deltas</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
