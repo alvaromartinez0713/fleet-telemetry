@@ -745,9 +745,9 @@
       "excerpt": "Pipeline",
       "comment": "De todas las pantallas de FleetGo Ops quitar este pipeline si ya no es se usa, revisa primero",
       "createdAt": "2026-11-07T04:29:32.987Z",
-      "status": "open",
+      "status": "resolved",
       "sentAt": "2026-11-07T04:30:59.649Z",
-      "resolvedAt": null
+      "resolvedAt": "2026-11-07T04:33:36.607Z"
     },
     {
       "id": "9xabbqth",
@@ -756,9 +756,9 @@
       "excerpt": "FleetGo Ops STATE SHEET Connection & data states States of the Live map screen (25) — the four cases it must handle explicitly, so the operator never has to guess whether data is fresh. Live connection lost — showing last known positions The map and counters are frozen at the moment the stream dropp",
       "comment": "Como se llega a esta pantalla?",
       "createdAt": "2026-11-07T04:29:58.757Z",
-      "status": "open",
+      "status": "resolved",
       "sentAt": "2026-11-07T04:30:59.649Z",
-      "resolvedAt": null
+      "resolvedAt": "2026-11-07T04:33:36.607Z"
     },
     {
       "id": "phtuz8ad",
@@ -767,8 +767,19 @@
       "excerpt": "PLATFORM Gateway & ingest Pipeline Partitions Workers 1 Assistant DATA Watermarks 1 Rejected 3 Dedup Logs & traces REFERENCE Sender wire Schema & limits",
       "comment": "Falta implementar pantallas de todo el menu de fleet platform",
       "createdAt": "2026-11-07T04:30:21.064Z",
-      "status": "open",
+      "status": "resolved",
       "sentAt": "2026-11-07T04:30:59.649Z",
+      "resolvedAt": "2026-11-07T04:33:36.607Z"
+    },
+    {
+      "id": "xefd1r5t",
+      "file": "30-alert-detail.html",
+      "selector": "body > header > nav > a:nth-of-type(3)",
+      "excerpt": "Alerts",
+      "comment": "Esta confuso esto de alert usa dos pantallas esta de alert detail y alert rules",
+      "createdAt": "2026-11-07T04:32:40.069Z",
+      "status": "open",
+      "sentAt": "2026-11-07T04:32:46.820Z",
       "resolvedAt": null
     }
   ]

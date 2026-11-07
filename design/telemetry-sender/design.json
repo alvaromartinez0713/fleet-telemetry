@@ -144,15 +144,36 @@
     },
     {
       "file": "27-pipeline-health.html",
-      "title": "Fleet Platform · Pipeline & data health",
-      "tradeoff": "Stage funnel, blocked watermarks, dead-letter, partition lag and a pausable live tail",
+      "title": "Fleet Platform · Pipeline",
+      "tradeoff": "Stage funnel with per-hop latency, blocked watermarks, dead-letter, partition lag strip and a pausable live tail",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "38-platform-partitions.html",
+      "title": "Fleet Platform · Partitions",
+      "tradeoff": "Per-partition lag, consumer assignment and the devices behind a hot partition; partition key is device_id, so order is guaranteed per device",
       "width": 1440,
       "height": 900
     },
     {
       "file": "36-platform-workers.html",
-      "title": "Fleet Platform · Workers & assistant",
+      "title": "Fleet Platform · Workers",
       "tradeoff": "Per-worker health, worker log, assistant circuit breaker and tool-call mix",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "39-platform-assistant.html",
+      "title": "Fleet Platform · Assistant",
+      "tradeoff": "The agent on its own screen: recent conversations with the tools they called, tool latency and errors, and the degraded answers it admitted to",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "40-platform-data-health.html",
+      "title": "Fleet Platform · Data health",
+      "tradeoff": "Watermarks, rejected events and dedup in one screen: what blocks a device, what was refused, and how many replays were absorbed instead of stored",
       "width": 1440,
       "height": 900
     },
@@ -167,6 +188,13 @@
       "file": "03-wire-inspector.html",
       "title": "Fleet Platform · Payload inspector (request & response)",
       "tradeoff": "One exchange at a time: request body and headers with line numbers and inline annotations, response status/body, timing per stage and the verdict; annotated vs raw toggle, copy as cURL and replay",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "41-platform-schema.html",
+      "title": "Fleet Platform · Schema & limits",
+      "tradeoff": "The contract table with the exact error each violation returns, plus the runtime surface of the running build; generated, never a drifting document",
       "width": 1440,
       "height": 900
     }
