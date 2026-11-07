@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Product family (vertical sheet)</title>
+<style>
+  :root {
+    --bg: #0b1119;
+    --panel: #101a29;
+    --line: #24344d;
+    --text: #e9edf2;
+    --muted: #8fa0b4;
+    --amber: #e08a2e;
+    --teal: #6faab5;
+    --star: #f0b429;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1600px; padding: 40px 48px 64px;
+  }
+  /* masthead */
+  .mast { border-bottom: 1px solid var(--line); padding-bottom: 22px; margin-bottom: 34px; }
+  .mast .over {
+    font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.4px;
+    color: var(--muted); display: flex; gap: 14px; align-items: center;
+  }
+  .mast .over b { color: var(--amber); }
+  .mast h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.8px; margin-top: 10px; }
+  .mast p { font-size: 14px; color: var(--muted); margin-top: 8px; max-width: 980px; line-height: 1.6; }
+  .index { display: flex; gap: 26px; margin-top: 18px; }
+  .index .it { display: flex; gap: 9px; align-items: baseline; font-size: 12.5px; }
+  .index .n {
+    font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 5px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--muted);
+  }
+  .index .it b { font-weight: 750; }
+  .index .it span { color: var(--muted); }
+
+  /* section */
+  section { margin-bottom: 52px; }
+  .sechead { display: flex; align-items: baseline; gap: 14px; padding-bottom: 14px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+  .sechead .num {
+    font-size: 12px; font-weight: 800; letter-spacing: 1px; color: var(--bg);
+    background: var(--amber); padding: 3px 9px; border-radius: 6px;
+  }
+  .sechead.ops .num { background: var(--teal); }
+  .sechead.plat .num { background: #6c7cf0; }
+  .sechead h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.4px; }
+  .sechead .who { font-size: 12.5px; color: var(--muted); margin-left: auto; text-align: right; line-height: 1.5; }
+  .sechead .who b { color: var(--text); }
+
+  /* rows of boards */
+  .row { display: flex; flex-wrap: wrap; gap: 22px; margin-bottom: 26px; }
+  .board { display: flex; flex-direction: column; gap: 7px; }
+  .board .lbl { font-size: 11.5px; font-weight: 750; color: var(--text); }
+  .board .lbl span { color: var(--muted); font-weight: 600; margin-left: 6px; font-size: 10.5px; }
+  .framebox {
+    overflow: hidden; border-radius: 14px; background: #0a1017;
+    border: 1px solid var(--line); box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+    position: relative;
+  }
+  .framebox iframe {
+    border: 0; display: block; transform-origin: 0 0; pointer-events: none;
+  }
+  /* mobile previews: 390x844 scaled */
+  .m .framebox { width: 273px; height: 590px; }
+  .m .framebox iframe { width: 390px; height: 844px; transform: scale(0.70); }
+  /* wide previews: 1440x900 scaled */
+  .w .framebox { width: 648px; height: 405px; }
+  .w .framebox iframe { width: 1440px; height: 900px; transform: scale(0.45); }
+  /* tall state sheet: 1440x900 */
+  .foot { border-top: 1px solid var(--line); padding-top: 18px; font-size: 11.5px; color: var(--muted); line-height: 1.7; }
+  .foot b { color: var(--text); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="mast">
+  <div class="over"><b>Fleet telemetry</b> &middot; product family &middot; vertical sheet</div>
+  <h1>Three products, one data pipeline</h1>
+  <p>The same telemetry travels through all three: the driver app captures and sends it,
+     FleetGo turns it into decisions about vehicles, and Fleet Platform explains what the
+     system itself is doing. Nothing is duplicated between them — each screen answers a
+     question the other two deliberately do not.</p>
+  <div class="index">
+    <div class="it"><span class="n">1</span><b>App</b><span>— the driver, one unit at a time</span></div>
+    <div class="it"><span class="n">2</span><b>FleetGo Ops</b><span>— which unit needs attention</span></div>
+    <div class="it"><span class="n">3</span><b>Fleet Platform</b><span>— is the system healthy, and why not</span></div>
+  </div>
+</div>
+
+<!-- 1 · BRAND -->
+<section>
+  <div class="sechead">
+    <span class="num">0</span>
+    <h2>Brand</h2>
+    <div class="who">The node-mesh mark used across the family</div>
+  </div>
+  <div class="row">
+    <div class="board m">
+      <div class="lbl">Node-mesh mark<span>23</span></div>
+      <div class="framebox"><iframe src="23-mesh-mark.html" title="Brand mark" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 · APP -->
+<section>
+  <div class="sechead">
+    <span class="num">1</span>
+    <h2>App — the driver</h2>
+    <div class="who"><b>Audience:</b> driver in the cab<br>One unit, one shift, almost no typing</div>
+  </div>
+  <div class="row">
+    <div class="board m">
+      <div class="lbl">Splash<span>20</span></div>
+      <div class="framebox"><iframe src="20-splash.html" title="Splash" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+    <div class="board m">
+      <div class="lbl">Welcome<span>21</span></div>
+      <div class="framebox"><iframe src="21-welcome.html" title="Welcome" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+    <div class="board m">
+      <div class="lbl">Add tracker<span>18</span></div>
+      <div class="framebox"><iframe src="18-device-setup.html" title="Add tracker" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+    <div class="board m">
+      <div class="lbl">Move tracker<span>19</span></div>
+      <div class="framebox"><iframe src="19-move-tracker.html" title="Move tracker" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="board m">
+      <div class="lbl">Drive<span>14</span></div>
+      <div class="framebox"><iframe src="14-fleet-one.html" title="Drive" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+    <div class="board m">
+      <div class="lbl">Queue<span>15</span></div>
+      <div class="framebox"><iframe src="15-queue-fleet-one.html" title="Queue" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+    <div class="board m">
+      <div class="lbl">Sync<span>16</span></div>
+      <div class="framebox"><iframe src="16-sync-fleet-one.html" title="Sync" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+    <div class="board m">
+      <div class="lbl">More<span>17</span></div>
+      <div class="framebox"><iframe src="17-more-fleet-one.html" title="More" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 · OPS -->
+<section>
+  <div class="sechead ops">
+    <span class="num">2</span>
+    <h2>FleetGo Ops — operations</h2>
+    <div class="who"><b>Audience:</b> dispatchers and ops leads<br>Outcomes: which unit, which alert, who takes it</div>
+  </div>
+  <div class="row">
+    <div class="board w">
+      <div class="lbl">Live map<span>25</span></div>
+      <div class="framebox"><iframe src="25-ops-console-v2.html" title="Live map" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+    <div class="board w">
+      <div class="lbl">Device detail<span>26</span></div>
+      <div class="framebox"><iframe src="26-device-detail.html" title="Device detail" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="board w">
+      <div class="lbl">Watchlist<span>33</span></div>
+      <div class="framebox"><iframe src="33-watchlist.html" title="Watchlist" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+    <div class="board w">
+      <div class="lbl">Follow mode<span>34</span></div>
+      <div class="framebox"><iframe src="34-follow-mode.html" title="Follow mode" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="board w">
+      <div class="lbl">24 h replay<span>32</span></div>
+      <div class="framebox"><iframe src="32-replay.html" title="Replay" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+    <div class="board w">
+      <div class="lbl">Alert detail<span>30</span></div>
+      <div class="framebox"><iframe src="30-alert-detail.html" title="Alert detail" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="board w">
+      <div class="lbl">Alert rules<span>29</span></div>
+      <div class="framebox"><iframe src="29-alert-rules.html" title="Alert rules" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+    <div class="board w">
+      <div class="lbl">Command palette<span>31</span></div>
+      <div class="framebox"><iframe src="31-command-palette.html" title="Command palette" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="board w">
+      <div class="lbl">States<span>28</span></div>
+      <div class="framebox"><iframe src="28-console-states.html" title="States" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 · PLATFORM -->
+<section>
+  <div class="sechead plat">
+    <span class="num">3</span>
+    <h2>Fleet Platform — engineering</h2>
+    <div class="who"><b>Audience:</b> whoever runs the system<br>Causes: stages, workers, traces, limits</div>
+  </div>
+  <div class="row">
+    <div class="board w">
+      <div class="lbl">Gateway &amp; ingest<span>35</span></div>
+      <div class="framebox"><iframe src="35-platform-ingest.html" title="Gateway and ingest" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+    <div class="board w">
+      <div class="lbl">Pipeline &amp; data health<span>27</span></div>
+      <div class="framebox"><iframe src="27-pipeline-health.html" title="Pipeline health" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="board w">
+      <div class="lbl">Workers &amp; assistant<span>36</span></div>
+      <div class="framebox"><iframe src="36-platform-workers.html" title="Workers" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+    <div class="board w">
+      <div class="lbl">Logs &amp; traces<span>37</span></div>
+      <div class="framebox"><iframe src="37-platform-logs.html" title="Logs and traces" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="board w">
+      <div class="lbl">Sender wire<span>03</span></div>
+      <div class="framebox"><iframe src="03-wire-inspector.html" title="Sender wire" loading="lazy" scrolling="no"></iframe></div>
+    </div>
+  </div>
+</section>
+
+<div class="foot">
+  <b>Reading rule.</b> App ends at the device; FleetGo Ops ends at the human decision;
+  Fleet Platform starts where a human decision is no longer the answer. A datum lives in
+  exactly one of the three &mdash; if it shows up in two, one of them is wrong.<br>
+  This sheet is a reading aid: every frame above is the real artboard, loaded from its own file.
+</div>
+</body>
+</html>

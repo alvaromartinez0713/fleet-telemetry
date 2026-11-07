@@ -3,6 +3,13 @@
   "brief": "Fleet telemetry product family: the FleetGo driver app that captures and sends samples, FleetGo for operations (which unit needs attention), and Fleet Platform for engineering (is the system healthy and why not).",
   "artboards": [
     {
+      "file": "00-family-sheet.html",
+      "title": "Family sheet · all three products, vertical",
+      "tradeoff": "One tall board that stacks Brand, App, FleetGo Ops and Fleet Platform top to bottom, each frame loading the real artboard; the reading aid the horizontal canvas strip cannot be",
+      "width": 1600,
+      "height": 6100
+    },
+    {
       "file": "23-mesh-mark.html",
       "title": "Brand · node-mesh mark",
       "tradeoff": "The chosen symbol: hub plus a triangle of fleet nodes with one accent reporting node, shown at three sizes and as a lockup",
