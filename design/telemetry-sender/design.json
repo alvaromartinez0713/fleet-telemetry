@@ -1,0 +1,9 @@
+{
+  "title": "Telemetry sender app",
+  "brief": "Screens for the app that captures vehicle telemetry (device_id, seq, captured_at, lat/lon, speed_kmh, heading_deg, accuracy_m, mode moving|heartbeat) and sends batches to POST /v1/telemetry in fleet-telemetry. Three directions for the same sender app.",
+  "artboards": [
+    { "file": "01-ops-console.html", "title": "Ops console", "tradeoff": "Fleet-wide live view: map, device list, intake feed in one dense dark screen; steep learning curve for non-operators", "width": 1440, "height": 900 },
+    { "file": "02-driver-app.html", "title": "Driver app (mobile)", "tradeoff": "Calm, touch-first, one device at a time with offline queue clarity; no fleet-wide visibility", "width": 390, "height": 844 },
+    { "file": "03-wire-inspector.html", "title": "Wire inspector", "tradeoff": "Transparent about the contract: JSON payload, dedup, skew and watermark visible; intimidating for non-technical staff", "width": 1440, "height": 900 }
+  ]
+}
