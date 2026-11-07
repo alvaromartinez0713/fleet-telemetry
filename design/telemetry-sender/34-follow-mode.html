@@ -27,6 +27,9 @@
     grid-area: top; display: flex; align-items: center; gap: 14px;
     padding: 0 18px; background: var(--navy-2); border-bottom: 1px solid var(--line);
   }
+  header .mark {
+    display: flex; align-items: center; gap: 9px;
+  }
   header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
   header .mark b span { color: var(--amber); }
   .followpill {
@@ -131,7 +134,18 @@
 </head>
 <body>
 <header>
-  <div class="mark"><b>FleetGo <span>Ops</span></b></div>
+  <div class="mark">
+    <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>FleetGo <span>Ops</span></b>
+  </div>
   <span class="followpill">Following truck-042</span>
   <nav class="views" aria-label="Ops views">
     <a href="#" class="on">Live</a>
