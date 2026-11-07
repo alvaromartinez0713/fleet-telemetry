@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Fleet Platform v2 · ingest &amp; pipeline</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24425d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --violet: #6c7cf0; --violet-soft: rgba(108,124,240,0.14);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 196px 1fr 404px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top top" "side main agent";
+  }
+  header { grid-area: top; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: #08101a; border-bottom: 1px solid var(--line); }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--violet); }
+  .pill {
+    font-size: 10.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px;
+    background: var(--green-soft); color: var(--green); display: flex; align-items: center; gap: 6px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  header .kbar {
+    margin-left: 4px; display: flex; align-items: center; gap: 8px; flex: 0 1 330px;
+    background: #0d1826; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px;
+    font-size: 11.5px; color: var(--muted);
+  }
+  header .kbar kbd { margin-left: auto; font-family: var(--mono); font-size: 9.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  header .ro {
+    font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px;
+    padding: 3px 9px; border-radius: 5px; background: var(--violet-soft); color: var(--violet);
+    border: 1px solid var(--violet);
+  }
+  header .stat { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 14px; }
+  header .stat b { color: var(--text); font-weight: 700; font-family: var(--mono); }
+
+  aside.side { grid-area: side; background: var(--panel); border-right: 1px solid var(--line); padding: 10px 9px; }
+  aside.side .grp { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 11px 8px 6px; }
+  aside.side a {
+    display: flex; align-items: center; gap: 8px; padding: 8px 9px; border-radius: 8px;
+    font-size: 12px; font-weight: 650; color: var(--muted); text-decoration: none; margin-bottom: 2px;
+  }
+  aside.side a.on { background: var(--panel-2); color: var(--text); }
+  aside.side a .d { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 6px; }
+  .d.ok { background: var(--green); } .d.warn { background: var(--amber); } .d.bad { background: var(--red); }
+  aside.side a .n { margin-left: auto; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: var(--amber-soft); color: var(--amber); }
+
+  main { grid-area: main; display: flex; flex-direction: column; overflow: hidden; padding: 13px 15px; gap: 11px; }
+  .kpis { display: flex; gap: 9px; flex-shrink: 0; }
+  .kpi { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 10px 11px; }
+  .kpi .k { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); }
+  .kpi .v { font-size: 19px; font-weight: 800; letter-spacing: -0.5px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .kpi .v small { font-size: 10px; font-weight: 650; color: var(--muted); margin-left: 2px; letter-spacing: 0; }
+  .kpi .v.good { color: var(--green); } .kpi .v.warn { color: var(--amber); }
+  .kpi .sub { font-size: 9px; color: var(--muted); margin-top: 3px; }
+
+  .cols { display: flex; gap: 11px; flex: 1; min-height: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; flex: 1; }
+  .card > h2 {
+    font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted);
+    padding: 9px 13px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .card > h2 .why { margin-left: auto; font-size: 8.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--teal); white-space: nowrap; }
+  table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  th { text-align: left; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); padding: 6px 13px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 13px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  td.mono { font-family: var(--mono); font-size: 9.5px; }
+  .scroll { overflow: hidden; flex: 1; }
+  .tag { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+  .tag.ok { background: var(--green-soft); color: var(--green); }
+  .tag.warn { background: var(--amber-soft); color: var(--amber); }
+  .tag.bad { background: var(--red-soft); color: var(--red); }
+  .tag.info { background: var(--teal-soft); color: var(--teal); }
+
+  /* funnel rows */
+  .stage { display: grid; grid-template-columns: 40px 1fr 64px 54px; gap: 9px; align-items: center; padding: 7px 13px; border-bottom: 1px solid var(--line); font-size: 10.5px; }
+  .stage .box { font-size: 8.5px; font-weight: 800; letter-spacing: 0.4px; padding: 3px 0; border-radius: 5px; text-align: center; }
+  .stage .box.t { background: var(--teal-soft); color: var(--teal); }
+  .stage .box.a { background: var(--amber-soft); color: var(--amber); }
+  .stage .box.g { background: var(--green-soft); color: var(--green); }
+  .stage .nm { font-weight: 700; }
+  .stage .nm small { display: block; color: var(--muted); font-size: 9px; font-weight: 500; font-family: var(--mono); margin-top: 1px; }
+  .stage .r { text-align: right; font-family: var(--mono); font-size: 10px; }
+  .stage .r small { display: block; color: var(--muted); font-size: 8.5px; font-family: inherit; }
+  .note { padding: 8px 13px; font-size: 9.5px; line-height: 1.55; color: var(--muted); border-top: 1px solid var(--line); background: #0a121c; }
+  .note b { color: var(--teal); }
+
+  /* read-only agent */
+  aside.agent { grid-area: agent; background: #0a121c; border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .ahd { display: flex; align-items: center; gap: 8px; padding: 10px 13px; border-bottom: 1px solid var(--line); }
+  .ahd .orb {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 30%, #9aa8ff, var(--violet) 65%);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; color: #0b1020;
+  }
+  .ahd .t { font-size: 11px; font-weight: 800; }
+  .ahd .s { font-size: 9px; color: var(--muted); }
+  .ahd .ro { margin-left: auto; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px; background: var(--violet-soft); color: var(--violet); border: 1px solid var(--violet); }
+  .thread { flex: 1; overflow: hidden; padding: 10px 13px; display: flex; flex-direction: column; gap: 8px; }
+  .msg .who { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 3px; }
+  .msg .bub { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 10.5px; line-height: 1.55; }
+  .msg.user .bub { background: var(--panel-2); border-color: var(--panel-2); }
+  .msg .bub b { color: var(--amber); }
+  .msg .bub .kv { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; border-top: 1px solid var(--line); font-size: 9.5px; }
+  .msg .bub .kv:first-of-type { border-top: none; margin-top: 6px; }
+  .msg .bub .kv .k { color: var(--muted); }
+  .msg .bub .kv .v { font-family: var(--mono); font-weight: 700; font-size: 9px; }
+  .msg .bub .kv .v.bad { color: var(--red); }
+  .cite { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+  .cite .c { font-size: 8.5px; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: var(--violet-soft); color: var(--violet); border: 1px solid rgba(108,124,240,0.4); }
+  .fallback { margin-top: 7px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font-size: 9.5px; color: var(--muted); line-height: 1.5; }
+  .fallback b { color: var(--teal); }
+  .composer { border-top: 1px solid var(--line); padding: 9px 13px 12px; background: #08101a; }
+  .composer .in { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 10.5px; color: var(--muted); }
+  .composer .in .send { margin-left: auto; width: 21px; height: 21px; border-radius: 6px; background: var(--violet); color: #0b1020; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+  .composer .note2 { font-size: 8.5px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>Fleet <span>Platform</span></b>
+  </div>
+  <span class="pill">healthy</span>
+  <span class="kbar">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    Ask, or query — "why did the 422 rate spike at 11:04?"
+    <kbd>&#8984;K</kbd>
+  </span>
+  <span class="ro" title="This assistant never writes">read-only</span>
+  <div class="stat">
+    <span>Build <b>v1.4.2</b></span>
+    <span>Schema <b>v1</b></span>
+  </div>
+</header>
+
+<aside class="side">
+  <div class="grp">Surfaces</div>
+  <a href="#" class="on"><span class="d ok"></span>Ingest &amp; pipeline</a>
+  <a href="#"><span class="d ok"></span>Runtime</a>
+  <a href="#"><span class="d ok"></span>Evidence</a>
+  <div class="grp">Inside this one</div>
+  <a href="#">Gateway outcomes</a>
+  <a href="#">Stage funnel</a>
+  <a href="#">Partitions</a>
+  <a href="#">Schema &amp; limits</a>
+</aside>
+
+<main>
+  <div class="kpis">
+    <div class="kpi"><div class="k">Requests / s</div><div class="v">1.2<small>rps</small></div><div class="sub">28 devices</div></div>
+    <div class="kpi"><div class="k">2xx</div><div class="v good">99.7<small>%</small></div><div class="sub">accepted</div></div>
+    <div class="kpi"><div class="k">4xx</div><div class="v warn">0.26<small>%</small></div><div class="sub">skew + bad mode</div></div>
+    <div class="kpi"><div class="k">p95</div><div class="v">210<small>ms</small></div><div class="sub">gateway &rarr; 202</div></div>
+    <div class="kpi"><div class="k">Lag</div><div class="v good">0.2<small>s</small></div><div class="sub">6 partitions</div></div>
+    <div class="kpi"><div class="k">Dedup</div><div class="v">0.42<small>%</small></div><div class="sub">absorbed</div></div>
+  </div>
+
+  <div class="cols">
+    <div class="card">
+      <h2>Stage funnel <span class="why">device &rarr; intake &rarr; journal &rarr; consumer &rarr; db</span></h2>
+      <div class="scroll">
+        <div class="stage">
+          <span class="box t">DEV</span>
+          <span class="nm">Devices posting<small>batches &le; 500 events</small></span>
+          <span class="r">12.4/s<small>in</small></span>
+          <span class="r"><span class="tag ok">ok</span></span>
+        </div>
+        <div class="stage">
+          <span class="box t">INT</span>
+          <span class="nm">Intake validation<small>schema v1 &middot; skew &le; 5 min</small></span>
+          <span class="r">99.7%<small>pass</small></span>
+          <span class="r"><span class="tag warn">3 rej</span></span>
+        </div>
+        <div class="stage">
+          <span class="box a">JRN</span>
+          <span class="nm">Journal &middot; telemetry.events<small>key = device_id</small></span>
+          <span class="r">0.2 s<small>lag</small></span>
+          <span class="r"><span class="tag ok">ok</span></span>
+        </div>
+        <div class="stage">
+          <span class="box g">CON</span>
+          <span class="nm">Consumer &middot; dedup + watermark<small>device + captured_at + seq</small></span>
+          <span class="r">12.3/s<small>stored</small></span>
+          <span class="r"><span class="tag ok">ok</span></span>
+        </div>
+        <div class="stage">
+          <span class="box g">DB</span>
+          <span class="nm">Postgres &middot; telemetry_events<small>watermark per device</small></span>
+          <span class="r">210 ms<small>p95</small></span>
+          <span class="r"><span class="tag ok">ok</span></span>
+        </div>
+      </div>
+      <div class="note">
+        Partitions live <b>inside</b> this surface, not in the menu: six partitions are a bar strip
+        under the funnel, not a destination.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Responses &amp; limits <span class="why">what the gateway answers</span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Code</th><th>Meaning</th><th>Today</th></tr></thead>
+          <tbody>
+            <tr><td class="mono" style="color: var(--green)">202</td><td>batch accepted</td><td>1 236 902</td></tr>
+            <tr><td class="mono" style="color: var(--amber)">422</td><td>invalid event (first violation)</td><td>3 109</td></tr>
+            <tr><td class="mono" style="color: var(--amber)">413</td><td>batch &gt; 500 events</td><td>107</td></tr>
+            <tr><td class="mono" style="color: var(--teal)">429</td><td>rate limited</td><td>51</td></tr>
+            <tr><td class="mono" style="color: var(--red)">401</td><td>bad device token</td><td>12</td></tr>
+            <tr><td class="mono" style="color: var(--red)">5xx</td><td>gateway failure</td><td>0</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h2 style="border-top: 1px solid var(--line);">Contract <span class="why">enforced, not documented</span></h2>
+      <div class="scroll">
+        <table>
+          <tbody>
+            <tr><td>schema_version</td><td class="mono">must equal 1</td><td><span class="tag bad">422</span></td></tr>
+            <tr><td>max batch</td><td class="mono">500 events</td><td><span class="tag bad">413</span></td></tr>
+            <tr><td>skew tolerance</td><td class="mono">5 min</td><td><span class="tag bad">422</span></td></tr>
+            <tr><td>device_id</td><td class="mono">&le; 64 bytes</td><td><span class="tag bad">422</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<aside class="agent">
+  <div class="ahd">
+    <span class="orb">&#10022;</span>
+    <div>
+      <div class="t">Platform Assistant</div>
+      <div class="s">reads everything, changes nothing</div>
+    </div>
+    <span class="ro">read-only</span>
+  </div>
+
+  <div class="thread">
+    <div class="msg user">
+      <div>
+        <div class="who">On call</div>
+        <div class="bub">The 4xx rate jumped at 11:04. What happened and is it still happening?</div>
+      </div>
+    </div>
+    <div class="msg">
+      <div>
+        <div class="who">Assistant</div>
+        <div class="bub">
+          Four devices drifted their clocks at once; intake refused their batches for
+          <b>captured_at &gt; 5 min</b>.
+          <div class="kv"><span class="k">Burst window</span><span class="v">11:04:02 &rarr; 11:04:41</span></div>
+          <div class="kv"><span class="k">Rejected</span><span class="v">3 109 events &middot; 4 devices</span></div>
+          <div class="kv"><span class="k">Still happening</span><span class="v">no &middot; 58 min clean</span></div>
+          <div class="kv"><span class="k">p99 latency</span><span class="v bad">640 ms during the burst</span></div>
+          They retried byte-identical, so dedup absorbed the replays instead of storing twice.
+          <div class="cite">
+            <span class="c">&#8594; Gateway outcomes</span>
+            <span class="c">&#8594; Consumer dedup</span>
+            <span class="c">&#8594; Logs &middot; 11:04</span>
+          </div>
+          <div class="fallback">
+            <b>Read-only:</b> I can query, correlate and cite. Replaying or resending is yours &mdash;
+            I will not touch the pipeline.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="composer">
+    <div class="in">
+      Ask about a stage, a partition, a device or a spike…
+      <span class="send">&uarr;</span>
+    </div>
+    <div class="note2">Every answer cites the panel it came from. No writes, no replay, no config.</div>
+  </div>
+</aside>
+</body>
+</html>
