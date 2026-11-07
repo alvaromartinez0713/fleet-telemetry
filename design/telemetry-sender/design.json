@@ -165,8 +165,8 @@
     },
     {
       "file": "03-wire-inspector.html",
-      "title": "Fleet Platform · Sender wire",
-      "tradeoff": "The device-facing contract: payload shape, dedup key, skew and held events",
+      "title": "Fleet Platform · Payload inspector (request & response)",
+      "tradeoff": "One exchange at a time: request body and headers with line numbers and inline annotations, response status/body, timing per stage and the verdict; annotated vs raw toggle, copy as cURL and replay",
       "width": 1440,
       "height": 900
     }
