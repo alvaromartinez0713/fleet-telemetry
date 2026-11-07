@@ -75,6 +75,7 @@
   .row:first-child { border-top: none; }
   .row .id { font-size: 12.5px; font-weight: 700; font-family: var(--mono); }
   .row .spd { font-size: 12.5px; font-weight: 750; font-variant-numeric: tabular-nums; }
+  .spd small { font-size: 9px; font-weight: 650; color: var(--muted); margin-left: 2px; }
   .row .meta { grid-column: 1 / -1; font-size: 10.5px; color: var(--muted); }
   .row.fresh .age { color: var(--green); }
   .row.aging { background: rgba(224, 138, 46, 0.05); }
@@ -140,12 +141,13 @@
       <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
     </svg>
   <b style="font-size: 15px; font-weight: 800; letter-spacing: -0.3px;">FleetGo <span style="color: var(--amber);">Ops</span></b>
-  <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.7px; text-transform: uppercase; padding: 3px 9px; border-radius: 5px; background: var(--teal-soft); color: var(--teal);">Reference sheet &middot; not navigable</span>
+  <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.7px; text-transform: uppercase; padding: 3px 9px; border-radius: 5px; background: var(--teal-soft); color: var(--teal);">Panel &middot; opened from the Live map header</span>
 </div>
 
 <div class="title" style="align-items: baseline;">
   <h1>Connection &amp; data states</h1>
-  <p>Not a screen you can reach: this is a design reference for the <b style="color: var(--text); font-weight: 700;">Live map</b> board (25) in FleetGo Ops. It documents the four states that screen must handle, so the operator never has to guess whether data is fresh. Read it next to board 25 in the canvas.</p>
+  <p>Opened from the <b style="color: var(--text); font-weight: 700;">health chip</b> in the Live map header (25): click <i>Pipeline healthy &rsaquo;</i> and this panel answers &ldquo;is the data I am looking at fresh, and why not?&rdquo; In the design canvas, review it next to board 25.</p>
+<span style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:750; padding:5px 11px; border-radius:999px; background:var(--panel); border:1px solid var(--line); color:var(--muted);">Entry: Live map header &rsaquo; <b style="color:var(--teal);">Pipeline healthy</b></span>
 </div>
 
 <div class="grid">
@@ -182,11 +184,11 @@
     <h2>Data age per device <span class="why">age is part of the reading</span></h2>
     <div class="pad rows">
       <div class="row fresh">
-        <span class="id"><span class="dot g"></span>truck-042</span><span class="spd">67 km/h</span>
+        <span class="id"><span class="dot g"></span>truck-042</span><span class="spd">67<small>km/h</small></span>
         <span class="meta">S-42 &middot; <span class="age">4 s ago</span> &middot; streaming</span>
       </div>
       <div class="row aging">
-        <span class="id"><span class="dot a"></span>bus-017</span><span class="spd">23 km/h</span>
+        <span class="id"><span class="dot a"></span>bus-017</span><span class="spd">23<small>km/h</small></span>
         <span class="meta">S-17 &middot; <span class="age">45 s ago</span> &middot; late, still moving</span>
       </div>
       <div class="row stale">

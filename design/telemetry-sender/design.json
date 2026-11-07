@@ -80,6 +80,55 @@
       "height": 900
     },
     {
+      "file": "42-ops-assistant.html",
+      "title": "FleetGo Ops · Live map — Assistant tab",
+      "tradeoff": "The Live map with the Assistant tab open: you talk to the agent in the rail and it answers with evidence, the tools it used and one-click actions, without leaving the map",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "43-ops-v2-live.html",
+      "title": "FleetGo Ops v2 · agent-first live (proposal)",
+      "tradeoff": "Proposal, kept beside v1: state rail on top (alerts always visible), agent as a permanent rail below with ⌘K, modes as chips over the map instead of screens; agent proposes actions, the human approves",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "46-ops-v2-alerts.html",
+      "title": "FleetGo Ops v2 · alerts queue (proposal)",
+      "tradeoff": "The Alerts destination the nav promises: a real queue with severity, age, owner and state, multi-select with bulk actions, saved views, and the agent triaging what needs a person versus what can be closed",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "47-platform-v2-alerting.html",
+      "title": "Fleet Platform v2 · alerting & delivery (proposal)",
+      "tradeoff": "The gap Platform had: delivery outcomes per channel (email, push, SMS, webhook), failures, suppressions, time-to-ack, per-rule evaluation health and a persistent agent that answers 'did this alert reach anyone'",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "48-platform-v2-gaps.html",
+      "title": "Fleet Platform v2 · what is missing (proposal)",
+      "tradeoff": "The audit: three things absent entirely (delivery log, per-rule evaluation, retention/export), four that should fold into fewer sections, and the three-surface shape with a persistent agent and a query bar",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "44-ops-v2-settings.html",
+      "title": "FleetGo Ops v2 · settings (proposal)",
+      "tradeoff": "Proposal: rules written in plain language with the agent drafting changes as a diff you approve, the readable rule list kept for audit, watchlist and routing in the same place",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "45-ops-v2-modes.html",
+      "title": "FleetGo Ops v2 · modes, not screens (proposal)",
+      "tradeoff": "Proposal: follow, replay and live as three states of one map with their exit keys, plus the keep/fold/drop ledger for the ten current boards and the rule for what the agent never absorbs",
+      "width": 1440,
+      "height": 900
+    },
+    {
       "file": "33-watchlist.html",
       "title": "FleetGo Ops · Watchlist",
       "tradeoff": "Star is membership (per operator), drag order is the pin; the list doubles as map highlight, alert scope and follow group",

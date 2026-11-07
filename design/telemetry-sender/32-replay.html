@@ -36,21 +36,49 @@
     background: var(--amber-soft); color: var(--amber); display: flex; align-items: center; gap: 6px;
     text-transform: uppercase; letter-spacing: 0.5px;
   }
-  .mode::before { content: "&#9654;"; font-size: 8px; }
+  .mode::before { content: "\25B6"; font-size: 8px; }
   header .views { display: flex; gap: 2px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
   header .views a { font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 5px 11px; border-radius: 7px; }
   header .views a.on { background: var(--panel-2); color: var(--text); }
-  header .vsep { width: 1px; height: 14px; background: var(--line); margin: 0 4px; }
+  header .cfg {
+    display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 750;
+    text-decoration: none; color: var(--muted); padding: 5px 10px; border-radius: 8px;
+    border: 1px solid var(--line); background: #0a111b;
+  }
+  header .cfg.on { background: var(--panel-2); color: var(--text); border-color: var(--panel-2); }
+  header .crumb {
+    display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;
+    color: var(--muted); padding: 4px 10px; border-radius: 999px;
+    background: #0a111b; border: 1px solid var(--line);
+  }
+  header .crumb b { color: var(--text); font-weight: 800; }
+  header .crumb .sep { color: var(--line); }
+  header .crumb .mstate {
+    color: var(--amber); font-weight: 800;
+    text-transform: none; letter-spacing: 0; background: none; padding: 0; border: none;
+  }
   header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 16px; }
   header .stat b { color: var(--text); font-weight: 700; }
   header .stat b.mono { font-family: var(--mono); }
 
   aside.fleet { grid-area: fleet; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
   aside.fleet h2 { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 13px 14px 7px; font-weight: 800; }
+  .lsearch {
+    display: flex; align-items: center; gap: 8px; background: #0a111b;
+    border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px;
+    font-size: 11px; color: var(--muted); margin: 10px 12px;
+  }
+  .lchips { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 12px 8px; }
+  .lchips .c {
+    font-size: 10px; font-weight: 700; padding: 4px 9px; border-radius: 999px;
+    background: #0a111b; border: 1px solid var(--line); color: var(--muted);
+  }
+  .lchips .c.on { background: var(--panel-2); color: var(--text); border-color: var(--panel-2); }
   .device { padding: 9px 14px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; row-gap: 2px; }
   .device.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); padding-left: 11px; }
   .device .id { font-size: 12px; font-weight: 700; font-family: var(--mono); }
   .device .spd { font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums; }
+  .spd small { font-size: 9px; font-weight: 650; color: var(--muted); margin-left: 2px; }
   .device .meta { grid-column: 1 / -1; font-size: 10px; color: var(--muted); }
   .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; background: var(--line); }
   .dot.hot { background: var(--amber); }
@@ -128,6 +156,14 @@
   }
   .ticks { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 9.5px; color: var(--muted); padding: 0 4px; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  .tabs { display: flex; background: #0a111b; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  .tab {
+    flex: 1; text-align: center; padding: 10px 4px; font-size: 10.5px; font-weight: 750;
+    text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted);
+    border-bottom: 2px solid transparent; cursor: pointer;
+  }
+  .tab.on { color: var(--text); border-bottom-color: var(--amber); }
+  .tab .cnt { background: var(--red); color: #fff; font-size: 9px; padding: 1px 6px; border-radius: 999px; margin-left: 4px; }
 </style>
 </head>
 <body>
@@ -148,9 +184,11 @@
   <nav class="views" aria-label="Ops views">
     <a href="#" class="on">Live</a>
     <a href="#">Alerts</a>
-    <span class="vsep" aria-hidden="true"></span>
-    <a href="#">Rules</a>
   </nav>
+  <span class="crumb" aria-label="You are in replay mode">
+    Live map <span class="sep">&#8250;</span> <b>24 h replay</b> <span class="sep">&#8250;</span> <span class="mstate">replay</span>
+  </span>
+  <a href="#" class="cfg" aria-label="Alert rules (configuration)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 17h16M4 7h16"/><circle cx="9" cy="7" r="2.2" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="2.2" fill="currentColor" stroke="none"/></svg> Rules</a>
   <div class="stat">
     <span>Reading <b class="mono">2026-02-17 11:47:12</b></span>
     <span>Scope <b>4 devices</b></span>
@@ -158,21 +196,22 @@
 </header>
 
 <aside class="fleet">
+  <div class="lsearch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> Search device or unit…</div>
   <h2>Replaying</h2>
   <div class="device sel">
-    <span class="id"><span class="dot hot"></span>truck-088</span><span class="spd">0 km/h</span>
+    <span class="id"><span class="dot hot"></span>truck-088</span><span class="spd">0<small>km/h</small></span>
     <span class="meta">S-88 &middot; stopped since 11:38</span>
   </div>
   <div class="device">
-    <span class="id"><span class="dot"></span>truck-042</span><span class="spd">64 km/h</span>
+    <span class="id"><span class="dot"></span>truck-042</span><span class="spd">64<small>km/h</small></span>
     <span class="meta">S-42 &middot; Ruta 3</span>
   </div>
   <div class="device">
-    <span class="id"><span class="dot"></span>bus-017</span><span class="spd">28 km/h</span>
+    <span class="id"><span class="dot"></span>bus-017</span><span class="spd">28<small>km/h</small></span>
     <span class="meta">S-17 &middot; corridor</span>
   </div>
   <div class="device">
-    <span class="id"><span class="dot"></span>van-118</span><span class="spd">0 km/h</span>
+    <span class="id"><span class="dot"></span>van-118</span><span class="spd">0<small>km/h</small></span>
     <span class="meta">S-118 &middot; parked</span>
   </div>
   <h2>Recorded</h2>
@@ -219,6 +258,11 @@
 </main>
 
 <aside class="rail">
+  <div class="tabs" role="tablist">
+    <span class="tab" role="tab">Alerts <span class="cnt">3</span></span>
+    <span class="tab on" role="tab" aria-selected="true">Replay</span>
+    <span class="tab" role="tab">Assistant</span>
+  </div>
   <h2>Events in window <span class="at">11:40&ndash;11:47</span></h2>
   <div class="ev past">
     <span class="t">11:38</span>

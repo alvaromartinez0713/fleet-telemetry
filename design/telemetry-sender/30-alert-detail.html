@@ -39,12 +39,28 @@
   header .views { display: flex; gap: 2px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
   header .views a { font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 5px 11px; border-radius: 7px; }
   header .views a.on { background: var(--panel-2); color: var(--text); }
-  header .vsep { width: 1px; height: 14px; background: var(--line); margin: 0 4px; }
+  header .cfg {
+    display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 750;
+    text-decoration: none; color: var(--muted); padding: 5px 10px; border-radius: 8px;
+    border: 1px solid var(--line); background: #0a111b;
+  }
+  header .cfg.on { background: var(--panel-2); color: var(--text); border-color: var(--panel-2); }
   header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 16px; }
   header .stat b { color: var(--text); font-weight: 700; }
 
   aside.fleet { grid-area: fleet; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
   aside.fleet h2 { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 13px 14px 7px; font-weight: 800; }
+  .lsearch {
+    display: flex; align-items: center; gap: 8px; background: #0a111b;
+    border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px;
+    font-size: 11px; color: var(--muted); margin: 10px 12px;
+  }
+  .lchips { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 12px 8px; }
+  .lchips .c {
+    font-size: 10px; font-weight: 700; padding: 4px 9px; border-radius: 999px;
+    background: #0a111b; border: 1px solid var(--line); color: var(--muted);
+  }
+  .lchips .c.on { background: var(--panel-2); color: var(--text); border-color: var(--panel-2); }
   .al { padding: 11px 14px; border-top: 1px solid var(--line); cursor: pointer; }
   .al.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--red); padding-left: 11px; }
   .al .r1 { display: flex; align-items: center; gap: 7px; }
@@ -86,6 +102,14 @@
   .chip.on { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
 
   .body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  .tabs { display: flex; background: #0a111b; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  .tab {
+    flex: 1; text-align: center; padding: 10px 4px; font-size: 10.5px; font-weight: 750;
+    text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted);
+    border-bottom: 2px solid transparent; cursor: pointer;
+  }
+  .tab.on { color: var(--text); border-bottom-color: var(--amber); }
+  .tab .cnt { background: var(--red); color: #fff; font-size: 9px; padding: 1px 6px; border-radius: 999px; margin-left: 4px; }
   .sec { padding: 12px 16px; border-bottom: 1px solid var(--line); }
   .sec h3 { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 9px; }
   /* timeline of the alert */
@@ -148,9 +172,8 @@
   <nav class="views" aria-label="Ops views">
     <a href="#">Live</a>
     <a href="#" class="on">Alerts</a>
-    <span class="vsep" aria-hidden="true"></span>
-    <a href="#">Rules</a>
   </nav>
+  <a href="#" class="cfg" aria-label="Alert rules (configuration)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 17h16M4 7h16"/><circle cx="9" cy="7" r="2.2" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="2.2" fill="currentColor" stroke="none"/></svg> Rules</a>
   <div class="stat">
     <span>Open <b>1</b></span>
     <span>Acknowledged <b>1</b></span>
@@ -159,6 +182,7 @@
 </header>
 
 <aside class="fleet">
+  <div class="lsearch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> Search alert, device or rule…</div>
   <h2>Alerts <span style="font-size: 9px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--muted);">instances &mdash; the rules that produced them live in Rules</span></h2>
   <div class="al sel">
     <div class="r1"><span class="sev crit">Critical</span><span class="ttl">Stopped in zone</span></div>
@@ -226,6 +250,11 @@
 </main>
 
 <aside class="detail">
+  <div class="tabs" role="tablist">
+    <span class="tab" role="tab">Alerts <span class="cnt">3</span></span>
+    <span class="tab on" role="tab" aria-selected="true">Alert</span>
+    <span class="tab" role="tab">Assistant</span>
+  </div>
   <div class="dhead">
     <div class="r1">
       <span class="sev">Critical</span>

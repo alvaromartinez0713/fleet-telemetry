@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — FleetGo Ops · Live map (Assistant tab)</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
+    --text: #e9edf2; --muted: #9aa8b8;
+    --navy: #16283e; --navy-2: #0a111b;
+    --amber: #e08a2e; --amber-soft: rgba(224, 138, 46, 0.14);
+    --teal: #6faab5; --teal-soft: rgba(111, 170, 181, 0.13);
+    --green: #58b47c; --green-soft: rgba(88, 180, 124, 0.13);
+    --red: #d9604f; --red-soft: rgba(217, 96, 79, 0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 280px 1fr 400px;
+    grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top top" "fleet map right";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 14px;
+    padding: 0 18px; background: var(--navy-2); border-bottom: 1px solid var(--line);
+  }
+  header .mark {
+    display: flex; align-items: center; gap: 9px;
+  }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--amber); }
+  header .pill {
+    font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px;
+    background: var(--green-soft); color: var(--green); display: flex; align-items: center; gap: 6px;
+  }
+  header .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  header .views { display: flex; gap: 2px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  header .views a {
+    font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted);
+    padding: 5px 11px; border-radius: 7px;
+  }
+  header .views a.on { background: var(--panel-2); color: var(--text); }
+  header .cfg {
+    display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 750;
+    text-decoration: none; color: var(--muted); padding: 5px 10px; border-radius: 8px;
+    border: 1px solid var(--line); background: #0a111b;
+  }
+  header .cfg.on { background: var(--panel-2); color: var(--text); border-color: var(--panel-2); }
+  header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 16px; }
+  header .stat b { color: var(--text); font-weight: 700; }
+  header .health {
+    font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+    background: var(--teal-soft); color: var(--teal); display: flex; align-items: center; gap: 6px;
+  }
+  header .health::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
+  aside.fleet {
+    grid-area: fleet; background: var(--panel); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  aside.fleet .bar { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  aside.fleet .search {
+    display: flex; align-items: center; gap: 8px; background: var(--navy-2);
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 11px;
+    font-size: 12px; color: var(--muted);
+  }
+  aside.fleet .chips { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .chip {
+    font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+    background: var(--navy-2); border: 1px solid var(--line); color: var(--muted);
+    cursor: pointer;
+  }
+  .chip.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .chip.r.on { background: var(--red); border-color: var(--red); color: #fff; }
+  aside.fleet h2 {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.9px;
+    color: var(--muted); padding: 12px 14px 6px; font-weight: 750;
+  }
+  .device {
+    padding: 11px 14px; border-top: 1px solid var(--line);
+    display: grid; grid-template-columns: 1fr auto 16px;
+    column-gap: 9px; row-gap: 4px; align-items: center;
+  }
+  .device.sel { background: var(--panel-2); border-left: 3px solid var(--amber); padding-left: 11px; }
+  .device .id { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .device .meta { font-size: 10.5px; color: var(--muted); grid-column: 1 / -1; }
+  .device .spd { font-size: 12.5px; font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .device .spd small { font-size: 9px; font-weight: 650; color: var(--muted); margin-left: 2px; }
+  .device .st { font-size: 13px; line-height: 1; cursor: pointer; flex-shrink: 0; text-align: center; }
+  .device .st.on { color: #f0b429; }
+  .device .st.off { color: var(--line); }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .dot.mv { background: var(--green); }
+  .dot.hb { background: var(--amber); }
+  .dot.st { background: var(--red); }
+  .dot.al { background: var(--red); box-shadow: 0 0 0 3px var(--red-soft); }
+  main.map { grid-area: map; position: relative; background: #0a1017; display: flex; flex-direction: column; }
+  .ticker {
+    position: absolute; top: 14px; left: 14px; right: 14px; z-index: 10;
+    display: flex; align-items: center; gap: 10px;
+    background: var(--red-soft); border: 1px solid var(--red); border-radius: 12px;
+    padding: 9px 13px;
+  }
+  .ticker .tag {
+    font-size: 9.5px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase;
+    background: var(--red); color: #fff; padding: 3px 8px; border-radius: 6px; flex-shrink: 0;
+  }
+  .ticker .txt { font-size: 12px; font-weight: 650; }
+  .ticker .txt small { display: block; font-weight: 500; color: var(--muted); font-size: 10.5px; margin-top: 1px; }
+  .ticker .nav { margin-left: auto; display: flex; gap: 6px; }
+  .ticker .nav span {
+    width: 24px; height: 24px; border-radius: 7px; background: rgba(255, 255, 255, 0.08);
+    display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; color: var(--muted);
+  }
+  .gmap { flex: 1; position: relative; overflow: hidden; }
+  .gmap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .gmap .attribution { position: absolute; bottom: 6px; right: 8px; font-size: 9px; color: rgba(255, 255, 255, 0.5); }
+  .gmap .controls { position: absolute; right: 12px; top: 60px; display: flex; flex-direction: column; gap: 6px; z-index: 5; }
+  .gmap .controls span {
+    width: 34px; height: 34px; border-radius: 9px; background: rgba(255, 255, 255, 0.92); color: #333;
+    display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  .gmap .layers { position: absolute; bottom: 14px; left: 14px; z-index: 5; display: flex; gap: 8px; }
+  section.rail {
+    grid-area: right; background: var(--panel); border-left: 1px solid var(--line);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .rail .tabs { display: flex; background: #0a111b; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  .rail .tab {
+    flex: 1; text-align: center; padding: 10px 4px; font-size: 10.5px; font-weight: 750;
+    text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted);
+    border-bottom: 2px solid transparent; cursor: pointer;
+  }
+  .rail .tab.on { color: var(--text); border-bottom-color: var(--amber); }
+  .rail .tab .cnt { background: var(--red); color: #fff; font-size: 9px; padding: 1px 6px; border-radius: 999px; margin-left: 4px; }
+  .rail .tab .go { font-size: 10px; color: var(--teal); margin-left: 4px; }
+  .rail .panel { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  .rail h2 {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.9px;
+    color: var(--muted); padding: 13px 16px 7px; font-weight: 750;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .rail h2 .cnt { background: var(--red); color: #fff; font-size: 10px; padding: 1px 7px; border-radius: 999px; }
+  .alertitem { padding: 10px 16px; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.45; }
+  .alertitem .l1 { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+  .alertitem .sev { font-size: 9px; font-weight: 800; letter-spacing: 0.7px; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; flex-shrink: 0; }
+  .alertitem .sev.crit { background: var(--red); color: #fff; }
+  .alertitem .sev.warn { background: var(--amber); color: #16283e; }
+  .alertitem .sev.info { background: var(--teal-soft); color: var(--teal); }
+  .alertitem .l2 { color: var(--muted); font-size: 11px; margin-top: 3px; }
+  .alertitem .acts { display: flex; gap: 7px; margin-top: 8px; }
+  .alertitem .acts span {
+    font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 8px;
+    background: var(--navy-2); border: 1px solid var(--line); color: var(--muted); cursor: pointer;
+  }
+  .alertitem .acts span.pri { background: var(--amber); border-color: var(--amber); color: #16283e; }
+  .assistant { border-top: 2px solid var(--amber); background: var(--navy-2); padding: 12px 16px; margin-top: auto; }
+  .assistant .hd { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+  .assistant .orb {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 30%, #f0a752, var(--amber) 65%);
+    display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff;
+    box-shadow: 0 0 0 3px var(--amber-soft);
+  }
+  .assistant .t { font-size: 12.5px; font-weight: 750; }
+  .assistant .s { font-size: 10.5px; color: var(--muted); }
+  .assistant .q {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 12px; font-size: 12px; line-height: 1.5;
+  }
+  .assistant .q .who { font-size: 9.5px; font-weight: 800; letter-spacing: 0.7px; text-transform: uppercase; color: var(--teal); margin-bottom: 4px; }
+  .assistant .q b { color: var(--amber); }
+  .assistant .in {
+    display: flex; gap: 8px; margin-top: 10px; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 11px;
+    font-size: 12px; color: var(--muted); align-items: center;
+  }
+  .assistant .in .send {
+    margin-left: auto; width: 24px; height: 24px; border-radius: 7px; background: var(--amber);
+    color: #16283e; display: flex; align-items: center; justify-content: center; font-size: 12px;
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  /* ── assistant tab: the conversation lives in the rail ── */
+  .rail .chat { flex: 1; overflow: hidden; padding: 12px 14px; display: flex; flex-direction: column; gap: 11px; }
+  .msg { display: flex; gap: 9px; }
+  .msg .av {
+    width: 24px; height: 24px; border-radius: 7px; flex-shrink: 0; font-size: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .msg.user .av { background: var(--panel-2); color: var(--muted); font-weight: 800; }
+  .msg.bot .av { background: radial-gradient(circle at 32% 30%, #f0a752, var(--amber) 65%); color: #16283e; }
+  .msg .b { flex: 1; min-width: 0; }
+  .msg .who { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 3px; }
+  .msg .bubble {
+    background: #0a111b; border: 1px solid var(--line); border-radius: 11px;
+    padding: 9px 11px; font-size: 11.5px; line-height: 1.55;
+  }
+  .msg.user .bubble { background: var(--panel-2); border-color: var(--panel-2); }
+  .msg .bubble b { color: var(--amber); }
+  .msg .bubble .kv4 { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-top: 1px solid var(--line); font-size: 10.5px; }
+  .msg .bubble .kv4:first-of-type { border-top: none; margin-top: 6px; }
+  .msg .bubble .kv4 .k { color: var(--muted); }
+  .msg .bubble .kv4 .v { font-weight: 700; font-family: var(--mono); font-size: 10px; }
+  .msg .bubble .kv4 .v.bad { color: var(--red); }
+  .tools-used { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+  .tool {
+    font-family: var(--mono); font-size: 9px; padding: 2px 6px; border-radius: 5px;
+    background: var(--teal-soft); color: var(--teal); border: 1px solid rgba(111,170,181,0.35);
+  }
+  .answer-actions { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+  .answer-actions .a {
+    font-size: 10px; font-weight: 750; padding: 4px 9px; border-radius: 7px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+  }
+  .answer-actions .a.pri { background: var(--amber); border-color: var(--amber); color: #16283e; }
+  .suggest { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+  .suggest .s {
+    font-size: 10px; font-weight: 650; padding: 5px 9px; border-radius: 999px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--muted);
+  }
+  .composer { border-top: 1px solid var(--line); padding: 10px 14px 13px; background: #0a111b; flex-shrink: 0; }
+  .composer .in {
+    display: flex; align-items: center; gap: 8px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px;
+    font-size: 11.5px; color: var(--muted);
+  }
+  .composer .in .send {
+    margin-left: auto; width: 24px; height: 24px; border-radius: 7px; background: var(--amber);
+    color: #16283e; display: flex; align-items: center; justify-content: center; font-size: 12px;
+  }
+  .composer .note { font-size: 9px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>FleetGo <span>Ops</span></b>
+  </div>
+  <span class="pill">Live · SSE</span>
+  <a href="#" class="health" aria-label="Open connection and data states" style="text-decoration:none;">Pipeline healthy <span style="opacity:.7; font-weight:800;">&#8250;</span></a>
+  <nav class="views" aria-label="Ops views">
+    <a href="#" class="on">Live</a>
+    <a href="#">Alerts</a>
+  </nav>
+  <a href="#" class="cfg" aria-label="Alert rules (configuration)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 17h16M4 7h16"/><circle cx="9" cy="7" r="2.2" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="2.2" fill="currentColor" stroke="none"/></svg> Rules</a>
+  <div class="stat">
+    <span>Fleet <b>28</b></span>
+    <span>Moving <b>19</b></span>
+    <span>Alerts <b>3</b></span>
+    <span>Ingest <b>12.4/s</b></span>
+  </div>
+  <span class="crumb" aria-label="You are in assistant mode">
+    Live map <span class="sep">&#8250;</span> rail <span class="sep">&#8250;</span> <span class="mstate">assistant</span>
+  </span>
+</header>
+
+<aside class="fleet">
+  <div class="bar">
+    <div class="search">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      Search device, unit, plate…
+    </div>
+    <div class="chips" role="group" aria-label="Fleet status filters">
+      <span class="chip on">All 28</span>
+      <span class="chip">&#9733; Watched 4</span>
+      <span class="chip">Moving 19</span>
+      <span class="chip">Parked 7</span>
+      <span class="chip r on">Alerts 3</span>
+      <span class="chip">No signal 2</span>
+    </div>
+  </div>
+  <h2>Devices</h2>
+  <div class="device sel">
+    <span class="id"><span class="dot mv"></span>truck-042</span>
+    <span class="spd">67<small>km/h</small></span>
+    <span class="st on" role="button" aria-label="Remove from watchlist" title="Remove from watchlist">&#9733;</span>
+    <span class="meta">S-42 · Ruta 3 · seq 18 401 · acc 4.2 m</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot mv"></span>bus-017</span>
+    <span class="spd">23<small>km/h</small></span>
+    <span class="st off" role="button" aria-label="Add to watchlist" title="Add to watchlist">&#9734;</span>
+    <span class="meta">S-17 · Av. 9 de Julio · seq 9 118</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot al"></span>truck-088</span>
+    <span class="spd">0<small>km/h</small></span>
+    <span class="st on" role="button" aria-label="Remove from watchlist" title="Remove from watchlist">&#9733;</span>
+    <span class="meta">S-88 · stopped 24 min · Zona Norte</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot hb"></span>van-118</span>
+    <span class="spd">0<small>km/h</small></span>
+    <span class="st on" role="button" aria-label="Remove from watchlist" title="Remove from watchlist">&#9733;</span>
+    <span class="meta">S-118 · parked · heartbeat</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot st"></span>van-203</span>
+    <span class="spd">—</span>
+    <span class="st on" role="button" aria-label="Remove from watchlist" title="Remove from watchlist">&#9733;</span>
+    <span class="meta">S-203 · last seen 09:41</span>
+  </div>
+  <div class="device">
+    <span class="id"><span class="dot mv"></span>truck-201</span>
+    <span class="spd">54<small>km/h</small></span>
+    <span class="st off" role="button" aria-label="Add to watchlist" title="Add to watchlist">&#9734;</span>
+    <span class="meta">S-201 · Ruta 8 · seq 44 210</span>
+  </div>
+</aside>
+
+<main class="map" aria-label="Fleet map">
+  <div class="ticker" role="alert">
+    <span class="tag">Alert</span>
+    <div class="txt">
+      truck-088 stopped 24 min in critical zone
+      <small>S-88 · AB 555 FG · Zona Norte · rule: stopped &gt; 20 min</small>
+    </div>
+    <div class="nav"><span>&#8249;</span><span>&#8250;</span><span>&#10005;</span></div>
+  </div>
+
+  <div class="gmap">
+    <svg viewBox="0 0 760 848" aria-hidden="true">
+      <rect width="760" height="848" fill="#0a1017"/>
+      <g stroke="#141d29" stroke-width="1">
+        <path d="M90 0V848 M220 0V848 M370 0V848 M540 0V848 M690 0V848"/>
+        <path d="M0 90H760 M0 210H760 M0 350H760 M0 500H760 M0 650H760 M0 780H760"/>
+      </g>
+      <g stroke="#1b2735" stroke-width="4">
+        <path d="M300 0 C 340 280 280 520 380 848" fill="none"/>
+        <path d="M0 680 H760" fill="none"/>
+      </g>
+      <rect x="450" y="120" width="180" height="150" rx="10" fill="#0e1a20"/>
+      <ellipse cx="150" cy="740" rx="130" ry="70" fill="#0c1620"/>
+      <rect x="80" y="80" width="90" height="90" rx="8" fill="#101a24"/>
+      <g font-family="system-ui" font-size="11" font-weight="700" text-anchor="middle">
+        <circle cx="370" cy="300" r="26" fill="#e08a2e" fill-opacity="0.92"/>
+        <text x="370" y="304" fill="#16283e">12</text>
+        <circle cx="540" cy="500" r="20" fill="#58b47c" fill-opacity="0.92"/>
+        <text x="540" y="504" fill="#0a111b">7</text>
+        <circle cx="220" cy="430" r="16" fill="#6faab5" fill-opacity="0.92"/>
+        <text x="220" y="434" fill="#0a111b">4</text>
+      </g>
+      <g transform="translate(300,600)">
+        <circle r="22" fill="rgba(217,96,79,0.25)"/>
+        <circle r="12" fill="#d9604f"/>
+        <circle r="4.5" fill="#fff"/>
+      </g>
+      <text x="300" y="640" text-anchor="middle" font-family="system-ui" font-size="11" font-weight="700" fill="#f2a49a">truck-088</text>
+      <g transform="translate(540,680)"><circle r="9" fill="#58b47c"/><circle r="3.5" fill="#0a111b"/></g>
+      <text x="540" y="706" text-anchor="middle" font-family="system-ui" font-size="10.5" fill="#9aa8b8">truck-201</text>
+      <polyline points="300,600 340,530 380,460 420,380" fill="none" stroke="#e08a2e" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/>
+    </svg>
+    <div class="controls"><span>+</span><span>&minus;</span><span>&#8982;</span></div>
+    <div class="layers">
+      <span class="chip on">Traffic</span>
+      <span class="chip">Heatmap</span>
+      <span class="chip">Clusters</span>
+    </div>
+    <span class="attribution">Map data &copy; Google &middot; dark style</span>
+  </div>
+</main>
+
+<section class="rail">
+  <div class="tabs" role="tablist">
+    <span class="tab" role="tab">Alerts <span class="cnt">3</span></span>
+    <span class="tab on" role="tab" aria-selected="true">Assistant</span>
+  </div>
+
+  <div class="chat" role="tabpanel">
+    <div class="msg user">
+      <span class="av">MR</span>
+      <div class="b">
+        <div class="who">M. Rivas &middot; dispatch</div>
+        <div class="bubble">What is wrong with truck-088?</div>
+      </div>
+    </div>
+
+    <div class="msg bot">
+      <span class="av">&#10022;</span>
+      <div class="b">
+        <div class="who">Assistant</div>
+        <div class="bubble">
+          Not a data problem &mdash; it is <b>stopped in a critical zone</b>.
+          <div class="kv4"><span class="k">Last sample</span><span class="v">12:09:41 &middot; 0 km/h</span></div>
+          <div class="kv4"><span class="k">Stopped since</span><span class="v">11:38 &middot; 24 min</span></div>
+          <div class="kv4"><span class="k">Zone</span><span class="v bad">Zona Norte</span></div>
+          <div class="kv4"><span class="k">Data gaps</span><span class="v">1 held &middot; seq 7 211</span></div>
+          The held sample is the clock, not the alert.
+          <div class="tools-used">
+            <span class="tool">buscar_dispositivo()</span>
+            <span class="tool">alertas_abiertas()</span>
+          </div>
+          <div class="answer-actions">
+            <span class="a pri">Open device</span>
+            <span class="a">Dispatch</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="msg user">
+      <span class="av">MR</span>
+      <div class="b"><div class="bubble">And the rest of the fleet?</div></div>
+    </div>
+
+    <div class="msg bot">
+      <span class="av">&#10022;</span>
+      <div class="b">
+        <div class="bubble">
+          28 units: <b>19 moving</b>, 7 parked, 2 silent. One warning left &mdash; van-203, no
+          signal for 2 h 15 m.
+          <div class="tools-used"><span class="tool">estado_flota()</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="suggest">
+      <span class="s">Summarise this shift</span>
+      <span class="s">Is the pipeline healthy?</span>
+      <span class="s">Which units are silent?</span>
+    </div>
+  </div>
+
+  <div class="composer">
+    <div class="in">
+      Ask about a device, an alert or the pipeline…
+      <span class="send">&uarr;</span>
+    </div>
+    <div class="note">Grounded in this fleet &mdash; says when it falls back to cached state.</div>
+  </div>
+</section>
+</body>
+</html>

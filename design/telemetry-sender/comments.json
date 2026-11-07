@@ -792,6 +792,215 @@
       "status": "resolved",
       "sentAt": "2026-11-07T04:35:23.674Z",
       "resolvedAt": "2026-11-07T04:35:37.370Z"
+    },
+    {
+      "id": "tou0rgv8",
+      "file": "25-ops-console-v2.html",
+      "selector": "body > header > nav > span",
+      "excerpt": "",
+      "comment": "Esto que es poruqe se ve asi",
+      "createdAt": "2026-11-07T04:36:06.721Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:36:08.239Z",
+      "resolvedAt": "2026-11-07T04:38:01.600Z"
+    },
+    {
+      "id": "cwdefz06",
+      "file": "34-follow-mode.html",
+      "selector": "body > header > nav",
+      "excerpt": "Live Alerts",
+      "comment": "varias pantallas tambien usar este Live, el Follow mode, 24h replay, y Live normal como se llega a cada pantalla cual es el boton o menu organizar esto mejor",
+      "createdAt": "2026-11-07T04:39:49.063Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:39:51.632Z",
+      "resolvedAt": "2026-11-07T04:40:23.319Z"
+    },
+    {
+      "id": "iwx5s172",
+      "file": "28-console-states.html",
+      "selector": "body",
+      "excerpt": "FleetGo Ops REFERENCE SHEET · NOT NAVIGABLE Connection & data states Not a screen you can reach: this is a design reference for the Live map board (25) in FleetGo Ops. It documents the four states that screen must handle, so the operator never has to guess whether data is fresh. Read it next to boar",
+      "comment": "desde donde se llega o como se abre esta pantalla",
+      "createdAt": "2026-11-07T04:43:08.976Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:43:09.840Z",
+      "resolvedAt": "2026-11-07T04:43:40.756Z"
+    },
+    {
+      "id": "cgil9koi",
+      "file": "32-replay.html",
+      "selector": "body > header > span:nth-of-type(2) > span:nth-of-type(3)",
+      "excerpt": "REPLAY",
+      "comment": "y eso ampersar numeral que es con ese numero",
+      "createdAt": "2026-11-07T04:44:55.228Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:45:14.405Z",
+      "resolvedAt": "2026-11-07T04:46:10.938Z"
+    },
+    {
+      "id": "uvjqips3",
+      "file": "32-replay.html",
+      "selector": "body > header > span:nth-of-type(1)",
+      "excerpt": "REPLAY",
+      "comment": "aca tambien que es esto ampersan numero y el numero",
+      "createdAt": "2026-11-07T04:45:13.200Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:45:14.405Z",
+      "resolvedAt": "2026-11-07T04:46:10.938Z"
+    },
+    {
+      "id": "g44ti69c",
+      "file": "26-device-detail.html",
+      "selector": "body > aside",
+      "excerpt": "Search device, unit, plate… All 28 Moving 19 Parked 7 Alerts 3 No signal 2 DEVICES truck-042 67 km/h S-42 · Ruta 3 · seq 18 401 · acc 4.2 m bus-017 23 km/h S-17 · Av. 9 de Julio · seq 9 118 truck-088 0 km/h S-88 · stopped 24 min · Zona Norte van-118 0 km/h S-118 · parked · heartbeat van-203 — S-203",
+      "comment": "crees que aca ya deberia tener las estrellar los devices, hasta que no seleccione el filtro o como se van a seleccionar para hacer los grupos, igual en la vista live map",
+      "createdAt": "2026-11-07T04:47:38.171Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:47:40.584Z",
+      "resolvedAt": "2026-11-07T04:48:29.406Z"
+    },
+    {
+      "id": "7yjkm7xu",
+      "file": "33-watchlist.html",
+      "selector": "body > aside:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > span:nth-of-type(3)",
+      "excerpt": "67",
+      "comment": "aca faltan los km/h",
+      "createdAt": "2026-11-07T04:50:26.462Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:51:38.405Z",
+      "resolvedAt": "2026-11-07T04:53:15.684Z"
+    },
+    {
+      "id": "qumv62lf",
+      "file": "33-watchlist.html",
+      "selector": "body > aside:nth-of-type(1) > div:nth-of-type(6) > div:nth-of-type(1) > span:nth-of-type(3)",
+      "excerpt": "23",
+      "comment": "aca igual km/h",
+      "createdAt": "2026-11-07T04:50:52.572Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:51:38.405Z",
+      "resolvedAt": "2026-11-07T04:53:15.684Z"
+    },
+    {
+      "id": "6q4j1qda",
+      "file": "25-ops-console-v2.html",
+      "selector": "body > aside > div:nth-of-type(2)",
+      "excerpt": "★ adds a unit to your watchlist — the group is reordered and shared from Watchlist.",
+      "comment": "Esto sobra en todas las pantallas",
+      "createdAt": "2026-11-07T04:52:44.984Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:52:50.060Z",
+      "resolvedAt": "2026-11-07T04:53:51.008Z"
+    },
+    {
+      "id": "pqud3flg",
+      "file": "25-ops-console-v2.html",
+      "selector": "body > section > h2:nth-of-type(1)",
+      "excerpt": "ALERTS 3",
+      "comment": "aqui seria mejor separa lo de alert y del asistan en tabs no te parece y crear una sola pantalla para el assitant",
+      "createdAt": "2026-11-07T04:56:34.358Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:56:54.219Z",
+      "resolvedAt": "2026-11-07T04:57:58.530Z"
+    },
+    {
+      "id": "6bqxnbvv",
+      "file": "43-ops-v2-live.html",
+      "selector": "body > aside:nth-of-type(1) > div:nth-of-type(4) > span:nth-of-type(1) > span",
+      "excerpt": "",
+      "comment": "y esto que es porque quedo asi  de grande",
+      "createdAt": "2026-11-07T05:33:59.598Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T05:34:02.844Z",
+      "resolvedAt": "2026-11-07T05:34:53.938Z"
+    },
+    {
+      "id": "8yv05oro",
+      "file": "44-ops-v2-settings.html",
+      "selector": "body > main > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(1) > h2",
+      "excerpt": "Watchlist drag to order",
+      "comment": "mejorar se ve muy grande",
+      "createdAt": "2026-11-07T05:35:04.113Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T05:35:04.135Z",
+      "resolvedAt": "2026-11-07T05:35:30.266Z"
+    },
+    {
+      "id": "bxp56yzu",
+      "file": "44-ops-v2-settings.html",
+      "selector": "body > main > div:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(2) > h2 > span",
+      "excerpt": "who gets woken up",
+      "comment": "mejorar se ve muy grande",
+      "createdAt": "2026-11-07T05:35:12.978Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T05:35:13.006Z",
+      "resolvedAt": "2026-11-07T05:36:23.939Z"
+    },
+    {
+      "id": "yl160lbt",
+      "file": "43-ops-v2-live.html",
+      "selector": "body > aside:nth-of-type(1) > div:nth-of-type(4) > span:nth-of-type(1) > span",
+      "excerpt": "",
+      "comment": "arreglar esto se ve mal",
+      "createdAt": "2026-11-07T05:35:53.699Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T05:35:53.735Z",
+      "resolvedAt": "2026-11-07T05:37:00.775Z"
+    },
+    {
+      "id": "nzzrpenw",
+      "file": "43-ops-v2-live.html",
+      "selector": "body > aside:nth-of-type(1) > div:nth-of-type(6) > span:nth-of-type(1) > span",
+      "excerpt": "",
+      "comment": "este debe ser un punto no ese tan grande",
+      "createdAt": "2026-11-07T05:38:04.687Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T05:38:04.740Z",
+      "resolvedAt": "2026-11-07T05:38:45.251Z"
+    },
+    {
+      "id": "2gih4l9g",
+      "file": "43-ops-v2-live.html",
+      "selector": "body > header > nav > a:nth-of-type(2)",
+      "excerpt": "Alerts",
+      "comment": "no falta la pantalla de alerts",
+      "createdAt": "2026-11-07T05:38:48.970Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T05:38:49.006Z",
+      "resolvedAt": "2026-11-07T05:39:39.451Z"
+    },
+    {
+      "id": "ijoeoxax",
+      "file": "43-ops-v2-live.html",
+      "selector": "body > aside:nth-of-type(1) > div:nth-of-type(4)",
+      "excerpt": "truck-088 0km/h ★ S-88 · stopped 24 min",
+      "comment": "esto sigue sin ser un punto es un ovalo grande",
+      "createdAt": "2026-11-07T05:39:47.531Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T05:39:47.803Z",
+      "resolvedAt": "2026-11-07T05:40:31.509Z"
+    },
+    {
+      "id": "4aljwb4s",
+      "file": "46-ops-v2-alerts.html",
+      "selector": "body > main > div:nth-of-type(2) > div:nth-of-type(4) > span:nth-of-type(2)",
+      "excerpt": "WARN",
+      "comment": "se ve mal el diseño aca",
+      "createdAt": "2026-11-07T05:40:57.439Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T05:40:57.466Z",
+      "resolvedAt": "2026-11-07T05:41:33.345Z"
+    },
+    {
+      "id": "f62yd9o2",
+      "file": "46-ops-v2-alerts.html",
+      "selector": "body > main > div:nth-of-type(1) > div > span:nth-of-type(3)",
+      "excerpt": "Ack all mine",
+      "comment": "que es eso de ack?",
+      "createdAt": "2026-11-07T05:41:51.594Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T05:41:51.622Z",
+      "resolvedAt": "2026-11-07T05:42:20.521Z"
     }
   ]
 }
