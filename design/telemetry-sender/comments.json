@@ -693,6 +693,72 @@
       "status": "resolved",
       "sentAt": "2026-11-07T04:02:41.759Z",
       "resolvedAt": "2026-11-07T04:03:18.715Z"
+    },
+    {
+      "id": "a9xt4go2",
+      "file": "28-console-states.html",
+      "selector": "body",
+      "excerpt": "Console states The four states the live view must handle explicitly — never leave the operator guessing whether data is fresh. Live connection lost — showing last known positions The map and counters are frozen at the moment the stream dropped. Do not dispatch on this view until it reconnects. last",
+      "comment": "Esta pantalla a que pertecene porque se llama Console states?",
+      "createdAt": "2026-11-07T04:25:05.368Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:25:05.436Z",
+      "resolvedAt": "2026-11-07T04:26:16.496Z"
+    },
+    {
+      "id": "h2wd5d7k",
+      "file": "28-console-states.html",
+      "selector": "body > div:nth-of-type(1) > h1",
+      "excerpt": "FleetGo Ops · Connection & data states",
+      "comment": "El logo no cumple como las otras pantallas",
+      "createdAt": "2026-11-07T04:26:49.283Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:26:49.315Z",
+      "resolvedAt": "2026-11-07T04:27:13.259Z"
+    },
+    {
+      "id": "bzqciz0l",
+      "file": "00-family-sheet.html",
+      "selector": "body",
+      "excerpt": "FLEET TELEMETRY · PRODUCT FAMILY · VERTICAL SHEET Three products, one data pipeline The same telemetry travels through all three: the driver app captures and sends it, FleetGo turns it into decisions about vehicles, and Fleet Platform explains what the system itself is doing. Nothing is duplicated b",
+      "comment": "Se perdio el tiempo no se ve ningun diseño",
+      "createdAt": "2026-11-07T04:27:36.254Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T04:27:36.274Z",
+      "resolvedAt": "2026-11-07T04:29:52.999Z"
+    },
+    {
+      "id": "c1i87v6o",
+      "file": "03-wire-inspector.html",
+      "selector": "body > main > pre",
+      "excerpt": "// POST /v1/telemetry — last 3 of 118 events shown { \"events\": [ { \"device_id\": \"truck-042\", \"seq\": 18401, \"captured_at\": \"2026-02-17T12:04:27.180Z\", \"lat\": -34.60371, \"lon\": -58.38160, \"speed_kmh\": 66.4, \"heading_deg\": 211.0, \"accuracy_m\": 4.2, \"mode\": \"moving\", \"traceparent\": \"00-4bf92f35...-00f06",
+      "comment": "QUiero implementar esta forma de ver los datos, tanto de las request como de los response en fleet platform",
+      "createdAt": "2026-11-07T04:28:28.664Z",
+      "status": "open",
+      "sentAt": "2026-11-07T04:28:28.732Z",
+      "resolvedAt": null
+    },
+    {
+      "id": "aojq9o3b",
+      "file": "33-watchlist.html",
+      "selector": "body > header > nav > a:nth-of-type(2)",
+      "excerpt": "Pipeline",
+      "comment": "De todas las pantallas de FleetGo Ops quitar este pipeline si ya no es se usa, revisa primero",
+      "createdAt": "2026-11-07T04:29:32.987Z",
+      "status": "open",
+      "sentAt": null,
+      "resolvedAt": null
+    },
+    {
+      "id": "9xabbqth",
+      "file": "28-console-states.html",
+      "selector": "body",
+      "excerpt": "FleetGo Ops STATE SHEET Connection & data states States of the Live map screen (25) — the four cases it must handle explicitly, so the operator never has to guess whether data is fresh. Live connection lost — showing last known positions The map and counters are frozen at the moment the stream dropp",
+      "comment": "Como se llega a esta pantalla?",
+      "createdAt": "2026-11-07T04:29:58.757Z",
+      "status": "open",
+      "sentAt": null,
+      "resolvedAt": null
     }
   ]
 }

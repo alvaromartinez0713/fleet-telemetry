@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Telemetry Sender — Ops Console · States</title>
+<title>Telemetry Sender — FleetGo Ops · Connection &amp; data states</title>
 <style>
   :root {
     --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
@@ -129,8 +129,8 @@
 </style>
 </head>
 <body>
-<div class="title" style="align-items:center;">
-  <svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true">
+<div style="display: flex; align-items: center; gap: 9px; margin-bottom: 4px;">
+  <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
       <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
       <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
       <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
@@ -139,8 +139,13 @@
       <circle cx="24" cy="25" r="6" fill="#fff"/>
       <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
     </svg>
-  <h1>Console states</h1>
-  <p>The four states the live view must handle explicitly — never leave the operator guessing whether data is fresh.</p>
+  <b style="font-size: 15px; font-weight: 800; letter-spacing: -0.3px;">FleetGo <span style="color: var(--amber);">Ops</span></b>
+  <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.7px; text-transform: uppercase; padding: 3px 9px; border-radius: 5px; background: var(--teal-soft); color: var(--teal);">State sheet</span>
+</div>
+
+<div class="title" style="align-items: baseline;">
+  <h1>Connection &amp; data states</h1>
+  <p>States of the <b style="color: var(--text); font-weight: 700;">Live map</b> screen (25) &mdash; the four cases it must handle explicitly, so the operator never has to guess whether data is fresh.</p>
 </div>
 
 <div class="grid">

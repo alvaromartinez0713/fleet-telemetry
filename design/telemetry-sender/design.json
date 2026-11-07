@@ -5,9 +5,9 @@
     {
       "file": "00-family-sheet.html",
       "title": "Family sheet · all three products, vertical",
-      "tradeoff": "One tall board that stacks Brand, App, FleetGo Ops and Fleet Platform top to bottom, each frame loading the real artboard; the reading aid the horizontal canvas strip cannot be",
+      "tradeoff": "Vertical index of the whole family: Brand, App, FleetGo Ops and Fleet Platform stacked top to bottom with labelled miniatures of every screen (inline, because the canvas blocks nested frames)",
       "width": 1600,
-      "height": 6100
+      "height": 4400
     },
     {
       "file": "23-mesh-mark.html",
@@ -130,8 +130,8 @@
     },
     {
       "file": "28-console-states.html",
-      "title": "FleetGo Ops · States",
-      "tradeoff": "Disconnected banner, data age per device, empty, error and skeleton loading",
+      "title": "FleetGo Ops · Connection & data states",
+      "tradeoff": "State sheet for the Live map: disconnected banner and frozen map, per-device data age with thresholds, empty, error and skeleton loading",
       "width": 1440,
       "height": 900
     },
