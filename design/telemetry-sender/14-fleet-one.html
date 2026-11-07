@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Driver · Fleet One</title>
+<style>
+  :root {
+    --bg: #f3f4f1;
+    --card: #ffffff;
+    --line: #e3e4df; --info: #3e7480; --info-soft: #e6efef;
+    --text: #1c2530;
+    --muted: #6d756e;
+    --brand: #c06f18; --ink-hero: #16283e;
+    --brand-deep: #9a5a14;
+    --brand-soft: #f4ead9;
+    --green: #3d8455;
+    --green-soft: #e5efe7;
+    --green-dark: #2e6b43;
+    --warn: #b45309;
+    --warn-soft: #f7ecd9;
+    --shadow: 0 8px 24px rgba(26, 36, 52, 0.06);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 390px; height: 844px; overflow-y: auto; overflow-x: hidden;
+  }
+  .phone { display: flex; flex-direction: column; min-height: 844px; padding: 0 16px; }
+  .statusbar {
+    display: flex; justify-content: space-between; padding: 14px 6px 6px;
+    font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+  /* header: brand title + restyled bell */
+  .head { display: flex; align-items: center; justify-content: space-between; padding: 12px 6px 14px; }
+  .head h1 { font-size: 23px; font-weight: 800; letter-spacing: -0.4px; }
+  .head h1 span { color: var(--brand); }
+  /* hero: blue gradient shell (fleet pro) holding the green speed ring (soft fleet) */
+  .hero {
+    background: var(--ink-hero);
+    border-radius: 24px; padding: 18px;
+    box-shadow: 0 12px 28px rgba(22, 40, 62, 0.3);
+    color: #fff;
+  }
+  .hero .toprow { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; opacity: 0.92; }
+  .hero .toprow .dot { width: 8px; height: 8px; border-radius: 50%; background: #86efac; box-shadow: 0 0 0 3px rgba(122, 214, 155, 0.3); }
+  .hero .toprow .mode {
+    margin-left: auto; background: #ffffff; color: var(--brand-deep);
+    border-radius: 999px;
+    font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px;
+    padding: 6px 13px; box-shadow: 0 2px 8px rgba(10, 30, 90, 0.25);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .hero .toprow .mode::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+  }
+  .hero .main { display: flex; align-items: center; gap: 18px; margin-top: 14px; }
+  .ring {
+    width: 118px; height: 118px; border-radius: 50%; flex-shrink: 0;
+    background:
+      radial-gradient(closest-side, #ffffff 80%, transparent 81% 100%),
+      conic-gradient(#ffffff 0 67%, rgba(255, 255, 255, 0.25) 67% 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--text);
+  }
+  .ring .n { font-size: 36px; font-weight: 800; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+  .ring .u { font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; }
+  .hero .facts { flex: 1; min-width: 0; }
+  .hero .facts .f {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 8px 0; border-top: 1px dashed rgba(255, 255, 255, 0.28); font-size: 13px;
+  }
+  .hero .facts .f:first-child { border-top: none; }
+  .hero .facts .k { opacity: 0.8; font-size: 12px; }
+  .hero .facts .v { font-weight: 700; font-variant-numeric: tabular-nums; }
+  /* meter: buffer fill, white on blue */
+  .hero .meter { margin-top: 12px; }
+  .hero .meter .lbl { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 600; opacity: 0.92; margin-bottom: 6px; }
+  .hero .meter .track { height: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.22); }
+  .hero .meter .track i { display: block; height: 100%; width: 19%; border-radius: 999px; background: #ffffff; }
+  /* (notification bell removed: the app has no notifications; connection state
+     lives on the unit badge and the offline banner) */
+  /* offline banner: shows when buffered data waits for connectivity */
+  .offline {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--warn-soft); border: 1px solid #ecd9b0; border-radius: 14px;
+    padding: 10px 14px; margin-bottom: 14px;
+    font-size: 12px; font-weight: 650; color: var(--warn);
+  }
+  .offline svg { flex-shrink: 0; }
+  .offline .count { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; }
+  /* unit card: same card language as the action cards */
+  .unitcard {
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    padding: 11px 15px; display: flex; align-items: center; gap: 11px;
+    box-shadow: var(--shadow); margin-bottom: 14px;
+  }
+  .unitcard .ic {
+    width: 38px; height: 38px; border-radius: 12px; background: var(--ink-hero);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .unitcard .t { font-size: 13.5px; font-weight: 700; }
+  .unitcard .s { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .unitcard .live {
+    margin-left: auto; display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: var(--brand-deep); background: var(--brand-soft);
+    padding: 5px 10px; border-radius: 999px; flex-shrink: 0;
+  }
+  .unitcard .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--brand); }
+  /* twin actions */
+  /* today stats: one clean card, 2x2 grid with dividers */
+  .stats { background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); margin-top: 14px; overflow: hidden; }
+  .stats .grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .stat { padding: 14px 16px; border-top: 1px solid var(--line); }
+  .stat:nth-child(odd) { border-right: 1px solid var(--line); }
+  .stat:nth-child(-n+2) { border-top: none; }
+  .stat .v { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
+  .stat .v small { font-size: 11px; color: var(--muted); font-weight: 650; margin-left: 3px; }
+  .stat .k { font-size: 10.5px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-top: 2px; }
+  .stats .queuefoot {
+    display: flex; align-items: center; gap: 9px;
+    padding: 11px 16px; border-top: 1px solid var(--line); background: var(--warn-soft);
+    font-size: 12px; font-weight: 650; color: var(--warn);
+  }
+  .stats .queuefoot .n { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stats .queuefoot .go { margin-left: auto; font-size: 14px; }
+  .action {
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    padding: 13px 15px; display: flex; align-items: center; gap: 11px;
+    box-shadow: var(--shadow);
+  }
+  .action .ic {
+    width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; flex-shrink: 0;
+  }
+  .action .ic.g { background: var(--green-soft); color: var(--green-dark); }
+  .action .ic.w { background: var(--warn-soft); color: var(--warn); }
+  .action .t { font-size: 13px; font-weight: 700; }
+  .action .s { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  /* shift action: the driver's one primary button */
+  .shiftbtn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin-top: 14px; width: 100%;
+    background: var(--brand); color: #fff; border: none; border-radius: 16px;
+    padding: 15px; font: inherit; font-size: 14.5px; font-weight: 750;
+    box-shadow: 0 8px 20px rgba(154, 90, 20, 0.28);
+    cursor: pointer;
+  }
+  .shiftbtn .since {
+    font-size: 11.5px; font-weight: 600; opacity: 0.8;
+    border-left: 1px solid rgba(255, 255, 255, 0.35); padding-left: 10px;
+  }
+  .shiftbtn svg { flex-shrink: 0; }
+  /* section + timeline */
+  .sect { display: flex; align-items: baseline; justify-content: space-between; margin: 18px 6px 10px; }
+  .sect h2 { font-size: 15.5px; font-weight: 750; }
+  .sect a { font-size: 12.5px; color: var(--brand); font-weight: 650; text-decoration: none; }
+  .timeline { background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 4px 16px; }
+  .updated {
+    text-align: center; font-size: 11px; color: var(--muted); font-weight: 600;
+    padding: 10px 0 4px;
+  }
+  .updated::before { content: "● "; color: var(--green); font-size: 8px; vertical-align: 2px; }
+  .titem { display: flex; gap: 12px; position: relative; padding: 12px 0; }
+  .titem:not(:last-child)::after {
+    content: ""; position: absolute; left: 11px; top: 42px; bottom: 0; width: 2px;
+    background: var(--line); border-radius: 2px;
+  }
+  .titem .node {
+    width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; z-index: 1;
+    display: flex; align-items: center; justify-content: center; font-size: 11px;
+    border: 2px solid;
+  }
+  .titem .node.g { background: var(--green-soft); border-color: var(--green); color: var(--green-dark); }
+  .titem .node.b { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-deep); }
+  .titem .t { font-size: 13.5px; font-weight: 650; }
+  .titem .s { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .titem .when { margin-left: auto; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  /* nav: fleet pro pill style */
+  nav {
+    position: sticky; bottom: 0; margin-top: auto; display: flex; background: var(--card);
+    border-top: 1px solid var(--line); padding: 10px 10px 14px; margin-left: -16px; margin-right: -16px;
+  }
+  nav a { flex: 1; text-align: center; text-decoration: none; color: var(--muted); font-size: 10.5px; font-weight: 600; }
+  nav a .pill {
+    width: 44px; height: 28px; margin: 0 auto 4px; border-radius: 999px;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  nav a.active { color: var(--ink-hero); font-weight: 750; }
+  nav a.active .pill { background: #e3e4df; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="phone" role="application" aria-label="Driver screen — fleet one">
+  <div class="statusbar"><span>9:41</span><span>📶 ⌖ ▮</span></div>
+
+  <div class="head">
+    <h1>Fleet<span>Go</span></h1>
+  </div>
+
+  <div class="offline" role="status" aria-label="Offline notice">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M2 2l20 20"/>
+      <path d="M8.5 16.4a5 5 0 0 1 7 0"/>
+      <path d="M5 12.9a10 10 0 0 1 3.2-2.1"/>
+      <path d="M19 12.9a10 10 0 0 0-3.2-2.1"/>
+      <path d="M12 20h.01"/>
+    </svg>
+    Offline — sending when back online
+    <span class="count">94 queued</span>
+  </div>
+
+  <div class="unitcard" aria-label="Current unit">
+    <span class="ic">
+      <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.6" fill="none" stroke-linejoin="round" opacity="0.45"/>
+        <circle cx="24" cy="12.5" r="4.6" fill="#fff"/>
+        <circle cx="11" cy="33" r="4.6" fill="#fff"/>
+        <circle cx="37" cy="33" r="4.6" fill="#e8b06a"/>
+        <circle cx="24" cy="25" r="6" fill="#fff"/>
+        <circle cx="24" cy="25" r="2.4" fill="#16283e"/>
+      </svg>
+    </span>
+    <div>
+      <div class="t">Unit S-42</div>
+      <div class="s">truck-042 · Ruta 3</div>
+    </div>
+    <span class="live">Online · 4G</span>
+  </div>
+
+  <section class="hero" aria-label="Current sample">
+    <div class="toprow">
+      <span class="dot"></span> Sending · live
+      <span class="mode">Moving</span>
+    </div>
+    <div class="main">
+      <div class="ring" role="img" aria-label="Speed 67 of about 100 km/h">
+        <span class="n">67</span><span class="u">km/h</span>
+      </div>
+      <div class="facts">
+        <div class="f"><span class="k">Heading</span><span class="v">214° SW</span></div>
+        <div class="f"><span class="k">GPS</span><span class="v">4.2 m</span></div>
+        <div class="f"><span class="k">Next sample</span><span class="v">in 4 s</span></div>
+      </div>
+    </div>
+    <div class="meter" aria-label="Buffer fill">
+      <div class="lbl"><span>94 / 500 buffered</span><span>next flush 6 s</span></div>
+      <div class="track"><i></i></div>
+    </div>
+  </section>
+
+  <div class="stats" aria-label="Today's stats">
+    <div class="grid">
+      <div class="stat"><div class="v">312<small>km</small></div><div class="k">Distance</div></div>
+      <div class="stat"><div class="v">5 h 40<small>driving</small></div><div class="k">Time</div></div>
+      <div class="stat"><div class="v">1 240<small>samples</small></div><div class="k">Sent today</div></div>
+      <div class="stat"><div class="v">0<small>lost</small></div><div class="k">Data loss</div></div>
+    </div>
+    <div class="queuefoot" role="link" aria-label="3 in queue, open Queue">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v5h-5"/></svg>
+      <span class="n">3 in queue</span> — retrying · held
+      <span class="go">›</span>
+    </div>
+  </div>
+
+  <button class="shiftbtn" type="button">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 2v10l4.5 2.5"/>
+      <circle cx="12" cy="12" r="10"/>
+    </svg>
+    Finish shift
+    <span class="since">since 07:00</span>
+  </button>
+
+  <div class="sect"><h2>Recent deliveries</h2><a href="#">See all</a></div>
+  <div class="timeline" aria-label="Recent deliveries">
+    <div class="titem">
+      <span class="node g">✓</span>
+      <div><div class="t">Batch #4193 · 118 events</div><div class="s">Accepted · dedup verified</div></div>
+      <span class="when">12:04:31</span>
+    </div>
+    <div class="titem">
+      <span class="node g">✓</span>
+      <div><div class="t">Batch #4192 · 121 events</div><div class="s">Accepted · 298 ms</div></div>
+      <span class="when">12:03:31</span>
+    </div>
+    <div class="titem">
+      <span class="node b">⟳</span>
+      <div><div class="t">Batch #4191 · retrying</div><div class="s">503 · attempt 2 of 5</div></div>
+      <span class="when">12:02:31</span>
+    </div>
+  </div>
+  <div class="updated">Updated 2 s ago</div>
+
+  <nav aria-label="App navigation">
+    <a href="#" class="active"><span class="pill">◎</span>Drive</a>
+    <a href="#"><span class="pill">▤</span>Queue</a>
+    <a href="#"><span class="pill">⟳</span>Sync</a>
+    <a href="#"><span class="pill">☰</span>More</a>
+  </nav>
+</div>
+</body>
+</html>

@@ -3,7 +3,15 @@
   "brief": "Screens for the app that captures vehicle telemetry (device_id, seq, captured_at, lat/lon, speed_kmh, heading_deg, accuracy_m, mode moving|heartbeat) and sends batches to POST /v1/telemetry in fleet-telemetry. Three directions for the same sender app.",
   "artboards": [
     { "file": "01-ops-console.html", "title": "Ops console", "tradeoff": "Fleet-wide live view: map, device list, intake feed in one dense dark screen; steep learning curve for non-operators", "width": 1440, "height": 900 },
-    { "file": "02-driver-app.html", "title": "Driver app (mobile)", "tradeoff": "Calm, touch-first, one device at a time with offline queue clarity; no fleet-wide visibility", "width": 390, "height": 844 },
-    { "file": "03-wire-inspector.html", "title": "Wire inspector", "tradeoff": "Transparent about the contract: JSON payload, dedup, skew and watermark visible; intimidating for non-technical staff", "width": 1440, "height": 900 }
+    { "file": "03-wire-inspector.html", "title": "Wire inspector", "tradeoff": "Transparent about the contract: JSON payload, dedup, skew and watermark visible; intimidating for non-technical staff", "width": 1440, "height": 900 },
+    { "file": "14-fleet-one.html", "title": "Drive — fleet one system", "tradeoff": "Chosen direction: blue gradient hero shell holding the speed ring, today stats card and delivery timeline", "width": 390, "height": 844 },
+    { "file": "15-queue-fleet-one.html", "title": "Queue — fleet one system", "tradeoff": "Fleet One redesign of the batch queue: summary strip, per-batch cards with detail rows and contract note", "width": 390, "height": 844 },
+    { "file": "16-sync-fleet-one.html", "title": "Sync — fleet one system", "tradeoff": "Fleet One redesign of sync: green status hero, clock and endpoint cards, primary/secondary actions", "width": 390, "height": 844 },
+    { "file": "17-more-fleet-one.html", "title": "More — fleet one system", "tradeoff": "Fleet One redesign of settings: unit card, working System/Light/Dark theme switch, SVG icon rows, scrollable", "width": 390, "height": 844 },
+    { "file": "19-move-tracker.html", "title": "Move tracker (reassignment) — fleet one system", "tradeoff": "Reached from More's Move tracker row: warns the current link releases, keeps the device_id, targets a new unit; cancelable", "width": 390, "height": 844 },
+    { "file": "23-mesh-mark.html", "title": "Mesh mark — chosen brand symbol", "tradeoff": "Refined node mesh: hub + triangle of fleet nodes, accent reporting node; shown at 3 sizes plus lockup", "width": 390, "height": 844 },
+    { "file": "20-splash.html", "title": "Splash — fleet one system", "tradeoff": "Brand entry: mark, wordmark, config check loader; shown while the app decides first-run vs. resume", "width": 390, "height": 844 },
+    { "file": "21-welcome.html", "title": "Welcome — fleet one system", "tradeoff": "First-run only: three value cards and the Set up my tracker CTA that leads into Add tracker; includes data policy note", "width": 390, "height": 844 },
+    { "file": "18-device-setup.html", "title": "Add tracker (first-time setup) — fleet one system", "tradeoff": "Modal wizard for initial pairing: type or scan device code, vehicle type, pick unit; no app nav, unit unknown until chosen", "width": 390, "height": 844 }
   ]
 }

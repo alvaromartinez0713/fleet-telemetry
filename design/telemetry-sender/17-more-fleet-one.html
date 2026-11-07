@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Fleet One · More</title>
+<style>
+  :root {
+    --bg: #f3f4f1; --card: #ffffff; --line: #e3e4df; --info: #3e7480; --info-soft: #e6efef; --text: #1c2530; --muted: #6d756e;
+    --brand: #c06f18; --brand-deep: #9a5a14; --brand-soft: #f4ead9;
+    --green: #3d8455; --green-soft: #e5efe7; --green-dark: #2e6b43;
+    --warn: #b45309; --warn-soft: #f7ecd9;
+    --shadow: 0 8px 24px rgba(26, 36, 52, 0.06);
+    --seg-bg: #eceee9; --seg-active: #ffffff; --seg-active-text: #1a2434;
+    --toggle: #0e9f6e;
+  }
+  [data-theme="dark"] {
+    --bg: #0d141d; --card: #16283e; --line: #2c3e56; --text: #e9edf2; --muted: #9aa8b8;
+    --brand: #e08a2e; --brand-deep: #f0a752; --brand-soft: #2e3a24;
+    --ink-hero: #0a111b;
+    --nav-active: #e08a2e;
+    --nav-active-text: #16283e;
+    --info: #6faab5; --info-soft: #1b2f36;
+    --green: #58b47c; --green-soft: #16301f; --green-dark: #58b47c;
+    --warn: #e0a12e; --warn-soft: #382a12;
+    --red: #d9604f; --red-soft: #381c18;
+    --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    --seg-bg: #0f1720; --seg-active: #2c3e56; --seg-active-text: #e9edf2;
+    --toggle: #58b47c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); width: 390px; height: 844px; overflow-y: auto; overflow-x: hidden; }
+  .phone { display: flex; flex-direction: column; min-height: 844px; padding: 0 16px 18px; }
+  .statusbar { display: flex; justify-content: space-between; padding: 14px 6px 6px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .head { padding: 12px 6px 14px; }
+  .head h1 { font-size: 23px; font-weight: 800; letter-spacing: -0.4px; }
+  .head h1 span { color: var(--brand); }
+  .head .sub { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+  /* search: shared component across screens */
+  .search {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: var(--shadow); padding: 11px 14px; margin-bottom: 14px;
+  }
+  .search svg { flex-shrink: 0; color: var(--muted); }
+  .search .ph { font-size: 13.5px; color: var(--muted); }
+  /* unit card */
+  .unitcard {
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    padding: 12px 15px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow);
+  }
+  .unitcard .ic {
+    width: 40px; height: 40px; border-radius: 12px; background: var(--brand);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .unitcard .t { font-size: 13.5px; font-weight: 700; }
+  .unitcard .s { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .unitcard .live {
+    margin-left: auto; display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: var(--brand-deep); background: var(--brand-soft);
+    padding: 5px 10px; border-radius: 999px; flex-shrink: 0;
+  }
+  .unitcard .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--brand); }
+  .sect { font-size: 15.5px; font-weight: 750; margin: 18px 6px 10px; }
+  .group { background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 4px 16px; }
+  .group:last-of-type { margin-bottom: 18px; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px dashed var(--line); font-size: 13.5px; }
+  .item:first-child { border-top: none; }
+  .item .gi { color: var(--muted); flex-shrink: 0; display: flex; }
+  .item .lbl { flex: 1; min-width: 0; }
+  .item .lbl small { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .item .value { font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .item .chev { font-size: 16px; color: var(--muted); font-weight: 400; flex-shrink: 0; }
+  .toggle { width: 44px; height: 26px; border-radius: 999px; background: var(--toggle); position: relative; flex-shrink: 0; }
+  .toggle::after { content: ""; position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+  .toggle.off { background: var(--seg-bg); box-shadow: inset 0 0 0 1px var(--line); }
+  .toggle.off::after { right: auto; left: 3px; }
+  .badge-warn { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); flex-shrink: 0; }
+  /* segmented control */
+  .seg { display: flex; gap: 4px; background: var(--seg-bg); border: 1px solid var(--line); border-radius: 12px; padding: 4px; margin: 8px 0 4px; }
+  .seg button {
+    flex: 1; border: none; border-radius: 9px; padding: 9px 0; cursor: pointer;
+    font: inherit; font-size: 13px; font-weight: 650; color: var(--muted); background: transparent;
+  }
+  .seg button[aria-pressed="true"] { background: var(--seg-active); color: var(--seg-active-text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); }
+  nav { position: sticky; bottom: 0; margin-top: auto; display: flex; background: var(--card); border-top: 1px solid var(--line); padding: 10px 10px 14px; margin-left: -16px; margin-right: -16px; }
+  nav a { flex: 1; text-align: center; text-decoration: none; color: var(--muted); font-size: 10.5px; font-weight: 600; }
+  nav a .pill { width: 44px; height: 28px; margin: 0 auto 4px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  nav a.active { color: var(--ink-hero); font-weight: 750; }
+  nav a.active .pill { background: #e3e4df; }
+  [data-theme="dark"] nav a.active { color: var(--brand); }
+  [data-theme="dark"] nav a.active .pill { background: #2c3e56; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="phone" role="application" aria-label="Unit and settings screen">
+  <div class="statusbar"><span>9:41</span><span>📶 ⌖ ▮</span></div>
+
+  <div class="head">
+    <h1>More</h1>
+    <div class="sub">Unit S-42 · truck-042 · Ruta 3</div>
+  </div>
+
+  <div class="search" role="search" aria-label="Search settings">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <span class="ph">Search settings — sample rate, clock, storage…</span>
+  </div>
+
+  <div class="unitcard" aria-label="Current unit">
+    <span class="ic">
+      <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+        <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+        <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+        <circle cx="37" cy="33" r="4.4" fill="#fbe3c4"/>
+        <circle cx="24" cy="25" r="6" fill="#fff"/>
+        <circle cx="24" cy="25" r="2.4" fill="#c06f18"/>
+      </svg>
+    </span>
+    <div>
+      <div class="t">Scania R450</div>
+      <div class="s">Configured unit · change requires supervisor</div>
+    </div>
+    <span class="toggle" role="switch" aria-checked="true" aria-label="Unit telemetry enabled"></span>
+  </div>
+
+  <h2 class="sect">Appearance</h2>
+  <div class="seg" role="group" aria-label="Theme selector" id="theme-seg">
+    <button type="button" data-theme-choice="system" aria-pressed="true">System</button>
+    <button type="button" data-theme-choice="light" aria-pressed="false">Light</button>
+    <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+  </div>
+
+  <h2 class="sect">Telemetry</h2>
+  <div class="group" aria-label="Telemetry settings">
+    <div class="item">
+      <span class="gi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+      <span class="lbl">Sample rate<small>One sample every 10 seconds</small></span>
+      <span class="value">10 s</span>
+    </div>
+    <div class="item">
+      <span class="gi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v2"/><path d="M12 19v2"/><path d="M3 12h2"/><path d="M19 12h2"/></svg></span>
+      <span class="lbl">GPS accuracy<small>Flag samples worse than</small></span>
+      <span class="value">10 m</span>
+    </div>
+    <div class="item">
+      <span class="gi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
+      <span class="lbl">Batch size<small>Max events per POST</small></span>
+      <span class="value">500</span>
+    </div>
+    <div class="item">
+      <span class="gi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4-4 4"/><path d="M21 7H9"/><path d="M7 21l-4-4 4-4"/><path d="M3 17h12"/></svg></span>
+      <span class="lbl">Move tracker<small>Reassign this device to another vehicle</small></span>
+      <span class="chev">›</span>
+    </div>
+    <div class="item">
+      <span class="gi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11L9.5 22 19 9.5h-6.5L13 2z"/></svg></span>
+      <span class="lbl">Heartbeat when parked<small>Keep alive without movement</small></span>
+      <span class="toggle" role="switch" aria-checked="true" aria-label="Heartbeat when parked"></span>
+    </div>
+  </div>
+
+  <h2 class="sect">Diagnostics</h2>
+  <div class="group" aria-label="Diagnostics">
+    <div class="item">
+      <span class="gi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+      <span class="lbl">Clock sync<small>Drift +3 min · tolerance 5 min</small></span>
+      <span class="badge-warn">Action needed</span>
+    </div>
+    <div class="item">
+      <span class="gi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></span>
+      <span class="lbl">Offline storage<small>98 MB of 512 MB used</small></span>
+      <span class="value">19%</span>
+    </div>
+    <div class="item">
+      <span class="gi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg></span>
+      <span class="lbl">Report a problem<small>Send logs with next batch</small></span>
+    </div>
+  </div>
+
+  <nav aria-label="App navigation">
+    <a href="#"><span class="pill">◎</span>Drive</a>
+    <a href="#"><span class="pill">▤</span>Queue</a>
+    <a href="#"><span class="pill">⟳</span>Sync</a>
+    <a href="#" class="active"><span class="pill">☰</span>More</a>
+  </nav>
+
+<script>
+  (function () {
+    var seg = document.getElementById('theme-seg');
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var root = document.documentElement;
+    function apply(choice) {
+      var dark = choice === 'dark' || (choice === 'system' && mq.matches);
+      root.setAttribute('data-theme', dark ? 'dark' : 'light');
+      seg.querySelectorAll('button').forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b.dataset.themeChoice === choice));
+      });
+    }
+    seg.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (b) apply(b.dataset.themeChoice);
+    });
+    mq.addEventListener('change', function () {
+      var current = seg.querySelector('button[aria-pressed="true"]');
+      if (current && current.dataset.themeChoice === 'system') apply('system');
+    });
+    apply('system');
+  })();
+</script>
+</body>
+</html>
