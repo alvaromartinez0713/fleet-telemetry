@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FleetGo Ops v2</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24425d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --star: #f0b429;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 264px 1fr 452px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top top" "fleet map rail";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 12px;
+    padding: 0 16px; background: #08101a; border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--amber); }
+  .pill {
+    font-size: 10.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px;
+    background: var(--green-soft); color: var(--green); display: flex; align-items: center; gap: 6px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  /* kbar = the agent input, replacing the command palette */
+  header .kbar {
+    margin-left: 6px; display: flex; align-items: center; gap: 8px; flex: 0 1 320px;
+    background: #0d1826; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px;
+    font-size: 11.5px; color: var(--muted);
+  }
+  header .kbar kbd {
+    margin-left: auto; font-family: var(--mono); font-size: 9.5px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px;
+  }
+  header .views { display: flex; gap: 2px; background: #0d1826; border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  header .views a { font-size: 10.5px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 4px 10px; border-radius: 7px; }
+  header .views a.on { background: var(--panel-2); color: var(--text); }
+  header .cfg {
+    display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 750;
+    text-decoration: none; color: var(--muted); padding: 4px 9px; border-radius: 8px;
+    border: 1px solid var(--line); background: #0d1826;
+  }
+  header .stat { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 14px; }
+  header .stat b { color: var(--text); font-weight: 700; font-family: var(--mono); }
+  header .crumb { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--muted); }
+  header .crumb .sep { color: var(--line); }
+  header .crumb .here { color: var(--text); }
+
+  aside.fleet { grid-area: fleet; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  aside.fleet .bar { padding: 11px 12px; border-bottom: 1px solid var(--line); }
+  /* the panel owns the only search on the board: units and plates, nothing else */
+  aside.fleet .search {
+    display: flex; align-items: center; gap: 7px;
+    background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px;
+  }
+  aside.fleet .search .ico { flex: none; color: var(--muted); display: flex; }
+  aside.fleet .search input {
+    flex: 1; min-width: 0; -webkit-appearance: none; appearance: none;
+    background: none; border: 0; outline: none; color: var(--text);
+    font-family: inherit; font-size: 11px; line-height: 14px;
+  }
+  aside.fleet .search input::placeholder { color: var(--muted); }
+  aside.fleet .search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+  /* filters keep the counts; groups below do not */
+  aside.fleet .chips { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+  .chip { font-size: 9.5px; font-weight: 750; padding: 3px 8px; border-radius: 999px; background: #0d1826; border: 1px solid var(--line); color: var(--muted); }
+  .chip.on { background: var(--panel-2); color: var(--text); border-color: var(--panel-2); }
+  .chip.r.on { background: var(--red); border-color: var(--red); color: #fff; }
+  .chip.s.on { background: var(--star); border-color: var(--star); color: #1a1305; }
+  /* one section header component for the whole panel: units and groups read as one system */
+  .sec-hd { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 11px 12px 6px; }
+  .sec-hd .n { font-family: var(--mono); font-size: 8.5px; font-weight: 600; letter-spacing: 0; }
+  .device { padding: 13px 12px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto auto; column-gap: 8px; row-gap: 2px; align-items: center; }
+  .device.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); padding-left: 9px; }
+  .device .id {
+    font-size: 11.5px; font-weight: 700; font-family: var(--mono);
+    display: flex; align-items: center; gap: 6px; min-width: 0;
+  }
+  .device .spd { font-size: 11.5px; font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .device .spd small { font-size: 8.5px; font-weight: 650; color: var(--muted); margin-left: 2px; }
+  .device .meta { grid-column: 1 / -1; font-size: 9.5px; color: var(--muted); }
+  .device .st { font-size: 12px; text-align: center; }
+  .device .st.on { color: var(--star); }
+  .device .st.off { color: var(--line); }
+  /* the star alone says watched; the affordance only ever adds, so it stays a + on every row */
+  .device .watch { display: flex; align-items: center; gap: 4px; }
+  .device .act {
+    width: 13px; height: 13px; padding: 0; border-radius: 4px; border: 1px solid var(--line); background: #0d1826;
+    color: var(--muted); font-family: inherit; font-size: 10px; font-weight: 800; line-height: 1;
+    display: flex; align-items: center; justify-content: center; flex: none;
+    cursor: pointer; -webkit-appearance: none; appearance: none;
+    transition: color .14s ease, border-color .14s ease, background .14s ease;
+  }
+  .device .act:hover { color: var(--amber); border-color: var(--amber); background: var(--amber-soft); }
+  .device .act:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+  /* the status dot is drawn, not laid out: a pseudo-element cannot stretch */
+  .device .id::before {
+    content: ""; align-self: center; flex: none;
+    width: 5px; height: 5px; min-width: 5px; border-radius: 50%;
+    background: var(--green);
+  }
+  .device .id.warn::before { background: var(--amber); }
+  .device .id.bad::before { background: var(--red); }
+
+  /* ── groups: the same header, divider and row rhythm as the units above it ── */
+  .groups { margin-top: auto; }
+  .grp { border-top: 1px solid var(--line); }
+  .grp-hd {
+    display: flex; align-items: center; gap: 7px; width: 100%; text-align: left;
+    padding: 13px 12px; background: none; border: 0; cursor: pointer;
+    font-family: var(--mono); font-size: 11.5px; font-weight: 700; color: var(--text);
+  }
+  .grp-hd:hover { background: var(--panel-2); }
+  .grp-hd .chev { flex: none; width: 9px; font-size: 8.5px; color: var(--teal); }
+  .grp-hd .grp-name { white-space: nowrap; }
+  /* the count is text, not a badge */
+  .grp-hd .grp-c { margin-left: auto; font-family: var(--mono); font-size: 9px; font-weight: 600; color: var(--muted); }
+  .grp-hd .grp-f { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--amber); }
+  .grp.on > .grp-hd { box-shadow: inset 3px 0 0 var(--amber); padding-left: 9px; }
+  .grp-body { padding-bottom: 4px; }
+  .grp:not(.open) .grp-body { display: none; }
+  .gu { display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 26px; font-size: 10px; line-height: 13px; }
+  .gu .gi { font-family: var(--mono); font-size: 10px; font-weight: 700; }
+  .gu .gs { color: var(--star); font-size: 9px; }
+  .gu .gs.off { color: var(--muted); }
+  .gu .gm { margin-left: auto; font-size: 9px; color: var(--muted); white-space: nowrap; }
+  /* the minus lives only here: it takes a unit out of the group it is listed in */
+  .gu .gu-rm {
+    flex: none; width: 15px; height: 15px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit; font-size: 10px; font-weight: 800; line-height: 1;
+    color: var(--red); background: var(--red-soft); border: 1px solid rgba(217,96,79,0.45);
+    border-radius: 4px; cursor: pointer; -webkit-appearance: none; appearance: none;
+    transition: color .14s ease, border-color .14s ease, background .14s ease;
+  }
+  .gu .gu-rm:hover { background: var(--red); border-color: var(--red); color: #fff; }
+  .gu .gu-rm:focus-visible { outline: 2px solid var(--red); outline-offset: 1px; }
+  /* the create action sits with the groups it creates */
+  .newgroup {
+    display: flex; align-items: center; gap: 7px; padding: 13px 12px;
+    border-top: 1px solid var(--line);
+    font-size: 10.5px; font-weight: 750; color: var(--amber);
+  }
+  .newgroup .plus {
+    width: 15px; height: 15px; border-radius: 5px; border: 1px dashed var(--amber); color: var(--amber);
+    font-size: 11px; font-weight: 800; line-height: 1; display: flex; align-items: center; justify-content: center; flex: none;
+  }
+
+  main { grid-area: map; position: relative; background: #08101a; }
+  main svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  /* ── the mode system: one switcher panel, same place and style on every map board ── */
+  /* one surface and one hairline hold the three controls: the chips inside carry no border, so no edge doubles */
+  .modebar {
+    position: absolute; left: 12px; top: 67px; z-index: 7;
+    display: flex; align-items: center; gap: 3px; padding: 3px;
+    background: rgba(8,16,26,0.88); border: 1px solid var(--line); border-radius: 10px;
+  }
+  /* two modes you can turn on; the target picker lives inside Following, so there is no second row */
+  .seg {
+    display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 7px;
+    font-family: inherit; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--muted); white-space: nowrap; background: none; border: 0; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+  .seg:hover { color: var(--text); background: var(--panel-2); }
+  .seg:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; }
+  .seg kbd {
+    font-family: var(--mono); font-size: 8.5px; font-weight: 700; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 3px; padding: 0 3px;
+  }
+  .seg.on.follow { background: var(--amber); color: #16283e; }
+  .seg.on.follow kbd { color: #16283e; border-color: #16283e; }
+  .seg.on.replay { background: var(--teal); color: #08201f; }
+  .seg.on.replay kbd { color: #08201f; border-color: #08201f; }
+  /* the way back is a label, not a third button: it sits inside the panel and draws no border of its own */
+  .esc {
+    font-family: var(--mono); font-size: 9px; color: var(--muted); white-space: nowrap;
+    padding: 0 9px 0 7px;
+  }
+
+  /* ── the persistent rail: one column, two collapsible sections, alerts on top ── */
+  aside.rail { grid-area: rail; background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; min-height: 0; position: relative; }
+  /* the rail folds from a grab handle that hangs OUTSIDE the rail, on the map edge — never inside a header */
+  .rail-hide {
+    position: absolute; top: 96px; right: 0; z-index: 7;
+    display: flex; align-items: center; justify-content: center;
+    width: 20px; height: 44px; padding: 0;
+    color: var(--text); background: var(--panel-2);
+    /* flat on the rail side so the rail's own edge line closes the seam, rounded on the map side */
+    border: 1px solid var(--line); border-right: 0; border-radius: 8px 0 0 8px;
+    box-shadow: -1px 0 4px rgba(0,0,0,0.4);
+    cursor: pointer; -webkit-appearance: none; appearance: none;
+    transition: color .14s ease, border-color .14s ease, background .14s ease;
+  }
+  .rail-hide:hover { background: var(--amber); border-color: var(--amber); color: #16283e; }
+  .rail-hide:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .acc { display: flex; flex-direction: column; min-height: 0; overflow: hidden; border-bottom: 1px solid var(--line); }
+  .acc.open { flex: 1 1 auto; }
+  .acc.collapsed { flex: 0 0 auto; background: #0a121c; }
+  /* every section header is the control: chevron, label, hint — one height, one typography, no bespoke chrome */
+  .acc-hd {
+    flex: none; display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; text-align: left;
+    padding: 0 14px; background: none; border: 0; border-bottom: 1px solid var(--line);
+    font-family: inherit; font-size: 9px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.9px; color: var(--muted); cursor: pointer;
+  }
+  .acc-hd:hover { background: #0d1826; color: var(--text); }
+  .acc-hd .chev { flex: none; width: 9px; font-size: 8.5px; color: var(--teal); }
+  .acc-hd .acc-t { color: var(--text); }
+  .acc-hd .why { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--teal); font-size: 9px; }
+  .acc-body { min-height: 0; }
+  .acc.collapsed .acc-body { display: none; }
+  /* alerts fill whatever the headers leave: the rail is the only place they are listed */
+  .alerts { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; }
+  .al { padding: 8px 14px 9px; border-top: 1px solid var(--line); }
+  .al:first-of-type { border-top: none; }
+  .al .l1 { display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 750; line-height: 16px; }
+  .sev { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+  .sev.crit { background: var(--red); color: #fff; }
+  .sev.warn { background: var(--amber); color: #16283e; }
+  .sev.info { background: var(--teal-soft); color: var(--teal); }
+  .al .l2 { font-size: 10px; color: var(--muted); margin-top: 3px; line-height: 14px; }
+  .al .acts { display: flex; gap: 5px; margin-top: 7px; height: 18px; }
+  .al .acts span {
+    font-size: 9.5px; font-weight: 750; padding: 3px 8px; border-radius: 6px;
+    background: #0d1826; border: 1px solid var(--line); color: var(--muted);
+  }
+  .al .acts span.pri { background: var(--amber); border-color: var(--amber); color: #16283e; }
+
+  /* ── the REPLAY body: what can be replayed, and what happened on those trips ── */
+  .rp {
+    flex: 1 1 auto; overflow-y: auto; overflow-x: hidden;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 10px 14px 12px;
+  }
+  /* a labelled block: one label line, then its own content — the same rhythm as the TRIP section */
+  .rp-block { display: flex; flex-direction: column; }
+  .rp-hd {
+    display: flex; align-items: baseline; gap: 7px; padding-bottom: 5px;
+    font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted);
+  }
+  .rp-hd .hint { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 650; font-size: 8.5px; color: var(--teal); white-space: nowrap; }
+  /* 1 · the day picker: the board's chip, with selection carried by the replay teal */
+  .rp-days { display: flex; align-items: center; gap: 4px; }
+  .rp-day {
+    font-size: 9.5px; font-weight: 750; white-space: nowrap;
+    padding: 4px 9px; border-radius: 999px;
+    background: #0d1826; border: 1px solid var(--line); color: var(--muted);
+  }
+  .rp-day.on { background: var(--teal); border-color: var(--teal); color: #08201f; }
+  /* 2 · the chosen day as six numbers: labelled, mono values, hairlines between cells */
+  .rp-tot {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--line); border: 1px solid var(--line); border-radius: 9px; overflow: hidden;
+  }
+  .rp-tot .c { background: #0d1826; padding: 7px 9px 8px; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .rp-tot .k { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); white-space: nowrap; }
+  .rp-tot .v { font-family: var(--mono); font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rp-tot .v small { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 8.5px; font-weight: 650; color: var(--muted); margin-left: 2px; }
+  .rp-tot .v.warn { color: var(--amber); }
+  /* 3 · the trips: one shared column template, so every number lines up down the list */
+  .rp-trips { display: flex; flex-direction: column; }
+  .rp-thead, .rp-trip { display: grid; grid-template-columns: 1fr 54px 34px 34px 44px 56px; column-gap: 8px; align-items: center; }
+  .rp-thead { padding-bottom: 3px; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); }
+  .rp-thead span:not(:first-child) { text-align: right; }
+  .rp-grp {
+    display: flex; align-items: baseline; gap: 7px;
+    padding: 5px 0 2px; border-top: 1px solid var(--line);
+    font-size: 8.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--muted); white-space: nowrap;
+  }
+  .rp-grp .sum { margin-left: auto; font-family: var(--mono); font-size: 8.5px; font-weight: 600; }
+  .rp-trip { padding: 5px 0; border-top: 1px solid var(--line); }
+  .rp-trip .t { font-family: var(--mono); font-size: 9.5px; font-weight: 700; color: var(--text); white-space: nowrap; }
+  .rp-trip .n { font-family: var(--mono); font-size: 9.5px; font-variant-numeric: tabular-nums; color: var(--text); text-align: right; white-space: nowrap; }
+  .rp-trip.now .t, .rp-trip.now .n { color: var(--green); }
+  .rp-trip .rep {
+    justify-self: end; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;
+    padding: 2px 6px; border-radius: 5px; border: 1px solid var(--line);
+    background: #0d1826; color: var(--teal); white-space: nowrap;
+  }
+  .rp-trip .rep::before { content: "\21BB"; margin-right: 3px; }
+  /* the boundary, said once: replay reads, it never sends */
+  .rp-foot {
+    display: flex; align-items: flex-start; gap: 7px;
+    border: 1px solid var(--line); border-radius: 9px; background: #0a121c;
+    padding: 6px 9px; font-size: 9.5px; line-height: 1.5; color: var(--muted);
+  }
+  .rp-foot .pin {
+    flex: none; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px;
+    color: var(--amber); border: 1px solid var(--amber); border-radius: 5px; padding: 2px 6px;
+  }
+  .rp-foot b { color: var(--teal); font-weight: 750; }
+
+  .agent { flex: 1 1 auto; display: flex; flex-direction: column; overflow: hidden; background: #0a121c; }
+  .thread { flex: 1; overflow: hidden; padding: 10px 14px; display: flex; flex-direction: column; gap: 9px; }
+  .msg { display: flex; gap: 8px; }
+  .msg .who { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 3px; }
+  .msg .bub { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 11px; line-height: 1.5; }
+  .msg.user .bub { background: var(--panel-2); border-color: var(--panel-2); }
+  .msg .bub b { color: var(--amber); }
+  .msg .bub .kvp { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; border-top: 1px solid var(--line); font-size: 10px; }
+  .msg .bub .kvp:first-of-type { border-top: none; margin-top: 5px; }
+  .msg .bub .kvp .k { color: var(--muted); }
+  .msg .bub .kvp .v { font-weight: 700; font-family: var(--mono); font-size: 9.5px; }
+  .tools { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .tools .tl { font-family: var(--mono); font-size: 8.5px; padding: 2px 6px; border-radius: 4px; background: var(--teal-soft); color: var(--teal); border: 1px solid rgba(111,170,181,0.3); }
+  .approve {
+    margin-top: 7px; border: 1px solid var(--amber); border-radius: 8px; padding: 7px 9px;
+    background: var(--amber-soft); font-size: 10px; line-height: 1.45;
+  }
+  .approve .ask { font-weight: 750; color: var(--amber); }
+  .approve .row { display: flex; gap: 5px; margin-top: 6px; }
+  .approve .row span { font-size: 9.5px; font-weight: 800; padding: 3px 8px; border-radius: 5px; background: var(--amber); color: #16283e; }
+  .approve .row span.no { background: #0d1826; color: var(--muted); border: 1px solid var(--line); }
+  .composer { border-top: 1px solid var(--line); padding: 9px 14px 12px; background: #08101a; flex-shrink: 0; }
+  .composer .in { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 11px; color: var(--muted); }
+  .composer .in .send { margin-left: auto; width: 22px; height: 22px; border-radius: 6px; background: var(--amber); color: #16283e; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .composer .note { font-size: 8.5px; color: var(--muted); margin-top: 5px; }
+  /* ── replay: honesty first, then a physical dock at the bottom of the map ── */
+  .pill.replay { background: var(--teal-soft); color: var(--teal); }
+  .pill.replay::before { display: none; }
+  .honesty {
+    /* stops exactly where the rail handle begins, so neither covers the other */
+    position: absolute; left: 12px; right: 20px; top: 12px; z-index: 7;
+    display: flex; align-items: center; gap: 11px;
+    background: rgba(224,138,46,0.13); border: 1px solid var(--amber); border-radius: 10px; padding: 8px 12px;
+  }
+  .honesty .flag {
+    flex-shrink: 0; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px;
+    color: #16283e; background: var(--amber); border-radius: 4px; padding: 2px 7px;
+  }
+  .honesty .t { font-size: 11.5px; font-weight: 800; }
+  .honesty .t b { color: var(--amber); }
+  .honesty .s { font-size: 9.5px; color: var(--muted); margin-top: 1px; }
+  .honesty .at { margin-left: auto; text-align: right; flex-shrink: 0; }
+  .honesty .at .k { font-size: 8.5px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+  .honesty .at .v { font-family: var(--mono); font-size: 13px; font-weight: 800; color: var(--amber); }
+  .honesty .x {
+    flex-shrink: 0; width: 20px; height: 20px; margin-left: 2px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    font: inherit; font-size: 13px; line-height: 1; font-weight: 800;
+    color: var(--amber); background: none; border: 1px solid rgba(224,138,46,0.45);
+    border-radius: 6px; cursor: pointer;
+  }
+  .honesty .x:hover { background: rgba(224,138,46,0.2); }
+  .dock {
+    position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 7;
+    background: rgba(10,18,28,0.97); border: 1px solid var(--line); border-radius: 12px;
+    padding: 9px 12px 10px; display: flex; flex-direction: column; gap: 7px;
+  }
+  .dock .row1 { display: flex; align-items: center; gap: 8px; }
+  .dock .pp {
+    width: 26px; height: 24px; border-radius: 6px; background: var(--teal); color: #08201f;
+    display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; letter-spacing: 1px;
+  }
+  .speeds { display: flex; gap: 2px; background: #0d1826; border: 1px solid var(--line); border-radius: 7px; padding: 2px; }
+  .speeds span { font-family: var(--mono); font-size: 9.5px; font-weight: 700; padding: 3px 7px; border-radius: 5px; color: var(--muted); }
+  .speeds span.on { background: var(--teal); color: #08201f; }
+  .dock .wl { font-size: 8.5px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+  .dock .wv { font-family: var(--mono); font-size: 10.5px; font-weight: 800; color: var(--text); }
+  .dock .btl { margin-left: auto; flex-shrink: 0; font-size: 10px; font-weight: 800; padding: 4px 9px; border-radius: 6px; background: var(--amber); color: #16283e; white-space: nowrap; }
+  .ov { position: relative; height: 16px; margin-top: 1px; border-radius: 4px; background: #08101a; border: 1px solid var(--line); }
+  .ov .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: #16283e; }
+  .ov .winband { position: absolute; top: -3px; bottom: -3px; left: 45.83%; width: 4.17%; border: 1px solid var(--teal); background: rgba(111,170,181,0.25); border-radius: 3px; }
+  .ov .am { position: absolute; top: 50%; width: 2px; height: 10px; margin-top: -5px; background: var(--amber); border-radius: 1px; }
+  .ticklbls { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 8px; color: var(--muted); }
+  .dtw { position: relative; padding-top: 12px; }
+  .dt { position: relative; height: 22px; margin-top: 3px; border-radius: 5px; background: #08101a; border: 1px solid var(--line); }
+  .dt .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 78.7%; border-radius: 4px 0 0 4px; background: rgba(111,170,181,0.16); border-right: 1px solid var(--teal); }
+  .dt .m15 { position: absolute; top: 0; bottom: 0; width: 1px; background: #16283e; }
+  .dt .am { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--amber); }
+  .dt .head { position: absolute; top: -4px; bottom: -4px; width: 6px; margin-left: -3px; border-radius: 3px; background: var(--teal); box-shadow: 0 0 0 2px rgba(111,170,181,0.2); }
+  .dt .now { position: absolute; top: -12px; transform: translateX(-50%); font-family: var(--mono); font-size: 9.5px; font-weight: 800; color: var(--teal); white-space: nowrap; }
+  .nums { display: flex; align-items: center; gap: 14px; border-top: 1px solid var(--line); padding-top: 6px; font-size: 9.5px; color: var(--muted); }
+  .nums b { color: var(--text); font-family: var(--mono); font-size: 10px; }
+  .foot { display: flex; align-items: center; gap: 10px; font-size: 8.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; }
+  .foot b { color: var(--teal); }
+  .foot .credit { margin-left: auto; color: rgba(255,255,255,0.35); white-space: nowrap; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>FleetGo <span>Ops</span></b>
+  </div>
+  <span class="crumb"><span>ops</span> <span class="sep">&rsaquo;</span> <span class="here">replay</span></span>
+  <span class="pill replay">replay &middot; stored</span>
+  <span class="kbar">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    Ask, search or type a command…
+    <kbd>&#8984;K</kbd>
+  </span>
+  <nav class="views" aria-label="Ops views">
+    <a href="#">Live</a>
+    <a href="#">Alerts</a>
+  </nav>
+  <a href="#" class="cfg" aria-label="Settings">Settings</a>
+  <div class="stat">
+    <span>Fleet <b>28</b></span>
+    <span>Alerts <b>3</b></span>
+  </div>
+</header>
+
+<aside class="fleet">
+  <div class="bar">
+    <div class="search">
+      <span class="ico" aria-hidden="true">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </span>
+      <input type="search" placeholder="Search units, plates, routes&hellip;" aria-label="Search units, plates, routes">
+    </div>
+    <div class="chips" aria-label="Filters">
+      <span class="chip s on">&#9733; 4</span>
+      <span class="chip on">All 28</span>
+      <span class="chip r">Alerts 3</span>
+      <span class="chip">No signal 2</span>
+    </div>
+  </div>
+  <h2 class="sec-hd">Units &middot; <span class="n">28 in service &middot; 4 watched</span></h2>
+  <div class="device sel">
+    <span class="id">truck-042</span>
+    <span class="spd">67<small>km/h</small></span>
+    <span class="watch"><span class="st on">&#9733;</span><button class="act" type="button" aria-label="Add to watchlist" title="Add to watchlist">+</button></span>
+    <span class="meta">S-42 &middot; Ruta 3 &middot; 4 s</span>
+  </div>
+  <div class="device">
+    <span class="id">bus-017</span>
+    <span class="spd">23<small>km/h</small></span>
+    <span class="watch"><span class="st off">&#9734;</span><button class="act" type="button" aria-label="Add to watchlist" title="Add to watchlist">+</button></span>
+    <span class="meta">S-17 &middot; Av. 9 de Julio</span>
+  </div>
+  <div class="device">
+    <span class="id bad">truck-088</span>
+    <span class="spd">0<small>km/h</small></span>
+    <span class="watch"><span class="st on">&#9733;</span><button class="act" type="button" aria-label="Add to watchlist" title="Add to watchlist">+</button></span>
+    <span class="meta">S-88 &middot; stopped 24 min</span>
+  </div>
+  <div class="device">
+    <span class="id warn">van-118</span>
+    <span class="spd">0<small>km/h</small></span>
+    <span class="watch"><span class="st on">&#9733;</span><button class="act" type="button" aria-label="Add to watchlist" title="Add to watchlist">+</button></span>
+    <span class="meta">S-118 &middot; parked</span>
+  </div>
+  <div class="device">
+    <span class="id bad">van-203</span>
+    <span class="spd">&mdash;</span>
+    <span class="watch"><span class="st on">&#9733;</span><button class="act" type="button" aria-label="Add to watchlist" title="Add to watchlist">+</button></span>
+    <span class="meta">S-203 &middot; silent 2 h 15 m</span>
+  </div>
+  <div class="device">
+    <span class="id">truck-201</span>
+    <span class="spd">54<small>km/h</small></span>
+    <span class="watch"><span class="st off">&#9734;</span><button class="act" type="button" aria-label="Add to watchlist" title="Add to watchlist">+</button></span>
+    <span class="meta">S-201 &middot; Ruta 8</span>
+  </div>
+
+  <!-- groups are a second section of the same panel: same header, same rows, no chrome of their own -->
+  <section class="groups" aria-labelledby="groups-hd">
+    <h2 class="sec-hd" id="groups-hd">Groups &middot; <span class="n">9 units &middot; 1 following</span></h2>
+
+    <div class="grp on open">
+      <button class="grp-hd" type="button" aria-expanded="true" aria-controls="grp-my-shift">
+        <span class="chev" aria-hidden="true">&#9662;</span>
+        <span class="grp-name">My shift</span>
+        <span class="grp-c">4 units</span>
+        <span class="grp-f">following</span>
+      </button>
+      <div class="grp-body" id="grp-my-shift">
+        <div class="gu"><span class="gs" aria-hidden="true">&#9733;</span><span class="gi">truck-042</span><span class="gm">S-42 &middot; 67 km/h</span><button class="gu-rm" type="button" aria-label="Remove from this group" title="Remove from My shift">&minus;</button></div>
+        <div class="gu"><span class="gs" aria-hidden="true">&#9733;</span><span class="gi">truck-088</span><span class="gm">S-88 &middot; stopped 24 min</span><button class="gu-rm" type="button" aria-label="Remove from this group" title="Remove from My shift">&minus;</button></div>
+        <div class="gu"><span class="gs" aria-hidden="true">&#9733;</span><span class="gi">van-118</span><span class="gm">S-118 &middot; parked</span><button class="gu-rm" type="button" aria-label="Remove from this group" title="Remove from My shift">&minus;</button></div>
+        <div class="gu"><span class="gs" aria-hidden="true">&#9733;</span><span class="gi">van-203</span><span class="gm">S-203 &middot; silent 2 h 15 m</span><button class="gu-rm" type="button" aria-label="Remove from this group" title="Remove from My shift">&minus;</button></div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <button class="grp-hd" type="button" aria-expanded="false" aria-controls="grp-zona-norte">
+        <span class="chev" aria-hidden="true">&#9656;</span>
+        <span class="grp-name">Zona Norte</span>
+        <span class="grp-c">3 units</span>
+      </button>
+      <div class="grp-body" id="grp-zona-norte">
+        <div class="gu"><span class="gs" aria-hidden="true">&#9733;</span><span class="gi">truck-088</span><span class="gm">S-88 &middot; stopped 24 min</span><button class="gu-rm" type="button" aria-label="Remove from this group" title="Remove from Zona Norte">&minus;</button></div>
+        <div class="gu"><span class="gs off" aria-hidden="true">&#9734;</span><span class="gi">bus-017</span><span class="gm">S-17 &middot; 23 km/h</span><button class="gu-rm" type="button" aria-label="Remove from this group" title="Remove from Zona Norte">&minus;</button></div>
+        <div class="gu"><span class="gs" aria-hidden="true">&#9733;</span><span class="gi">van-118</span><span class="gm">S-118 &middot; parked</span><button class="gu-rm" type="button" aria-label="Remove from this group" title="Remove from Zona Norte">&minus;</button></div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <button class="grp-hd" type="button" aria-expanded="false" aria-controls="grp-contractors">
+        <span class="chev" aria-hidden="true">&#9656;</span>
+        <span class="grp-name">Contractors</span>
+        <span class="grp-c">2 units</span>
+      </button>
+      <div class="grp-body" id="grp-contractors">
+        <div class="gu"><span class="gs off" aria-hidden="true">&#9734;</span><span class="gi">truck-201</span><span class="gm">S-201 &middot; 54 km/h</span><button class="gu-rm" type="button" aria-label="Remove from this group" title="Remove from Contractors">&minus;</button></div>
+        <div class="gu"><span class="gs" aria-hidden="true">&#9733;</span><span class="gi">van-118</span><span class="gm">S-118 &middot; parked</span><button class="gu-rm" type="button" aria-label="Remove from this group" title="Remove from Contractors">&minus;</button></div>
+      </div>
+    </div>
+
+    <div class="newgroup"><span class="plus">+</span> New group</div>
+  </section>
+</aside>
+
+<main>
+  <svg viewBox="0 0 724 848" aria-hidden="true">
+    <rect width="724" height="848" fill="#08101a"/>
+    <g stroke="#111d2a" stroke-width="1">
+      <path d="M90 0V848 M220 0V848 M370 0V848 M540 0V848 M680 0V848"/>
+      <path d="M0 90H724 M0 210H724 M0 350H724 M0 500H724 M0 650H724 M0 780H724"/>
+    </g>
+    <g stroke="#182636" stroke-width="4">
+      <path d="M300 0 C 340 280 285 520 380 848" fill="none"/>
+      <path d="M0 660 H724" fill="none"/>
+    </g>
+    <!-- Zona Norte: the critical zone band, read from the stored geometry -->
+    <rect x="120" y="270" width="220" height="150" rx="10" fill="#160f1c" stroke="#3a2430"/>
+    <text x="230" y="296" text-anchor="middle" font-family="system-ui" font-size="10" fill="#d9604f" font-weight="800">ZONA NORTE</text>
+    <text x="230" y="310" text-anchor="middle" font-family="system-ui" font-size="8.5" fill="#6b3a3a" font-weight="700">CRITICAL ZONE</text>
+    <!-- truck-088, stopped 24 min inside the band at this instant -->
+    <g transform="translate(230,365)">
+      <circle r="30" fill="rgba(217,96,79,0.14)"/>
+      <circle r="13" fill="#d9604f"/><circle r="4.5" fill="#fff"/>
+    </g>
+    <text x="230" y="398" text-anchor="middle" font-family="system-ui" font-size="10" fill="#f2a49a" font-weight="700">truck-088 &middot; stopped 24 min</text>
+    <!-- truck-042 at 11:47:12, with the ~15 min of samples behind it -->
+    <polyline points="310,560 346,528 382,500 414,472 442,448 468,430" fill="none" stroke="#6faab5" stroke-width="2" stroke-dasharray="3 6" stroke-linecap="round" opacity="0.5"/>
+    <g opacity="0.55" fill="#6faab5">
+      <circle cx="310" cy="560" r="2.5"/><circle cx="346" cy="528" r="2.5"/><circle cx="382" cy="500" r="2.5"/>
+      <circle cx="414" cy="472" r="2.5"/><circle cx="442" cy="448" r="2.5"/>
+    </g>
+    <text x="310" y="580" font-family="monospace" font-size="8" fill="#5b7186">15 min trail &middot; 11:32 &rarr; 11:47</text>
+    <g transform="translate(468,422)">
+      <circle r="30" fill="none" stroke="#6faab5" stroke-width="1" stroke-dasharray="3 6" opacity="0.6"/>
+      <circle r="12" fill="#6faab5"/><circle r="4" fill="#08201f"/>
+    </g>
+    <text x="468" y="462" text-anchor="middle" font-family="system-ui" font-size="12" font-weight="800" fill="#9fd0d8">truck-042</text>
+    <text x="468" y="477" text-anchor="middle" font-family="monospace" font-size="8.5" fill="#8fa0b4">11:47:12 &middot; stored sample</text>
+  </svg>
+
+  <div class="honesty">
+    <span class="flag">Replay</span>
+    <div>
+      <div class="t">Stored samples, <b>not a live stream</b> &mdash; every position below is read from the window.</div>
+      <div class="s">truck-042 and truck-088 are drawn where their samples put them. Nothing is arriving here.</div>
+    </div>
+    <div class="at"><div class="k">instant</div><div class="v">11:47:12</div></div>
+    <button class="x" type="button" aria-label="Dismiss the replay notice" title="Dismiss the replay notice">&times;</button>
+  </div>
+
+  <div class="modebar" role="group" aria-label="Map mode">
+    <button class="seg follow" type="button" aria-pressed="false" aria-label="Following">
+      Following <kbd>F</kbd>
+    </button>
+    <button class="seg replay on" type="button" aria-pressed="true" aria-label="Replay stored samples">Replay <kbd>R</kbd></button>
+    <span class="esc">Esc &rarr; Live</span>
+  </div>
+
+  <div class="dock" role="group" aria-label="24 h scrubber">
+    <div class="row1">
+      <span class="pp" aria-label="Pause">&#10073;&#10073;</span>
+      <div class="speeds"><span class="on">1&times;</span><span>4&times;</span><span>16&times;</span></div>
+      <span class="wl">window</span><span class="wv">11:00&ndash;12:00</span>
+      <span class="wl">at</span><span class="wv">11:47:12</span>
+      <span class="btl">Back to live</span>
+    </div>
+
+    <div class="ov">
+      <span class="tick" style="left:12.5%"></span><span class="tick" style="left:25%"></span><span class="tick" style="left:37.5%"></span>
+      <span class="tick" style="left:50%"></span><span class="tick" style="left:62.5%"></span><span class="tick" style="left:75%"></span><span class="tick" style="left:87.5%"></span>
+      <span class="winband"></span>
+      <span class="am" style="left:31.6%"></span>
+      <span class="am" style="left:48.6%"></span>
+      <span class="am" style="left:66.0%"></span>
+      <span class="am" style="left:79.5%"></span>
+    </div>
+    <div class="ticklbls"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+
+    <div class="dtw">
+      <div class="dt">
+        <span class="fill"></span>
+        <span class="m15" style="left:25%"></span>
+        <span class="m15" style="left:50%"></span>
+        <span class="m15" style="left:75%"></span>
+        <span class="am" style="left:66.7%"></span>
+        <span class="head" style="left:78.7%"></span>
+        <span class="now" style="left:78.7%">11:47:12</span>
+      </div>
+      <div class="ticklbls"><span>11:00</span><span>11:15</span><span>11:30</span><span>11:45</span><span>12:00</span></div>
+    </div>
+
+    <div class="nums">
+      <span>samples in window <b>1 284</b></span>
+      <span>units <b>19</b></span>
+      <span>alert events <b>4</b></span>
+      <span style="margin-left:auto">stored &middot; read-only</span>
+    </div>
+    <div class="foot">Replay reads <b>stored samples</b>. Nothing is sent. Leaving the mode returns to live.
+      <span class="credit">Map data &copy; Google &middot; dark style</span>
+    </div>
+  </div>
+  <button class="rail-hide" type="button" aria-label="Hide the right rail — the map takes the width" title="Hide the right rail — the map takes the width">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+  </button>
+</main>
+
+<aside class="rail">
+  <!-- the column folds from a handle on its left edge: the map widens when this is grabbed -->
+
+  <!-- ALERTS: expanded by default, scoped to the stored window this board is showing -->
+  <section class="acc open" aria-labelledby="alerts-hd">
+    <button class="acc-hd" id="alerts-hd" type="button" aria-expanded="true" aria-controls="alerts-body">
+      <span class="chev" aria-hidden="true">&#9662;</span>
+      <span class="acc-t">ALERTS</span>
+      <span class="why">3 events in this window</span>
+    </button>
+    <div class="acc-body alerts" id="alerts-body" role="region" aria-label="Alerts in this window">
+      <div class="al">
+        <div class="l1"><span class="sev crit">Critical</span> truck-088 stopped inside Zona Norte</div>
+        <div class="l2">S-88 &middot; entered 11:16 &middot; stopped since 11:40 &middot; rule stopped &gt; 20 min</div>
+        <div class="acts"><span class="pri">Ack</span><span>Dispatch</span><span>Ask why</span></div>
+      </div>
+      <div class="al">
+        <div class="l1"><span class="sev warn">Warning</span> van-203 sent nothing in the window</div>
+        <div class="l2">S-203 &middot; no samples 11:00&ndash;11:47 &middot; rule silence &gt; 2 h</div>
+      </div>
+      <div class="al">
+        <div class="l1"><span class="sev info">Info</span> bus-017 left the Ruta 3 corridor</div>
+        <div class="l2">S-17 &middot; 340 m outside the buffer &middot; 11:52</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REPLAY: what can be replayed, and what happened on those trips — the mode's own section -->
+  <section class="acc collapsed" aria-labelledby="replay-hd">
+    <button class="acc-hd" id="replay-hd" type="button" aria-expanded="false" aria-controls="replay-body">
+      <span class="chev" aria-hidden="true">&#9656;</span>
+      <span class="acc-t">REPLAY</span>
+      <span class="why">truck-042 &middot; 5 days</span>
+    </button>
+
+    <div class="acc-body rp" id="replay-body" role="region" aria-label="Replay by day and by trip">
+      <!-- 1 · pick a day: five kept days, the one in view marked -->
+      <div class="rp-block">
+        <div class="rp-hd">Day <span class="hint">5 kept in this window</span></div>
+        <div class="rp-days" role="group" aria-label="Choose a day">
+          <span class="rp-day on" aria-current="true">Today</span>
+          <span class="rp-day">Yesterday</span>
+          <span class="rp-day">Mon 3</span>
+          <span class="rp-day">Sun 2</span>
+          <span class="rp-day">Sat 1</span>
+        </div>
+      </div>
+
+      <!-- 2 · the chosen day as six numbers -->
+      <div class="rp-block">
+        <div class="rp-hd">Day totals <span class="hint">today &middot; 06:12 &rarr; 12:13</span></div>
+        <div class="rp-tot">
+          <div class="c"><span class="k">Samples</span><span class="v">1 240</span></div>
+          <div class="c"><span class="k">Distance</span><span class="v">312 <small>km</small></span></div>
+          <div class="c"><span class="k">Driving</span><span class="v">4 h 13</span></div>
+          <div class="c"><span class="k">Stops</span><span class="v">4</span></div>
+          <div class="c"><span class="k">Gaps</span><span class="v">8</span></div>
+          <div class="c"><span class="k">Alerts fired</span><span class="v warn">3</span></div>
+        </div>
+      </div>
+
+      <!-- 3 · the trips: today's four, then yesterday's two, one shared column template -->
+      <div class="rp-block">
+        <div class="rp-hd">Trips <span class="hint">each row replays on its own</span></div>
+        <div class="rp-trips">
+          <div class="rp-thead" aria-hidden="true"><span>Trip</span><span>Dur</span><span>Km</span><span>Stops</span><span>Samples</span><span></span></div>
+
+          <div class="rp-grp">Today <span class="sum">4 trips &middot; 1 in progress</span></div>
+          <div class="rp-trip"><span class="t">06:12 &rarr; 08:01</span><span class="n">1 h 49 m</span><span class="n">63</span><span class="n">2</span><span class="n">375</span><span class="rep">Replay</span></div>
+          <div class="rp-trip"><span class="t">08:01 &rarr; 09:37</span><span class="n">1 h 36 m</span><span class="n">82</span><span class="n">1</span><span class="n">330</span><span class="rep">Replay</span></div>
+          <div class="rp-trip"><span class="t">09:37 &rarr; 10:51</span><span class="n">1 h 14 m</span><span class="n">88</span><span class="n">0</span><span class="n">254</span><span class="rep">Replay</span></div>
+          <div class="rp-trip now"><span class="t">10:51 &rarr; now</span><span class="n">1 h 22 m</span><span class="n">79</span><span class="n">1</span><span class="n">281</span><span class="rep">Replay</span></div>
+
+          <div class="rp-grp">Yesterday <span class="sum">Mon 3 &middot; 2 trips &middot; 246 km</span></div>
+          <div class="rp-trip"><span class="t">07:04 &rarr; 09:26</span><span class="n">2 h 22 m</span><span class="n">112</span><span class="n">2</span><span class="n">489</span><span class="rep">Replay</span></div>
+          <div class="rp-trip"><span class="t">13:40 &rarr; 16:12</span><span class="n">2 h 32 m</span><span class="n">134</span><span class="n">1</span><span class="n">523</span><span class="rep">Replay</span></div>
+        </div>
+      </div>
+
+      <!-- 4 · the boundary, said once -->
+      <p class="rp-foot"><span class="pin">Stored</span><span>Every row above reads samples already in the window &mdash; nothing is sent. Longer windows live in <b>History</b>.</span></p>
+    </div>
+  </section>
+
+  <!-- ASSISTANT: collapsed by default, the header alone until you open it -->
+  <section class="acc collapsed" aria-labelledby="agent-hd">
+    <button class="acc-hd" id="agent-hd" type="button" aria-expanded="false" aria-controls="assistant-body">
+      <span class="chev" aria-hidden="true">&#9656;</span>
+      <span class="acc-t">ASSISTANT</span>
+      <span class="why">&#8984;K focuses</span>
+    </button>
+
+    <div class="acc-body agent" id="assistant-body">
+    <div class="thread">
+      <div class="msg user">
+        <div>
+          <div class="who">M. Rivas</div>
+          <div class="bub">What happened with truck-088 around 11:40?</div>
+        </div>
+      </div>
+      <div class="msg bot">
+        <div>
+          <div class="who">Assistant</div>
+          <div class="bub">
+            From the stored window <b>11:00&ndash;12:00</b>: truck-088 entered Zona Norte at 11:16 and has not moved since <b>11:40:07</b> &mdash; 0 km/h, accuracy 3.8 m, no gaps in the samples.
+            <div class="kvp"><span class="k">Samples 11:30&ndash;11:50</span><span class="v">20 &middot; no gaps</span></div>
+            <div class="kvp"><span class="k">First stop</span><span class="v">11:40:07 &middot; Zona Norte</span></div>
+            <div class="kvp"><span class="k">Source</span><span class="v">window 11:00&ndash;12:00</span></div>
+            <div class="tools"><span class="tl">muestras_ventana()</span><span class="tl">alertas_ventana()</span></div>
+            <div class="approve">
+              <div class="ask">Open the alert &mdash; truck-088 stopped 24 min?</div>
+              <div class="row"><span>Open alert</span><span class="no">Stay in replay</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="composer">
+      <div class="in">
+        Ask about the window &mdash; &ldquo;what changed between 11:30 and 11:50?&rdquo;…
+        <span class="send">&uarr;</span>
+      </div>
+      <div class="note">Nothing runs without your click. Every approved action is logged with the alert it belongs to.</div>
+    </div>
+    </div>
+  </section>
+</aside>
+<script>
+  /* the accordion is the rail: one section open at a time never loses the other header */
+  document.querySelectorAll('.acc-hd').forEach(function (hd) {
+    hd.addEventListener('click', function () {
+      var sec = hd.parentElement, open = !sec.classList.contains('open');
+      /* one expanded section at a time: the open one takes the rail height, the other keeps its header */
+      document.querySelectorAll('.acc').forEach(function (other) {
+        if (other === sec) return;
+        other.classList.remove('open');
+        other.classList.add('collapsed');
+        var ohd = other.querySelector('.acc-hd');
+        ohd.setAttribute('aria-expanded', 'false');
+        ohd.querySelector('.chev').textContent = '\u25B8';
+      });
+      sec.classList.toggle('open', open);
+      sec.classList.toggle('collapsed', !open);
+      hd.setAttribute('aria-expanded', open ? 'true' : 'false');
+      hd.querySelector('.chev').textContent = open ? '\u25BE' : '\u25B8';
+    });
+  });
+  /* groups collapse by name; the open one shows its units in place */
+  document.querySelectorAll('.grp-hd').forEach(function (hd) {
+    hd.addEventListener('click', function () {
+      var grp = hd.parentElement, open = !grp.classList.contains('open');
+      grp.classList.toggle('open', open);
+      hd.setAttribute('aria-expanded', open ? 'true' : 'false');
+      hd.querySelector('.chev').textContent = open ? '\u25BE' : '\u25B8';
+    });
+  });
+</script>
+</body>
+</html>

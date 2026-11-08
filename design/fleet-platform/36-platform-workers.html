@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Platform · Workers</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
+    --text: #e9edf2; --muted: #9aa8b8;
+    --navy: #16283e; --navy-2: #0a111b;
+    --amber: #e08a2e; --amber-soft: rgba(224, 138, 46, 0.14);
+    --teal: #6faab5; --teal-soft: rgba(111, 170, 181, 0.13);
+    --green: #58b47c; --green-soft: rgba(88, 180, 124, 0.13);
+    --red: #d9604f; --red-soft: rgba(217, 96, 79, 0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 210px 1fr; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top" "sidenav main";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 14px;
+    padding: 0 18px; background: var(--navy-2); border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--teal); }
+  header .pill {
+    font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px;
+    background: var(--amber-soft); color: var(--amber); display: flex; align-items: center; gap: 6px;
+  }
+  header .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }
+  header .views { display: flex; gap: 2px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  header .views a { font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 5px 11px; border-radius: 7px; }
+  header .views a.on { background: var(--panel-2); color: var(--text); }
+  header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 16px; }
+  header .stat b { color: var(--text); font-weight: 700; }
+  header .stat b.warn { color: var(--amber); }
+
+  aside.sidenav { grid-area: sidenav; background: var(--panel); border-right: 1px solid var(--line); padding: 12px 10px; }
+  aside.sidenav .grp { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 12px 8px 6px; }
+  aside.sidenav a { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 9px; font-size: 12.5px; font-weight: 650; color: var(--muted); text-decoration: none; margin-bottom: 2px; }
+  aside.sidenav a.on { background: var(--panel-2); color: var(--text); }
+  aside.sidenav a .n { margin-left: auto; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: var(--red); color: #fff; }
+  aside.sidenav a .n.amber { background: var(--amber); color: #16283e; }
+
+  main { grid-area: main; overflow: hidden; display: flex; flex-direction: column; padding: 16px 18px; gap: 14px; }
+  /* worker cards */
+  .workers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; flex-shrink: 0; }
+  .w { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .w.degraded { border-color: var(--amber); }
+  .w .top { display: flex; align-items: center; gap: 9px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .w .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .w .dot.ok { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+  .w .dot.warn { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-soft); }
+  .w .nm { font-size: 13px; font-weight: 800; }
+  .w .mod { font-family: var(--mono); font-size: 9.5px; color: var(--muted); margin-left: auto; }
+  .w .rows { padding: 4px 14px 10px; }
+  .w .r { display: flex; justify-content: space-between; padding: 5px 0; font-size: 11.5px; border-top: 1px solid var(--line); }
+  .w .r:first-child { border-top: none; }
+  .w .r .k { color: var(--muted); }
+  .w .r .v { font-weight: 700; font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 11px; }
+  .w .r .v.good { color: var(--green); }
+  .w .r .v.warn { color: var(--amber); }
+  .w .r .v.bad { color: var(--red); }
+  .w .bar { height: 4px; border-radius: 999px; background: var(--navy-2); margin: 0 14px 12px; overflow: hidden; }
+  .w .bar i { display: block; height: 100%; border-radius: 999px; }
+
+  .cols { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; flex: 1; min-height: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; }
+  .card > h2 {
+    font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px;
+    color: var(--muted); padding: 12px 15px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .card > h2 .hint { font-size: 9.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--teal); margin-left: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  th { text-align: left; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); padding: 8px 15px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  td { padding: 9px 15px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  td.mono { font-family: var(--mono); font-size: 10.5px; }
+  .scroll { overflow: auto; flex: 1; }
+  .tag { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 5px; }
+  .tag.ok { background: var(--green-soft); color: var(--green); }
+  .tag.warn { background: var(--amber-soft); color: var(--amber); }
+  .tag.bad { background: var(--red-soft); color: var(--red); }
+  .tag.info { background: var(--teal-soft); color: var(--teal); }
+  /* circuit breaker */
+  .cb { padding: 12px 15px; }
+  .cb .state {
+    display: flex; align-items: center; gap: 10px; background: var(--amber-soft);
+    border: 1px solid var(--amber); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px;
+  }
+  .cb .state .t { font-size: 12px; font-weight: 800; color: var(--amber); }
+  .cb .state .s { font-size: 10.5px; color: var(--muted); margin-top: 1px; }
+  .cb .state .badge { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--amber); }
+  .kv { display: flex; justify-content: space-between; padding: 5px 0; font-size: 11.5px; border-top: 1px solid var(--line); }
+  .kv:first-of-type { border-top: none; }
+  .kv .k { color: var(--muted); }
+  .kv .v { font-weight: 700; font-family: var(--mono); font-size: 11px; }
+  .kv .v.warn { color: var(--amber); }
+  .note2 { padding: 11px 15px; font-size: 10.5px; line-height: 1.6; color: var(--muted); border-top: 1px solid var(--line); }
+  .note2 b { color: var(--teal); }
+  /* tool calls */
+  .tools { padding: 4px 15px 12px; }
+  .tool { display: flex; align-items: center; gap: 9px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 11.5px; }
+  .tool:first-child { border-top: none; }
+  .tool .nm { font-family: var(--mono); font-size: 10.5px; }
+  .tool .n { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 11px; }
+  .tool .pct { width: 44px; text-align: right; color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>Fleet <span>Platform</span></b>
+  </div>
+  <span class="pill">1 degraded</span>
+  <div class="stat">
+    <span>Uptime <b>14 d 6 h</b></span>
+    <span>Restarts 24 h <b class="warn">2</b></span>
+    <span>Build <b>v1.4.2</b></span>
+  </div>
+</header>
+
+<aside class="sidenav">
+  <div class="grp">Platform</div>
+  <a href="#">Gateway &amp; ingest</a>
+  <a href="#">Pipeline</a>
+  <a href="#">Partitions</a>
+  <a href="#" class="on">Workers <span class="n amber">1</span></a>
+  <a href="#">Assistant</a>
+  <div class="grp">Data</div>
+  <a href="#">Data health</a>
+  <a href="#">Logs &amp; traces</a>
+  <div class="grp">Reference</div>
+  <a href="#">Sender wire</a>
+  <a href="#">Schema &amp; limits</a>
+</aside>
+
+<main>
+  <div class="workers">
+    <div class="w">
+      <div class="top"><span class="dot ok"></span><span class="nm">Consumer</span><span class="mod">dedup+watermark</span></div>
+      <div class="rows">
+        <div class="r"><span class="k">Status</span><span class="v good">running</span></div>
+        <div class="r"><span class="k">Lag</span><span class="v good">0.2 s</span></div>
+        <div class="r"><span class="k">Throughput</span><span class="v">12.3 /s</span></div>
+        <div class="r"><span class="k">Restarts 24 h</span><span class="v">0</span></div>
+        <div class="r"><span class="k">Uptime</span><span class="v">14 d 6 h</span></div>
+      </div>
+      <div class="bar"><i style="width: 96%; background: var(--green)"></i></div>
+    </div>
+
+    <div class="w degraded">
+      <div class="top"><span class="dot warn"></span><span class="nm">Alerting</span><span class="mod">rules engine</span></div>
+      <div class="rows">
+        <div class="r"><span class="k">Status</span><span class="v warn">degraded</span></div>
+        <div class="r"><span class="k">Evaluation lag</span><span class="v warn">48 s</span></div>
+        <div class="r"><span class="k">Rules evaluated</span><span class="v">6 &middot; every 30 s</span></div>
+        <div class="r"><span class="k">Restarts 24 h</span><span class="v bad">2</span></div>
+        <div class="r"><span class="k">Uptime</span><span class="v">3 h 12 m</span></div>
+      </div>
+      <div class="bar"><i style="width: 62%; background: var(--amber)"></i></div>
+    </div>
+
+    <div class="w">
+      <div class="top"><span class="dot ok"></span><span class="nm">Assistant</span><span class="mod">function calling</span></div>
+      <div class="rows">
+        <div class="r"><span class="k">Status</span><span class="v good">running</span></div>
+        <div class="r"><span class="k">Tool latency p95</span><span class="v">740 ms</span></div>
+        <div class="r"><span class="k">Calls 24 h</span><span class="v">318</span></div>
+        <div class="r"><span class="k">Circuit breaker</span><span class="v warn">1 trip</span></div>
+        <div class="r"><span class="k">Uptime</span><span class="v">14 d 4 h</span></div>
+      </div>
+      <div class="bar"><i style="width: 88%; background: var(--green)"></i></div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="card">
+      <h2>Worker log <span class="hint">last 6 events</span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Time</th><th>Worker</th><th>Event</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="mono">12:06</td><td class="mono">alerting</td><td>restart &middot; oom_killed (rss 512 MiB)</td><td><span class="tag bad">critical</span></td></tr>
+            <tr><td class="mono">11:58</td><td class="mono">alerting</td><td>evaluation lag above 30 s threshold</td><td><span class="tag warn">warning</span></td></tr>
+            <tr><td class="mono">11:47</td><td class="mono">assistant</td><td>circuit open &middot; 3 tool timeouts in 60 s</td><td><span class="tag warn">warning</span></td></tr>
+            <tr><td class="mono">11:46</td><td class="mono">consumer</td><td>dedup replay absorbed &middot; seq 18 400</td><td><span class="tag info">info</span></td></tr>
+            <tr><td class="mono">09:12</td><td class="mono">alerting</td><td>rule watermark-blocked fired for truck-088</td><td><span class="tag info">info</span></td></tr>
+            <tr><td class="mono">07:02</td><td class="mono">consumer</td><td>rebalance &middot; 6 partitions assigned</td><td><span class="tag ok">ok</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Assistant circuit breaker <span class="hint">ADR-004</span></h2>
+      <div class="cb">
+        <div class="state">
+          <div>
+            <div class="t">Closed &middot; recovered 11:48</div>
+            <div class="s">opened 11:47 on 3 tool timeouts, closed itself after the window</div>
+          </div>
+          <span class="badge">2 ms</span>
+        </div>
+        <div class="kv"><span class="k">Failure threshold</span><span class="v">3 in 60 s</span></div>
+        <div class="kv"><span class="k">Open duration</span><span class="v warn">60 s</span></div>
+        <div class="kv"><span class="k">Degraded answer</span><span class="v">maps + alerts kept</span></div>
+        <div class="kv"><span class="k">Trips 24 h</span><span class="v">1</span></div>
+      </div>
+      <h2 style="border-top: 1px solid var(--line);">Top tool calls</h2>
+      <div class="tools">
+        <div class="tool"><span class="nm">salud_pipeline()</span><span class="n">124</span><span class="pct">39%</span></div>
+        <div class="tool"><span class="nm">buscar_dispositivo()</span><span class="n">86</span><span class="pct">27%</span></div>
+        <div class="tool"><span class="nm">alertas_abiertas()</span><span class="n">52</span><span class="pct">16%</span></div>
+        <div class="tool"><span class="nm">estado_flota()</span><span class="n">38</span><span class="pct">12%</span></div>
+        <div class="tool"><span class="nm">otros (5)</span><span class="n">18</span><span class="pct">6%</span></div>
+      </div>
+      <div class="note2">
+        When the breaker opens the assistant keeps answering from cached fleet state and says
+        so &mdash; the degraded message is part of the contract, not an accident.
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Fleet One · Splash</title>
+<style>
+  :root {
+    --bg: #f3f4f1; --card: #ffffff; --line: #e3e4df; --info: #3e7480; --info-soft: #e6efef; --text: #1c2530; --muted: #6d756e;
+    --brand: #c06f18; --brand-deep: #9a5a14; --brand-soft: #f4ead9;
+    --bg-hero: linear-gradient(160deg, #f3f4f1 0%, #fbeedd 60%, #f2e2c8 100%);
+    --green: #3e7480;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); width: 390px; height: 844px; overflow: hidden; }
+  .phone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 844px; padding: 0 32px; text-align: center;
+    background: var(--bg-hero);
+  }
+  .statusbar { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; padding: 14px 20px 6px; font-size: 13px; font-weight: 600; }
+  /* logo mark */
+  .mark {
+    width: 96px; height: 96px; border-radius: 28px;
+    background: #16283e;
+    box-shadow: 0 16px 36px rgba(22, 40, 62, 0.35);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 22px;
+  }
+  .wordmark { font-size: 40px; font-weight: 800; letter-spacing: -1px; }
+  .wordmark span { color: var(--brand); }
+  .tagline { font-size: 14px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  /* progress */
+  .loader { margin-top: 34px; width: 180px; }
+  .loader .bar { height: 6px; border-radius: 999px; background: rgba(154, 90, 20, 0.24); overflow: hidden; }
+  .loader .bar i { display: block; height: 100%; width: 62%; border-radius: 999px; background: var(--brand); }
+  .loader .lbl { font-size: 11.5px; color: var(--muted); font-weight: 600; margin-top: 8px; }
+  .ver { position: absolute; bottom: 22px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="phone" role="application" aria-label="Splash screen">
+  <div class="statusbar"><span>9:41</span><span>📶 ⌖ ▮</span></div>
+
+  <div class="mark" role="img" aria-label="FleetGo logo">
+    <svg width="52" height="52" viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#16283e"/>
+    </svg>
+  </div>
+  <div class="wordmark">Fleet<span>Go</span></div>
+  <p class="tagline">Vehicle telemetry, delivered.<br>Every sample counts, none gets lost.</p>
+
+  <div class="loader" aria-label="Starting">
+    <div class="bar"><i></i></div>
+    <div class="lbl">Checking device configuration…</div>
+  </div>
+
+  <span class="ver">v1.0 · schema 1</span>
+</div>
+</body>
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Fleet One · Device Setup</title>
+<style>
+  :root {
+    --bg: #f3f4f1; --card: #ffffff; --line: #e3e4df; --info: #3e7480; --info-soft: #e6efef; --text: #1c2530; --muted: #6d756e;
+    --brand: #c06f18; --brand-deep: #9a5a14; --brand-soft: #f4ead9;
+    --green: #3e7480; --green-soft: #e6efef; --green-dark: #325f68;
+    --warn: #b45309; --warn-soft: #f7ecd9;
+    --shadow: 0 8px 24px rgba(26, 36, 52, 0.06);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); width: 390px; height: 844px; overflow-y: auto; overflow-x: hidden; }
+  .phone { display: flex; flex-direction: column; min-height: 844px; padding: 0 16px; }
+  .statusbar { display: flex; justify-content: space-between; padding: 14px 6px 6px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .head { padding: 12px 6px 14px; }
+  .head h1 { font-size: 23px; font-weight: 800; letter-spacing: -0.4px; display: none; }
+  .head h1 span { color: var(--brand); }
+  .head .sub { display: none; }
+  /* modal setup flow: no app nav, unit unknown yet */
+  .topbar { display: flex; align-items: center; gap: 12px; padding: 12px 6px 14px; }
+  .topbar .back {
+    width: 40px; height: 40px; border-radius: 50%; background: var(--bg); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center; color: var(--muted);
+  }
+  /* back renders only from step 2 on; step 1 has no previous step, so no back button */
+  .topbar .firsttime {
+    margin-left: auto; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--brand-deep); background: var(--brand-soft);
+    padding: 5px 11px; border-radius: 999px;
+  }
+  .topbar h1 { font-size: 18px; font-weight: 800; }
+  .topbar .close { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--muted); background: none; border: none; cursor: pointer; font-family: inherit; }
+  /* step indicator */
+  .steps { display: flex; align-items: center; gap: 8px; margin: 4px 6px 16px; }
+  .step { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; color: var(--muted); }
+  .step .n {
+    width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line);
+    display: flex; align-items: center; justify-content: center; font-size: 10.5px;
+    background: var(--card);
+  }
+  .step.done .n { background: var(--green); border-color: var(--green); color: #fff; }
+  .step.done { color: var(--green); }
+  .step.now .n { background: var(--info); border-color: var(--info); color: #fff; }
+  .step.now { color: var(--info); }
+  .steps .arrow { color: var(--line); font-size: 12px; }
+  /* cards */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
+  .card h2 { font-size: 15px; font-weight: 750; margin-bottom: 4px; }
+  .card .hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+  /* device readout */
+  .devread {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--brand-soft); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px;
+  }
+  .devread .ic {
+    width: 40px; height: 40px; border-radius: 12px; background: var(--brand-soft);
+    color: var(--brand-deep); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .devread .t { font-size: 13.5px; font-weight: 700; font-family: ui-monospace, Menlo, monospace; }
+  .devread .s { font-size: 11.5px; color: var(--muted); margin-top: 1px; font-family: system-ui, sans-serif; }
+  .devread .live {
+    margin-left: auto; font-size: 10.5px; font-weight: 750; color: var(--info);
+    background: var(--info-soft); padding: 4px 10px; border-radius: 999px; flex-shrink: 0;
+  }
+  /* first-run scan state: nothing detected yet */
+  .devread.scanning { background: var(--bg); border: 2px dashed var(--line); }
+  .devread.scanning .ic { background: var(--card); color: var(--muted); }
+  .scanbtn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; background: var(--brand-soft); color: var(--brand-deep);
+    border: none; border-radius: 12px; padding: 12px;
+    font: inherit; font-size: 13px; font-weight: 750; cursor: pointer;
+  }
+  /* vehicle type chips: tidy 3-column grid */
+  .types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .type {
+    text-align: center; padding: 10px 0;
+    border: 1.5px solid var(--line); border-radius: 12px;
+    font-size: 12.5px; font-weight: 700; color: var(--muted); cursor: pointer;
+  }
+  .type[aria-pressed="true"] {
+    background: var(--brand); border-color: var(--brand); color: #fff;
+  }
+  .vrow .typebadge {
+    font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--brand-deep); background: var(--brand-soft);
+    padding: 2px 7px; border-radius: 6px; margin-left: 6px; vertical-align: 1px;
+  }
+  /* vehicle select */
+  .vrow {
+    display: flex; align-items: center; gap: 12px; padding: 12px 4px;
+    border-top: 1px dashed var(--line); cursor: pointer;
+  }
+  .vrow:first-of-type { border-top: none; }
+  .vrow .plate {
+    width: 52px; text-align: center; font-family: ui-monospace, Menlo, monospace;
+    font-size: 12px; font-weight: 700; border: 2px solid var(--text); border-radius: 6px;
+    padding: 4px 0; background: var(--bg);
+  }
+  .vrow .t { font-size: 13.5px; font-weight: 650; }
+  .vrow .s { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .vrow .radio {
+    margin-left: auto; width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid var(--line); flex-shrink: 0;
+  }
+  .vrow[aria-checked="true"] { background: var(--brand-soft); border-radius: 12px; padding-left: 12px; padding-right: 12px; }
+  .vrow[aria-checked="true"] .radio { border-color: var(--brand); background: var(--brand); box-shadow: inset 0 0 0 4px #fff; }
+  /* alternate find-ways: photo or typed plate */
+  .findways { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .findway {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    border: 1.5px dashed var(--line); border-radius: 12px; padding: 11px 8px;
+    font-size: 12px; font-weight: 700; color: var(--brand-deep); background: var(--bg);
+  }
+  /* pairing code */
+  .code {
+    display: flex; gap: 8px; justify-content: center; margin: 6px 0 4px;
+  }
+  .code span {
+    width: 44px; height: 54px; border-radius: 12px; border: 2px solid var(--line);
+    background: var(--bg); font-family: ui-monospace, Menlo, monospace;
+    font-size: 22px; font-weight: 750; display: flex; align-items: center; justify-content: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .code span.fill { border-color: var(--brand); color: var(--brand-deep); background: var(--brand-soft); }
+  /* result banner */
+  .result {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--green-soft); border: 1px solid #c6dadc; border-radius: 16px;
+    padding: 14px 16px; margin-bottom: 14px;
+  }
+  .result .ok {
+    width: 40px; height: 40px; border-radius: 50%; background: var(--green); color: #fff;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .result .t { font-size: 14px; font-weight: 750; color: var(--green); }
+  .result .s { font-size: 12px; color: var(--muted); margin-top: 1px; line-height: 1.45; }
+  /* primary button */
+  .primary {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin: 6px 0 16px; width: 100%;
+    background: var(--brand); color: #fff; border: none; border-radius: 16px;
+    padding: 15px; font: inherit; font-size: 14.5px; font-weight: 750;
+    box-shadow: 0 8px 20px rgba(154, 90, 20, 0.28); cursor: pointer;
+  }
+  .primary.ghost {
+    background: var(--card); color: var(--brand-deep); border: 1.5px solid var(--line);
+    box-shadow: none; margin-top: -6px;
+  }
+  nav { position: sticky; bottom: 0; margin-top: auto; display: flex; background: var(--card); border-top: 1px solid var(--line); padding: 10px 10px 14px; margin-left: -16px; margin-right: -16px; }
+  nav a { flex: 1; text-align: center; text-decoration: none; color: var(--muted); font-size: 10.5px; font-weight: 600; }
+  nav a .pill { width: 44px; height: 28px; margin: 0 auto 4px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  nav a.active { color: var(--brand); }
+  nav a.active .pill { background: var(--brand-soft); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="phone" role="application" aria-label="Device setup screen">
+  <div class="statusbar"><span>9:41</span><span>📶 ⌖ ▮</span></div>
+
+  <div class="topbar">
+    <h1>Add tracker</h1>
+    <span class="firsttime" role="status">First-time setup</span>
+  </div>
+  <div style="display:flex; align-items:center; gap:8px; margin: 0 6px 12px;">
+    <span class="brandmark-sm" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 48 48">
+        <path d="M24 12.5L11 33h26z" stroke="#16283e" stroke-width="2.6" fill="none" stroke-linejoin="round" opacity="0.4"/>
+        <circle cx="24" cy="12.5" r="4.6" fill="#16283e"/>
+        <circle cx="11" cy="33" r="4.6" fill="#16283e"/>
+        <circle cx="37" cy="33" r="4.6" fill="#e8b06a"/>
+        <circle cx="24" cy="25" r="6" fill="#16283e"/>
+        <circle cx="24" cy="25" r="2.4" fill="#fff"/>
+      </svg>
+    </span>
+    <span class="hint" style="margin:0; flex:1">Assign this vehicle's tracker to start — there's no cancel: the app has no home until it's assigned.</span>
+  </div>
+
+  <div class="steps" aria-label="Setup steps">
+    <span class="step now"><span class="n">1</span> Device code</span>
+    <span class="arrow">→</span>
+    <span class="step"><span class="n">2</span> Vehicle</span>
+    <span class="arrow">→</span>
+    <span class="step"><span class="n">3</span> Assign</span>
+  </div>
+
+  <div class="card">
+    <h2>Device code</h2>
+    <div class="hint">Every tracker has a code printed on its label. Type it here — it's the device_id that will identify all telemetry from this vehicle. The device itself needs no configuration: it just sends data.</div>
+    <div class="devread">
+      <span class="ic">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+      </span>
+      <div>
+        <div class="t">tracker-A4F2-77</div>
+        <div class="s">Typed from device label · 14 of 64 max characters</div>
+      </div>
+      <span class="live">Valid format</span>
+    </div>
+    <button class="scanbtn" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+      Or scan the label barcode
+    </button>
+    <div class="hint" style="margin: 10px 0 0">If this code is already assigned to another vehicle, assigning it here moves the link — the previous association is released.</div>
+  </div>
+
+  <div class="card">
+    <h2>Vehicle type</h2>
+    <div class="hint">Define what this unit is — it affects sample behavior (idle thresholds, heartbeat) and reports.</div>
+    <div class="types" role="group" aria-label="Vehicle type">
+      <span class="type" role="button" aria-pressed="true">Truck</span>
+      <span class="type" role="button" aria-pressed="false">Van</span>
+      <span class="type" role="button" aria-pressed="false">Bus</span>
+      <span class="type" role="button" aria-pressed="false">Pickup</span>
+      <span class="type" role="button" aria-pressed="false">Car</span>
+      <span class="type" role="button" aria-pressed="false">Moto</span>
+      <span class="type" role="button" aria-pressed="false">Trailer</span>
+      <span class="type" role="button" aria-pressed="false">Machinery</span>
+      <span class="type" role="button" aria-pressed="false">Other</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Pair with vehicle</h2>
+    <div class="hint">Choose the unit this tracker lives on. The device_id becomes the telemetry key for that vehicle.</div>
+    <div class="findways" role="group" aria-label="Find vehicle by plate">
+      <span class="findway">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Photo of the plate
+      </span>
+      <span class="findway">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+        Type the plate
+      </span>
+    </div>
+    <div class="vrow" role="radio" aria-checked="false" tabindex="0">
+      <span class="plate">AB 123 CD</span>
+      <div><div class="t">Unit S-41<span class="typebadge">Truck</span></div><div class="s">Scania R450 · free tracker slot</div></div>
+      <span class="radio"></span>
+    </div>
+    <div class="vrow" role="radio" aria-checked="false" tabindex="0">
+      <span class="plate">AB 910 DE</span>
+      <div><div class="t">Unit S-42<span class="typebadge">Truck</span></div><div class="s">Scania R450 · recommended for this device</div></div>
+      <span class="radio"></span>
+    </div>
+    <div class="vrow" role="radio" aria-checked="false" tabindex="0">
+      <span class="plate">AB 555 FG</span>
+      <div><div class="t">Unit S-43<span class="typebadge">Van</span></div><div class="s">Ford Transit · free tracker slot</div></div>
+      <span class="radio"></span>
+    </div>
+  </div>
+
+  <button class="primary" type="button" disabled style="opacity: 0.45">
+    Assign tracker
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+  </button>
+  <div class="hint" style="text-align: center; margin: -8px 0 16px; font-size: 11.5px; color: var(--muted)">Enabled when a valid device code is typed and a vehicle is chosen</div>
+</div>
+</body>
+</html>

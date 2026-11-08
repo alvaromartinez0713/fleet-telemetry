@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "comments": [
+    {
+      "id": "x6dtpoch",
+      "file": "18-device-setup.html",
+      "selector": "body > div > div:nth-of-type(4) > span:nth-of-type(1)",
+      "excerpt": "1 Device code",
+      "comment": "Este verde me gusta mas aplicarlo en todas las pantallas donde hay otro verde diferente",
+      "createdAt": "2026-11-07T16:55:28.841Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T16:55:28.864Z",
+      "resolvedAt": "2026-11-07T16:56:36.847Z"
+    },
+    {
+      "id": "i6yis4rv",
+      "file": "16-sync-fleet-one.html",
+      "selector": "body > div > section:nth-of-type(3) > div:nth-of-type(3) > span:nth-of-type(2)",
+      "excerpt": "12:04:31 · 200 OK",
+      "comment": "este verde es diferente al que te pedi",
+      "createdAt": "2026-11-07T16:57:40.676Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T16:57:40.693Z",
+      "resolvedAt": "2026-11-07T16:58:31.098Z"
+    },
+    {
+      "id": "w3jvbenx",
+      "file": "17-more-fleet-one.html",
+      "selector": "body > div > div:nth-of-type(4) > span:nth-of-type(2)",
+      "excerpt": "Unit telemetry enabled",
+      "comment": "este verde tambien es diferente",
+      "createdAt": "2026-11-07T16:57:48.664Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T16:57:48.670Z",
+      "resolvedAt": "2026-11-07T16:59:26.177Z"
+    },
+    {
+      "id": "y6oe5ypn",
+      "file": "19-move-tracker.html",
+      "selector": "body > div > div:nth-of-type(5) > span:nth-of-type(1)",
+      "excerpt": "✓ Device code",
+      "comment": "este tambien es diferente",
+      "createdAt": "2026-11-07T16:58:01.527Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T16:58:01.551Z",
+      "resolvedAt": "2026-11-07T17:00:10.680Z"
+    },
+    {
+      "id": "pdj56a9y",
+      "file": "21-welcome.html",
+      "selector": "body > div > div:nth-of-type(3) > div:nth-of-type(2) > span",
+      "excerpt": "",
+      "comment": "Este verda tmabien es diferente",
+      "createdAt": "2026-11-07T16:58:18.100Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T16:58:18.112Z",
+      "resolvedAt": "2026-11-07T17:02:03.854Z"
+    },
+    {
+      "id": "l0by7hu7",
+      "file": "16-sync-fleet-one.html",
+      "selector": "body > div > section:nth-of-type(3) > div:nth-of-type(4)",
+      "excerpt": "Dedup key device + captured_at + seq",
+      "comment": "No se que tan necesario es que el usuario de la app tenga conocimiento de esto",
+      "createdAt": "2026-11-07T16:59:30.524Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T16:59:30.535Z",
+      "resolvedAt": "2026-11-07T17:03:28.764Z"
+    },
+    {
+      "id": "35kklh8y",
+      "file": "15-queue-fleet-one.html",
+      "selector": "body > div > div:nth-of-type(10)",
+      "excerpt": "Batch #4193 118 events · 341 ms · 12:04:31 200 OK",
+      "comment": "Este verda tambein es diferente",
+      "createdAt": "2026-11-07T17:00:30.103Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T17:00:30.114Z",
+      "resolvedAt": "2026-11-07T17:07:57.846Z"
+    },
+    {
+      "id": "x05te6to",
+      "file": "14-fleet-one.html",
+      "selector": "body > div > div:nth-of-type(7) > div:nth-of-type(1) > span:nth-of-type(1)",
+      "excerpt": "✓",
+      "comment": "Este verda tamabien es diferente",
+      "createdAt": "2026-11-07T17:01:04.805Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T17:01:04.842Z",
+      "resolvedAt": "2026-11-07T17:07:57.846Z"
+    },
+    {
+      "id": "amoalxai",
+      "file": "14-fleet-one.html",
+      "selector": "body > div > div:nth-of-type(7) > div:nth-of-type(1) > span:nth-of-type(1)",
+      "excerpt": "✓",
+      "comment": "Estos iconos estan quedando encima del menu cuando se hace scroll",
+      "createdAt": "2026-11-07T17:02:48.119Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T17:02:48.135Z",
+      "resolvedAt": "2026-11-07T17:07:57.846Z"
+    },
+    {
+      "id": "z62ckjy3",
+      "file": "16-sync-fleet-one.html",
+      "selector": "body > div",
+      "excerpt": "9:41 📶 ⌖ ▮ Sync Unit S-42 · truck-042 · Ruta 3 Connected · 4G Sending normally — clock needs attention DEVICE CLOCK Drift vs server +3 min 02 s Accepted skew ±5 min Last NTP sync yesterday 21:04 Events lost to skew · 24 h 1 ENDPOINT Service FleetGo ingestion · v1 Last success 12:04:31 · 200 OK Sync",
+      "comment": "que otra cosa podemos agregar en Sync",
+      "createdAt": "2026-11-07T17:29:51.316Z",
+      "status": "resolved",
+      "sentAt": "2026-11-07T17:29:51.346Z",
+      "resolvedAt": "2026-11-07T17:33:52.805Z"
+    }
+  ]
+}

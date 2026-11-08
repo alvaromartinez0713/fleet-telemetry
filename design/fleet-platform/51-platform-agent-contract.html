@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Fleet Platform v2 · agent contract (read-only)</title>
+<style>
+  :root {
+    --bg: #0b1119; --panel: #101a29; --panel-2: #16283e; --line: #24425d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --violet: #6c7cf0; --violet-soft: rgba(108,124,240,0.14);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); width: 1440px; height: 900px; overflow: hidden; padding: 32px 38px; }
+  .mast { display: flex; align-items: flex-end; gap: 14px; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 20px; }
+  .mast h1 { font-size: 25px; font-weight: 800; letter-spacing: -0.6px; }
+  .mast h1 span { color: var(--violet); }
+  .mast .who { margin-left: auto; font-size: 12px; color: var(--muted); text-align: right; line-height: 1.5; max-width: 520px; }
+  .mast .who b { color: var(--text); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 14px 16px; display: flex; flex-direction: column; }
+  .box.can { border-color: rgba(88,180,124,0.5); }
+  .box.cannot { border-color: rgba(217,96,79,0.5); }
+  .box.how { border-color: rgba(111,170,181,0.5); }
+  .box h2 { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; margin-bottom: 11px; display: flex; align-items: center; gap: 7px; }
+  .box.can h2 { color: var(--green); }
+  .box.cannot h2 { color: var(--red); }
+  .box.how h2 { color: var(--teal); }
+  .box h2 .k { font-size: 8.5px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: #0d1826; border: 1px solid var(--line); color: var(--muted); }
+  ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  li { display: flex; gap: 8px; font-size: 11.5px; line-height: 1.5; }
+  li .i { font-size: 10px; flex-shrink: 0; padding-top: 1px; }
+  .can li .i { color: var(--green); }
+  .cannot li .i { color: var(--red); }
+  .how li .i { color: var(--teal); }
+  li b { color: var(--text); }
+  li .why { color: var(--muted); }
+
+  .wide { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 14px 16px; }
+  .wide h2 { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); margin-bottom: 11px; }
+  .modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 11px; }
+  .mode { background: #0a121c; border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; }
+  .mode .t { font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .mode .t .tag { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; }
+  .mode .tag.v { background: var(--violet-soft); color: var(--violet); }
+  .mode .tag.g { background: var(--green-soft); color: var(--green); }
+  .mode .tag.r { background: var(--red-soft); color: var(--red); }
+  .mode .d { font-size: 10px; color: var(--muted); line-height: 1.5; margin-top: 5px; }
+
+  .foot { margin-top: 16px; border: 1px solid rgba(108,124,240,0.5); border-radius: 12px; padding: 13px 16px; background: var(--violet-soft); font-size: 11px; line-height: 1.65; color: var(--text); }
+  .foot b { color: var(--violet); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="mast">
+  <div>
+    <h1>Platform agent &middot; <span>read-only</span> by contract</h1>
+  </div>
+  <div class="who">
+    The Ops assistant proposes actions for a human to approve. <b>The Platform assistant has no
+    actions at all</b> &mdash; it answers, correlates and cites. That asymmetry is the whole point.
+  </div>
+</div>
+
+<div class="grid">
+  <div class="box can">
+    <h2>&#10003; It can <span class="k">all reads</span></h2>
+    <ul>
+      <li><span class="i">&#10003;</span><div><b>Query any surface.</b> <span class="why">Stages, partitions, workers, rules, deliveries, logs, traces, payloads.</span></div></li>
+      <li><span class="i">&#10003;</span><div><b>Correlate by trace id.</b> <span class="why">From one 422 back to the device, the batch and every span of that request.</span></div></li>
+      <li><span class="i">&#10003;</span><div><b>Explain a spike.</b> <span class="why">&ldquo;4xx at 11:04 &rarr; four devices drifted their clock &rarr; 3 109 events rejected &rarr; retried byte-identical.&rdquo;</span></div></li>
+      <li><span class="i">&#10003;</span><div><b>Write the query for you.</b> <span class="why">It composes a filter you can copy, but it does not run writes.</span></div></li>
+      <li><span class="i">&#10003;</span><div><b>Cite the panel.</b> <span class="why">Every claim carries the section it came from, so you can verify it.</span></div></li>
+    </ul>
+  </div>
+
+  <div class="box cannot">
+    <h2>&#10007; It cannot <span class="k">no writes</span></h2>
+    <ul>
+      <li><span class="i">&#10007;</span><div><b>Resend or release an event.</b> <span class="why">Held and dead-letter events move only by a human command, with a footprint.</span></div></li>
+      <li><span class="i">&#10007;</span><div><b>Replay against a build.</b> <span class="why">Reproducing traffic is an operation, not a question.</span></div></li>
+      <li><span class="i">&#10007;</span><div><b>Resend a notification.</b> <span class="why">It can tell you the SMS never left; sending it again is your call.</span></div></li>
+      <li><span class="i">&#10007;</span><div><b>Change a rule, a limit or a config.</b> <span class="why">Configuration has one path: a diff a human approves.</span></div></li>
+      <li><span class="i">&#10007;</span><div><b>Restart a worker or scale anything.</b> <span class="why">No infrastructure verbs at all.</span></div></li>
+    </ul>
+  </div>
+
+  <div class="box how">
+    <h2>&#8942; How it stays honest</h2>
+    <ul>
+      <li><span class="i">&#8226;</span><div><b>Same data path.</b> <span class="why">It reads the modules the panels read; there is no second source of truth.</span></div></li>
+      <li><span class="i">&#8226;</span><div><b>Says when it is degraded.</b> <span class="why">If a tool fails it answers from cached state and declares it &mdash; the circuit breaker is in the UI.</span></div></li>
+      <li><span class="i">&#8226;</span><div><b>No invented identifiers.</b> <span class="why">Device ids, seq numbers and trace ids come from tool results, never from prose.</span></div></li>
+      <li><span class="i">&#8226;</span><div><b>Queries are logged.</b> <span class="why">Who asked what, and which panels were read &mdash; the only audit trail a read-only agent needs.</span></div></li>
+      <li><span class="i">&#8226;</span><div><b>Never blocks the panels.</b> <span class="why">If the model is down, Ingest, Runtime and Evidence still render.</span></div></li>
+    </ul>
+  </div>
+</div>
+
+<div class="wide">
+  <h2>Four things it is allowed to be</h2>
+  <div class="modes">
+    <div class="mode">
+      <div class="t">Explainer <span class="tag v">read</span></div>
+      <div class="d">&ldquo;What does the watermark do?&rdquo; &mdash; answers from the running build, not from documentation that drifts.</div>
+    </div>
+    <div class="mode">
+      <div class="t">Correlator <span class="tag v">read</span></div>
+      <div class="d">Joins device, batch, span and notification into one story when the panels are four screens apart.</div>
+    </div>
+    <div class="mode">
+      <div class="t">Query builder <span class="tag g">read</span></div>
+      <div class="d">Turns a sentence into a filter you can copy into the search bar. It never runs the query for you.</div>
+    </div>
+    <div class="mode">
+      <div class="t">Second opinion <span class="tag r">read</span></div>
+      <div class="d">When you think you found the cause, it checks the evidence and contradicts you if the numbers do not agree.</div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <b>The asymmetry that matters:</b> in Ops the agent saves a dispatcher a phone call; in Platform it
+  saves an engineer a search. But Ops actions are recoverable (a call, a silence) while platform
+  ones are not (a replay writes, a resend duplicates, a scale-up costs money). So Platform gets a
+  <b>copilot with no hands</b> &mdash; and that is a feature, not a limitation to fix later.
+</div>
+</body>
+</html>

@@ -1,0 +1,69 @@
+{
+  "title": "FleetGo App",
+  "brief": "The driver app: captures and sends telemetry samples. Onboarding, tracker setup and the Fleet One Drive/Queue/Sync/More surfaces, plus the node-mesh brand mark.",
+  "artboards": [
+    {
+      "file": "14-fleet-one.html",
+      "title": "App \u00b7 Drive",
+      "tradeoff": "Home: speed ring, buffer meter, today stats, shift action and the delivery timeline",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "15-queue-fleet-one.html",
+      "title": "App \u00b7 Queue",
+      "tradeoff": "Batch lifecycle, search by batch/device/seq and status chips that filter the list in place",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "16-sync-fleet-one.html",
+      "title": "App \u00b7 Sync",
+      "tradeoff": "Connection, device clock and endpoint state with one-tap fixes, plus the phone-level check the driver can act on (background sending allowed) and a one-tap diagnostics handoff to support instead of exposing engineering internals",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "17-more-fleet-one.html",
+      "title": "App \u00b7 More",
+      "tradeoff": "Unit settings, working System/Light/Dark switch, move-tracker entry and diagnostics",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "18-device-setup.html",
+      "title": "App \u00b7 Add tracker (first-time setup)",
+      "tradeoff": "Mandatory wizard: type or scan the device code, pick vehicle type and unit; no cancel because the app has no home until assigned",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "19-move-tracker.html",
+      "title": "App \u00b7 Move tracker (reassignment)",
+      "tradeoff": "Same wizard reached from More once running: warns that the current link releases and keeps the device_id",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "20-splash.html",
+      "title": "App \u00b7 Splash",
+      "tradeoff": "Brand entry while the app decides first run vs. resume",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "21-welcome.html",
+      "title": "App \u00b7 Welcome",
+      "tradeoff": "First run only: three value cards and the Set up my tracker CTA that leads into Add tracker",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "23-mesh-mark.html",
+      "title": "Brand \u00b7 node-mesh mark",
+      "tradeoff": "The chosen symbol: hub plus a triangle of fleet nodes with one accent reporting node, shown at three sizes and as a lockup",
+      "width": 390,
+      "height": 844
+    }
+  ]
+}

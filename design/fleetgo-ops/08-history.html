@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FleetGo Ops v2</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24425d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --star: #f0b429;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 1fr 400px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top" "main agent";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 12px;
+    padding: 0 16px; background: #08101a; border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--amber); }
+  .crumb {
+    display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;
+    color: var(--muted); padding: 4px 10px; border-radius: 999px;
+    background: #0d1826; border: 1px solid var(--line);
+  }
+  .crumb b { color: var(--text); font-weight: 800; }
+  .crumb .sep { color: var(--line); }
+  .crumb .mstate { color: var(--amber); font-weight: 800; }
+  header .stat { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 14px; }
+  header .stat b { color: var(--text); font-weight: 700; }
+
+  main { grid-area: main; display: flex; flex-direction: column; overflow: hidden; padding: 16px 18px; gap: 14px; }
+  /* secondary section strip: peers below the top bar, not a second bar */
+  .sectabs {
+    display: flex; align-items: stretch; gap: 20px; height: 32px; flex: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .sectabs a {
+    display: flex; align-items: center; padding: 0 2px; text-decoration: none;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.4px; color: var(--muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .sectabs a.on { color: var(--text); border-bottom-color: var(--amber); }
+  .head { display: flex; align-items: flex-end; gap: 12px; }
+  .head h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; }
+  .head .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .head .new {
+    margin-left: auto; align-self: flex-start; flex-shrink: 0; white-space: nowrap;
+    font: inherit; font-size: 11.5px; font-weight: 800; letter-spacing: 0.1px;
+    padding: 8px 14px; border: none; border-radius: 9px; cursor: pointer;
+    background: var(--amber); color: #16283e;
+  }
+  .lsearch {
+    display: flex; align-items: center; gap: 8px; background: #0d1826;
+    border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px; font-size: 11.5px; color: var(--muted);
+  }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .why {
+    font-size: 9px; font-weight: 600; text-transform: none; letter-spacing: 0;
+    color: var(--teal); line-height: 1.3;
+  }
+  .card > h2 {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted);
+    padding: 11px 15px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px;
+  }
+  .card > h2 .why { margin-left: auto; white-space: nowrap; }
+  .scroll { overflow: hidden; flex: 1; }
+  .rule { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 10px 15px; border-top: 1px solid var(--line); }
+  .rule:first-of-type { border-top: none; }
+  .rule.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); }
+  .rule .sent { font-size: 12px; line-height: 1.5; }
+  .rule .sent b { color: var(--text); }
+  .rule .sent .kw { color: var(--teal); font-family: var(--mono); font-size: 10.5px; }
+  .rule .meta { font-size: 9.5px; color: var(--muted); margin-top: 2px; }
+  .sev { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+  .sev.crit { background: var(--red); color: #fff; }
+  .sev.warn { background: var(--amber); color: #16283e; }
+  .sev.info { background: var(--teal-soft); color: var(--teal); }
+  .scope {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 750;
+    padding: 2px 7px; border-radius: 5px; background: #0d1826; border: 1px solid var(--line);
+    color: var(--muted); white-space: nowrap;
+  }
+  .scope.unit { border-color: var(--amber); color: var(--amber); }
+  .scope.group { border-color: var(--star); color: var(--star); }
+  .scope.zone { border-color: var(--teal); color: var(--teal); }
+  .scope.all { border-color: var(--line); }
+  .fam {
+    font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 2px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted);
+  }
+  .fam.data { border-color: var(--amber); color: var(--amber); background: var(--amber-soft); }
+  .toggle { width: 32px; height: 18px; border-radius: 999px; background: var(--green); position: relative; display: inline-block; }
+  .toggle::after { content: ""; position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; border-radius: 50%; background: #06100a; }
+  .toggle.off { background: var(--line); }
+  .toggle.off::after { right: auto; left: 2px; background: var(--muted); }
+  .foot-note { padding: 10px 15px; border-top: 1px solid var(--line); font-size: 10px; color: var(--muted); line-height: 1.55; background: #0a121c; }
+  .foot-note b { color: var(--teal); }
+
+  /* side cards */
+  .side2 { display: flex; flex-direction: column; gap: 14px; flex: 0 0 300px; }
+  .wl { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; flex: 1; }
+  .wl h2 {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted);
+    padding: 11px 14px; border-bottom: 1px solid var(--line); margin: 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .wl h2 .why { margin-left: auto; white-space: nowrap; }
+  .wrow { display: grid; grid-template-columns: 10px 1fr auto 12px; gap: 8px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); font-size: 11.5px; }
+  .wrow:first-of-type { border-top: none; }
+  .wrow .grip { color: var(--line); font-size: 10px; }
+  .wrow .nm { font-family: var(--mono); font-weight: 650; }
+  .wrow .sp { font-weight: 750; font-variant-numeric: tabular-nums; }
+  .wrow .sp small { font-size: 8.5px; color: var(--muted); margin-left: 2px; font-weight: 650; }
+  .wrow .st { color: var(--star); text-align: center; }
+
+  /* settings agent */
+  aside.agent { grid-area: agent; background: #0a121c; border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .ahd { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+  .ahd .orb {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 30%, #f0a752, var(--amber) 65%);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; color: #16283e;
+  }
+  .ahd .t { font-size: 11.5px; font-weight: 800; }
+  .ahd .s { font-size: 9.5px; color: var(--muted); }
+  .thread { flex: 1; overflow: hidden; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .msg .who { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 3px; }
+  .msg .bub { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 11.5px; line-height: 1.55; }
+  .msg.user .bub { background: var(--panel-2); border-color: var(--panel-2); }
+  .msg .bub b { color: var(--amber); }
+  .msg .bub .why { font-size: 10px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .diff {
+    margin-top: 8px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+    font-family: var(--mono); font-size: 10px; line-height: 1.6;
+  }
+  .diff .ln { padding: 3px 9px; }
+  .diff .ln.rem { background: rgba(217,96,79,0.14); color: #f0a8a0; }
+  .diff .ln.add { background: rgba(88,180,124,0.14); color: #9fe0b8; }
+  .approve { margin-top: 8px; border: 1px solid var(--amber); background: var(--amber-soft); border-radius: 8px; padding: 8px 10px; }
+  .approve .ask { font-size: 10.5px; font-weight: 750; color: var(--amber); }
+  .approve .row { display: flex; gap: 5px; margin-top: 6px; }
+  .approve .row span { font-size: 9.5px; font-weight: 800; padding: 4px 9px; border-radius: 5px; background: var(--amber); color: #16283e; }
+  .approve .row span.no { background: #0d1826; color: var(--muted); border: 1px solid var(--line); }
+  .composer { border-top: 1px solid var(--line); padding: 10px 14px 13px; background: #08101a; }
+  .composer .in { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 11px; color: var(--muted); }
+  .composer .in .send { margin-left: auto; width: 22px; height: 22px; border-radius: 6px; background: var(--amber); color: #16283e; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .composer .note { font-size: 8.5px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  .tbl { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .trow { display: grid; align-items: center; gap: 12px; padding: 10px 15px; border-top: 1px solid var(--line); font-size: 12px; }
+  .trow:first-child { border-top: none; }
+  .trow.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); }
+  .trow .nm { font-weight: 700; }
+  .trow .mono { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+  .trow .end { justify-self: end; }
+  .pillx { display: inline-block; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 5px; border: 1px solid var(--line); color: var(--muted); }
+  .pillx.crit { background: var(--red); border-color: var(--red); color: #fff; }
+  .pillx.warn { background: var(--amber); border-color: var(--amber); color: #16283e; }
+  .pillx.teal { background: var(--teal-soft); border-color: transparent; color: var(--teal); }
+  .pillx.on { border-color: var(--green); color: var(--green); }
+  .note { padding: 10px 15px; border-top: 1px solid var(--line); font-size: 10px; color: var(--muted); line-height: 1.55; }
+  .note b { color: var(--teal); }
+  .trow .s2 { display: block; font-size: 9.5px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+  .w2 { grid-template-columns: 1fr auto; }
+  .w3 { grid-template-columns: 1fr auto auto; }
+  .composer .note { padding: 0; border-top: none; }
+
+  .hrow { grid-template-columns: 54px 84px 1fr 1fr; align-items: start; }
+  .hrow .when { font-family: var(--mono); font-size: 10.5px; color: var(--text); }
+  .hrow .when small { display: block; font-family: system-ui, sans-serif; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); margin-top: 2px; }
+  .hrow .who { font-size: 11.5px; font-weight: 700; }
+  .hrow .chg { font-size: 11.5px; line-height: 1.45; }
+  .hrow .why2 { font-size: 10.5px; color: var(--muted); line-height: 1.45; }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>FleetGo <span>Ops</span></b>
+  </div>
+  <span class="crumb" aria-label="You are in settings">
+    Live map <span class="sep">&#8250;</span> settings <span class="sep">&#8250;</span> <span class="mstate">history</span>
+  </span>
+  <div class="stat">
+    <span>Changes <b>24</b></span>
+    <span>Today <b>5</b></span>
+  </div>
+</header>
+
+<main>
+  <nav class="sectabs" aria-label="Settings sections">
+    <a href="#">Rules</a>
+    <a href="#">Zones</a>
+    <a href="#">Routing</a>
+    <a href="#" class="on" aria-current="page">History</a>
+  </nav>
+
+  <div class="head">
+    <div>
+      <h1>History</h1>
+      <div class="sub">Every change to a rule, zone, channel or watched group is written down with who, when and why. This is an audit log, not a chat log.</div>
+    </div>
+    <button class="new" type="button">Export CSV</button>
+  </div>
+
+  <div class="lsearch">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    Search who, what or why&hellip;
+  </div>
+
+  <div style="display: flex; gap: 14px; flex: 1; min-height: 0;">
+    <div class="card">
+      <h2>Audit record <span class="why">append-only</span></h2>
+      <div class="tbl">
+        <div class="trow hrow">
+          <span class="when">11:47<small>today</small></span>
+          <span class="who">M. Rivas</span>
+          <span class="chg">stopped &gt; 20 min &rarr; 30 min<span class="s2">Stopped in critical zone</span></span>
+          <span class="why2">3 real stops in 24 h, all genuine</span>
+        </div>
+        <div class="trow hrow">
+          <span class="when">11:47<small>today</small></span>
+          <span class="who">M. Rivas</span>
+          <span class="chg">notify: push first, SMS after 5 min<span class="s2">Stopped in critical zone</span></span>
+          <span class="why2">approved together with the 30 min change</span>
+        </div>
+        <div class="trow hrow">
+          <span class="when">09:41<small>today</small></span>
+          <span class="who">System</span>
+          <span class="chg">acknowledged by Rivas<span class="s2">silence &gt; 2 h &middot; van-203</span></span>
+          <span class="why2">written by the ack, not typed</span>
+        </div>
+        <div class="trow hrow">
+          <span class="when">09:12<small>today</small></span>
+          <span class="who">L. Paredes</span>
+          <span class="chg">zone Zona Norte redrawn<span class="s2">148 pts &middot; +Ruta 3 shoulder</span></span>
+          <span class="why2">boundary was cutting the shoulder</span>
+        </div>
+        <div class="trow hrow">
+          <span class="when">08:03<small>today</small></span>
+          <span class="who">System</span>
+          <span class="chg">rule fired 3&times; (truck-088)<span class="s2">Stopped in critical zone</span></span>
+          <span class="why2">auto-recorded, no human involved</span>
+        </div>
+        <div class="trow hrow">
+          <span class="when">18:20<small>yest.</small></span>
+          <span class="who">M. Rivas</span>
+          <span class="chg">watched group +van-203<span class="s2">My shift &middot; S-203 &middot; AB 909 ZZ</span></span>
+          <span class="why2">covering Paredes&#8217; shift</span>
+        </div>
+        <div class="trow hrow">
+          <span class="when">16:02<small>yest.</small></span>
+          <span class="who">L. Paredes</span>
+          <span class="chg">voice channel disabled<span class="s2">critical &middot; on-call lead</span></span>
+          <span class="why2">two false wake-ups last week</span>
+        </div>
+        <div class="trow hrow">
+          <span class="when">09:15<small>yest.</small></span>
+          <span class="who">System</span>
+          <span class="chg">12 data warnings routed to Platform<span class="s2">ingest &amp; integrity</span></span>
+          <span class="why2">not fleet behaviour, not dispatchable</span>
+        </div>
+        <div class="trow hrow">
+          <span class="when">08:40<small>yest.</small></span>
+          <span class="who">R. Vega</span>
+          <span class="chg">override added: quiet hours 23:00&ndash;06:00<span class="s2">stricter only</span></span>
+          <span class="why2">night shift asked not to be woken for warnings</span>
+        </div>
+        <div class="trow hrow">
+          <span class="when">08:12<small>yest.</small></span>
+          <span class="who">M. Rivas</span>
+          <span class="chg">zone Depot Sur redrawn<span class="s2">loading dock added</span></span>
+          <span class="why2">vans parked on the apron fell outside the boundary</span>
+        </div>
+      </div>
+      <div class="foot-note">
+        <b>The agent can propose a change; it can never write the record.</b> If a change is not in
+        History it did not happen &mdash; so the log holds the refusal as well as the approval.
+      </div>
+    </div>
+
+    <div class="side2">
+      <div class="wl">
+        <h2>What is recorded <span class="why">every change</span></h2>
+        <div class="wrow w2"><span class="nm" style="font-family: inherit;">Who approved</span><span class="sp" style="font-size: 10px;">name</span></div>
+        <div class="wrow w2"><span class="nm" style="font-family: inherit;">Before &rarr; after</span><span class="sp" style="font-size: 10px;">both values</span></div>
+        <div class="wrow w2"><span class="nm" style="font-family: inherit;">The reason given</span><span class="sp" style="font-size: 10px;">free text</span></div>
+        <div class="wrow w2"><span class="nm" style="font-family: inherit;">The alerts it caused</span><span class="sp" style="font-size: 10px;">count</span></div>
+        <div class="foot-note" style="margin-top: auto;">System entries are written automatically for acks, fires and routed data warnings.</div>
+      </div>
+
+      <div class="wl">
+        <h2>Retention <span class="why">18 months</span></h2>
+        <div class="wrow w2"><span class="nm" style="font-family: inherit;">Kept for</span><span class="sp" style="font-size: 10px;">18 months</span></div>
+        <div class="wrow w2"><span class="nm" style="font-family: inherit;">Export</span><span class="sp" style="font-size: 10px; color: var(--green);">CSV</span></div>
+        <div class="wrow w2"><span class="nm" style="font-family: inherit;">Edit or delete</span><span class="sp" style="font-size: 10px; color: var(--red);">no</span></div>
+        <div class="foot-note" style="margin-top: auto;">Append-only means a correction is a new entry, never an overwritten line.</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<aside class="agent">
+  <div class="ahd">
+    <span class="orb">&#10022;</span>
+    <div>
+      <div class="t">Fleet Assistant</div>
+      <div class="s">reads the record &mdash; never writes it</div>
+    </div>
+  </div>
+
+  <div class="thread">
+    <div class="msg user">
+      <div>
+        <div class="who">M. Rivas</div>
+        <div class="bub">Who changed the stopped-in-zone rule to 30 minutes, and why?</div>
+      </div>
+    </div>
+    <div class="msg">
+      <div>
+        <div class="who">Assistant</div>
+        <div class="bub">
+          <b>M. Rivas</b>, today at <span style="font-family: var(--mono); font-size: 10.5px;">11:47</span>.
+          The recorded reason is <b>3 real stops in 24 h</b>. The same approval also moved notify
+          to push first and SMS after 5 min.
+          <div class="why">Before the change the rule fired 3 times in 24 h and every fire was a real
+            stop, so the 20 min threshold was not noise. The record contains both values and the
+            alerts the rule caused since.</div>
+          <div class="why" style="color: var(--amber);">I can read this log. I cannot add to it or amend it &mdash;
+            only a human action writes a line.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="composer">
+    <div class="in">
+      Ask what changed, when, and who approved it&hellip;
+      <span class="send">&uarr;</span>
+    </div>
+    <div class="note">Answers here are read directly from the audit record, not summarized from memory.</div>
+  </div>
+</aside>
+</body>
+</html>

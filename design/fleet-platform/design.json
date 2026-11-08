@@ -1,0 +1,104 @@
+{
+  "title": "Fleet Platform",
+  "brief": "Engineering console: is the system healthy and why not. Ingest, pipeline, workers, partitions, logs, schema, payload inspector and the v2 platform proposals.",
+  "artboards": [
+    {
+      "file": "03-wire-inspector.html",
+      "title": "Fleet Platform \u00b7 Payload inspector (request & response)",
+      "tradeoff": "One exchange at a time: request body and headers with line numbers and inline annotations, response status/body, timing per stage and the verdict; annotated vs raw toggle, copy as cURL and replay",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "27-pipeline-health.html",
+      "title": "Fleet Platform \u00b7 Pipeline",
+      "tradeoff": "Stage funnel with per-hop latency, blocked watermarks, dead-letter, partition lag strip and a pausable live tail",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "35-platform-ingest.html",
+      "title": "Fleet Platform \u00b7 Gateway & ingest",
+      "tradeoff": "Responses by status, latency percentiles, devices with gateway errors and the live schema limits table",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "36-platform-workers.html",
+      "title": "Fleet Platform \u00b7 Workers",
+      "tradeoff": "Per-worker health, worker log, assistant circuit breaker and tool-call mix",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "37-platform-logs.html",
+      "title": "Fleet Platform \u00b7 Logs & traces",
+      "tradeoff": "Searchable logs with inline trace ids and a span waterfall for one trace",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "38-platform-partitions.html",
+      "title": "Fleet Platform \u00b7 Partitions",
+      "tradeoff": "Per-partition lag, consumer assignment and the devices behind a hot partition; partition key is device_id, so order is guaranteed per device",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "39-platform-assistant.html",
+      "title": "Fleet Platform \u00b7 Assistant",
+      "tradeoff": "The agent on its own screen: recent conversations with the tools they called, tool latency and errors, and the degraded answers it admitted to",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "40-platform-data-health.html",
+      "title": "Fleet Platform \u00b7 Data health",
+      "tradeoff": "Watermarks, rejected events and dedup in one screen: what blocks a device, what was refused, and how many replays were absorbed instead of stored",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "41-platform-schema.html",
+      "title": "Fleet Platform \u00b7 Schema & limits",
+      "tradeoff": "The contract table with the exact error each violation returns, plus the runtime surface of the running build; generated, never a drifting document",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "47-platform-v2-alerting.html",
+      "title": "Fleet Platform v2 \u00b7 alerting & delivery (proposal)",
+      "tradeoff": "The gap Platform had: delivery outcomes per channel (email, push, SMS, webhook), failures, suppressions, time-to-ack, per-rule evaluation health and a persistent agent that answers 'did this alert reach anyone'",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "48-platform-v2-gaps.html",
+      "title": "Fleet Platform v2 \u00b7 what is missing (proposal)",
+      "tradeoff": "The audit: three things absent entirely (delivery log, per-rule evaluation, retention/export), four that should fold into fewer sections, and the three-surface shape with a persistent agent and a query bar",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "49-platform-v2-ingest.html",
+      "title": "Fleet Platform v2 \u00b7 ingest & pipeline (proposal)",
+      "tradeoff": "One surface instead of three sections: gateway outcomes, stage funnel with partitions inside it, live schema limits, and a read-only agent that explains a spike and cites the panels it read",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "50-platform-v2-runtime.html",
+      "title": "Fleet Platform v2 \u00b7 runtime (proposal)",
+      "tradeoff": "Workers, per-rule evaluation, delivery by channel and the notification log on one surface; the agent answers whether an escalation ever left the building",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "51-platform-agent-contract.html",
+      "title": "Fleet Platform v2 \u00b7 agent contract, read-only (proposal)",
+      "tradeoff": "The evaluation asked for: what the platform agent can do (all reads, correlate, explain, build queries, cite), what it can never do (no resend, no replay, no config, no infra verbs) and how it stays honest",
+      "width": 1440,
+      "height": 900
+    }
+  ]
+}

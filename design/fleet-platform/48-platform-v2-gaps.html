@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Fleet Platform v2 · what is missing</title>
+<style>
+  :root {
+    --bg: #0b1119; --panel: #101a29; --line: #24425d; --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --violet: #6c7cf0; --violet-soft: rgba(108,124,240,0.14);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); width: 1440px; height: 900px; overflow: hidden; padding: 32px 38px; }
+  .mast { display: flex; align-items: flex-end; gap: 14px; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 22px; }
+  .mast h1 { font-size: 25px; font-weight: 800; letter-spacing: -0.6px; }
+  .mast h1 span { color: var(--violet); }
+  .mast .who { margin-left: auto; font-size: 12px; color: var(--muted); text-align: right; line-height: 1.5; max-width: 460px; }
+  .mast .who b { color: var(--text); }
+  .grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 16px; }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 15px 17px; }
+  .box h2 { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); margin-bottom: 11px; display: flex; gap: 8px; align-items: center; }
+  .box h2 .n { font-size: 9px; padding: 1px 6px; border-radius: 999px; background: var(--red-soft); color: var(--red); }
+  ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  li { display: flex; gap: 9px; font-size: 11.5px; line-height: 1.55; }
+  li .b { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; height: fit-content; flex-shrink: 0; }
+  .b.have { background: var(--green-soft); color: var(--green); }
+  .b.miss { background: var(--red-soft); color: var(--red); }
+  .b.next { background: var(--amber-soft); color: var(--amber); }
+  li b { color: var(--text); }
+  li .why { color: var(--muted); }
+  .foot { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; padding: 13px 16px; background: #0a121c; font-size: 11px; line-height: 1.65; color: var(--muted); }
+  .foot b { color: var(--teal); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="mast">
+  <div>
+    <h1>Fleet <span>Platform</span> &middot; what is missing</h1>
+  </div>
+  <div class="who">
+    Audited against the nine platform sections and the modules the backend already has.
+    <b>Three things are missing entirely</b> — and the biggest one is alerting delivery.
+  </div>
+</div>
+
+<div class="grid">
+  <div class="box">
+    <h2>Missing <span class="n">3</span></h2>
+    <ul>
+      <li>
+        <span class="b miss">missing</span>
+        <div><b>Alert delivery &amp; notification log.</b>
+          <span class="why">The platform knows if the alerting worker is alive, but not whether a
+          notification reached a human. Email, push, SMS and webhook outcomes, retries, quiet-hour
+          suppressions. Without it, a failed page looks exactly like an ignored alert.
+          <b style="color: var(--violet);">Designed in board 47.</b></span></div>
+      </li>
+      <li>
+        <span class="b miss">missing</span>
+        <div><b>Rule evaluation health, per rule.</b>
+          <span class="why">Today only the worker has a card. What matters is which rule is slow,
+          which one is silent when it should fire, and how far behind the evaluation window it is.
+          <b style="color: var(--violet);">Panel included in board 47.</b></span></div>
+      </li>
+      <li>
+        <span class="b miss">missing</span>
+        <div><b>Retention, export and cost.</b>
+          <span class="why">How long events and logs live, what a tenant's storage costs, and how to
+          export a window for an audit. This is a sales question before it is a UI question.</span></div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="box">
+    <h2>Present, but should move</h2>
+    <ul>
+      <li>
+        <span class="b next">fold</span>
+        <div><b>Partitions</b> <span class="why">&mdash; it is a tab inside Pipeline, not a section of its own. Six partitions do not deserve nine menu entries.</span></div>
+      </li>
+      <li>
+        <span class="b next">fold</span>
+        <div><b>Schema &amp; limits</b> <span class="why">&mdash; a reference table that belongs beside Ingest, where the contract is enforced.</span></div>
+      </li>
+      <li>
+        <span class="b next">merge</span>
+        <div><b>Workers + Assistant</b> <span class="why">&mdash; same question: is this thing running, and how fast. One surface, two sections.</span></div>
+      </li>
+      <li>
+        <span class="b have">keep</span>
+        <div><b>Gateway &amp; ingest, Pipeline, Data health, Logs &amp; traces, Payload inspector</b>
+          <span class="why">&mdash; each answers a distinct question and none is a shortcut for another.</span></div>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="grid" style="margin-top: 16px; grid-template-columns: 1fr;">
+  <div class="box">
+    <h2>The v2 shape, if it is applied</h2>
+    <ul style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
+      <li><span class="b have">1</span><div><b>Ingest &amp; pipeline</b><br><span class="why">gateway outcomes, stage funnel, partitions, schema limits</span></div></li>
+      <li><span class="b have">2</span><div><b>Runtime</b><br><span class="why">workers and assistant, evaluation and delivery health, notification log</span></div></li>
+      <li><span class="b have">3</span><div><b>Evidence</b><br><span class="why">logs, traces, payload inspector — the bytes, searchable</span></div></li>
+      <li><span class="b next">+</span><div><b>Persistent agent</b><br><span class="why">⌘K on every surface, answers with the tool that produced them</span></div></li>
+      <li><span class="b next">+</span><div><b>Query bar</b><br><span class="why">same box takes natural language or a structured query, no second tool</span></div></li>
+      <li><span class="b next">+</span><div><b>Links to Ops</b><br><span class="why">every device fact offers &ldquo;see it as a dispatcher would&rdquo;</span></div></li>
+    </ul>
+  </div>
+</div>
+
+<div class="foot">
+  <b>The same rule as Ops, applied to engineering:</b> panels for state, the agent for intent,
+  the inspector for evidence. Platform keeps one extra obligation Ops does not have &mdash;
+  <b>it must be able to prove what the system did</b>, which is why the notification log and the
+  per-rule evaluation table are not optional extras.
+</div>
+</body>
+</html>

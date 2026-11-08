@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FleetGo Ops v2</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24425d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --star: #f0b429;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 264px 1fr 452px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top top" "fleet map rail";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 12px;
+    padding: 0 16px; background: #08101a; border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--amber); }
+  .pill {
+    font-size: 10.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px;
+    background: var(--green-soft); color: var(--green); display: flex; align-items: center; gap: 6px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  /* kbar = the agent input, replacing the command palette */
+  header .kbar {
+    margin-left: 6px; display: flex; align-items: center; gap: 8px; flex: 0 1 320px;
+    background: #0d1826; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px;
+    font-size: 11.5px; color: var(--muted);
+  }
+  header .kbar kbd {
+    margin-left: auto; font-family: var(--mono); font-size: 9.5px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px;
+  }
+  header .views { display: flex; gap: 2px; background: #0d1826; border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  header .views a { font-size: 10.5px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 4px 10px; border-radius: 7px; }
+  header .views a.on { background: var(--panel-2); color: var(--text); }
+  header .cfg {
+    display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 750;
+    text-decoration: none; color: var(--muted); padding: 4px 9px; border-radius: 8px;
+    border: 1px solid var(--line); background: #0d1826;
+  }
+  header .stat { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 14px; }
+  header .stat b { color: var(--text); font-weight: 700; font-family: var(--mono); }
+  header .crumb { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--muted); }
+  header .crumb .sep { color: var(--line); }
+  header .crumb .here { color: var(--text); }
+
+  aside.fleet { grid-area: fleet; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  aside.fleet .bar { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  aside.fleet .search { display: flex; align-items: center; gap: 8px; background: #0d1826; border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; font-size: 11.5px; color: var(--muted); }
+  aside.fleet .chips { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+  /* groups live here, next to the units they contain — never on a settings screen */
+  .groups { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--line); }
+  .groups .ghd {
+    display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px;
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted);
+  }
+  .groups .ghd .why { margin-left: auto; font-size: 8.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--teal); }
+  .gchips { display: flex; gap: 4px; flex-wrap: wrap; }
+  .gchip {
+    display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 750;
+    padding: 3px 8px; border-radius: 999px; background: #0d1826; border: 1px solid var(--line); color: var(--muted);
+  }
+  .gchip b { font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--text); }
+  .gchip.on { background: var(--amber-soft); border-color: var(--amber); color: var(--text); }
+  .gchip.on::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--amber); flex: none; }
+  .gchip.on b { color: var(--amber); }
+  .gchip.add { padding: 2px 7px; font-family: var(--mono); font-size: 11px; font-weight: 700; }
+  .chip { font-size: 9.5px; font-weight: 750; padding: 3px 8px; border-radius: 999px; background: #0d1826; border: 1px solid var(--line); color: var(--muted); }
+  .chip.on { background: var(--panel-2); color: var(--text); border-color: var(--panel-2); }
+  .chip.r.on { background: var(--red); border-color: var(--red); color: #fff; }
+  .chip.s.on { background: var(--star); border-color: var(--star); color: #1a1305; }
+  aside.fleet h2 { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 10px 12px 5px; }
+  .device { padding: 9px 12px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto auto; column-gap: 8px; row-gap: 2px; align-items: center; }
+  .device.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); padding-left: 9px; }
+  .device .id {
+    font-size: 11.5px; font-weight: 700; font-family: var(--mono);
+    display: flex; align-items: center; gap: 6px; min-width: 0;
+  }
+  .device .spd { font-size: 11.5px; font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .device .spd small { font-size: 8.5px; font-weight: 650; color: var(--muted); margin-left: 2px; }
+  .device .meta { grid-column: 1 / -1; font-size: 9.5px; color: var(--muted); }
+  .device .st { font-size: 12px; text-align: center; }
+  .device .st.on { color: var(--star); }
+  .device .st.off { color: var(--line); }
+  /* membership is readable per row: filled star = watched, hollow = not, plus the toggle */
+  .device .watch { display: flex; align-items: center; gap: 4px; }
+  .device .act {
+    width: 13px; height: 13px; border-radius: 4px; border: 1px solid var(--line); background: #0d1826;
+    color: var(--muted); font-size: 10px; font-weight: 800; line-height: 1;
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  .device .act.rm { color: var(--red); border-color: rgba(217,96,79,0.45); background: var(--red-soft); }
+  /* the create action and the rationale sit at the foot of the panel, not in Settings */
+  .newgroup {
+    margin-top: auto; display: flex; align-items: center; gap: 7px; padding: 10px 12px;
+    border-top: 1px solid var(--line); background: #0a121c;
+    font-size: 10.5px; font-weight: 750; color: var(--amber);
+  }
+  .newgroup .plus {
+    width: 15px; height: 15px; border-radius: 5px; border: 1px dashed var(--amber); color: var(--amber);
+    font-size: 11px; font-weight: 800; line-height: 1; display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  .gfoot { padding: 8px 12px 10px; border-top: 1px solid var(--line); background: #0a121c; font-size: 8.5px; line-height: 1.5; color: var(--muted); }
+  /* the status dot is drawn, not laid out: a pseudo-element cannot stretch */
+  .device .id::before {
+    content: ""; align-self: center; flex: none;
+    width: 5px; height: 5px; min-width: 5px; border-radius: 50%;
+    background: var(--green);
+  }
+  .device .id.warn::before { background: var(--amber); }
+  .device .id.bad::before { background: var(--red); }
+
+  main { grid-area: map; position: relative; background: #08101a; }
+  /* the map layer only: icons nested in the sheet must not inherit the full-bleed map sizing */
+  main > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  /* ── the mode system: one switcher, same place and style on every map board ── */
+  .modebar {
+    position: absolute; left: 12px; top: 12px; z-index: 7;
+    background: rgba(8,16,26,0.94); border: 1px solid var(--line); border-radius: 11px;
+    padding: 6px; display: flex; flex-direction: column; gap: 5px;
+  }
+  .switcher {
+    display: flex; align-items: center; gap: 2px;
+    background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 2px;
+  }
+  .seg {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 5px 9px; border-radius: 6px; color: var(--muted); white-space: nowrap;
+  }
+  .seg kbd {
+    font-family: var(--mono); font-size: 8.5px; font-weight: 700; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 3px; padding: 0 3px;
+  }
+  .seg.on { background: var(--panel-2); color: var(--text); }
+  .seg.on kbd { color: var(--text); border-color: var(--text); }
+  .seg.on.follow { background: var(--amber); color: #16283e; }
+  .seg.on.follow kbd { color: #16283e; border-color: #16283e; }
+  .seg.on.replay { background: var(--teal); color: #08201f; }
+  .seg.on.replay kbd { color: #08201f; border-color: #08201f; }
+  .switcher .esc {
+    margin-left: 3px; padding-left: 8px; border-left: 1px solid var(--line);
+    font-family: var(--mono); font-size: 9px; color: var(--muted); white-space: nowrap;
+  }
+  /* the two ways into the other modes live with the switcher, never elsewhere */
+  .entries { display: flex; gap: 5px; }
+  .entry {
+    display: flex; align-items: center; gap: 6px; flex: 1; justify-content: center;
+    font-size: 10px; font-weight: 750; color: var(--text);
+    background: #0d1826; border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px;
+  }
+  .entry .g { color: var(--amber); font-size: 11px; }
+  .entry .go { color: var(--muted); font-family: var(--mono); font-size: 10px; }
+  .modebar .note { font-size: 8.5px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); padding: 0 3px; }
+  .modebar .note b { color: var(--text); }
+  /* alerts live in the rail: the map carries the spatial marker, never a second list */
+  .legend {
+    position: absolute; right: 12px; bottom: 32px; z-index: 6;
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(8,16,26,0.9); border: 1px solid var(--line); border-radius: 9px; padding: 5px 9px;
+    font-size: 9px; color: var(--muted);
+  }
+  .legend .lg { display: flex; align-items: center; gap: 4px; }
+  .legend i { width: 7px; height: 7px; border-radius: 50%; display: block; }
+  .legend .sq { width: 9px; height: 7px; border-radius: 2px; background: rgba(217,96,79,0.25); border: 1px solid #3a2430; display: block; }
+  .legend .dash { width: 12px; height: 0; border-top: 2px dashed var(--amber); display: block; }
+  .attribution { position: absolute; bottom: 8px; right: 10px; font-size: 9px; color: rgba(255,255,255,0.45); }
+  .mapcard {
+    position: absolute; left: 12px; bottom: 12px; z-index: 6;
+    background: rgba(8,16,26,0.95); border: 1px solid var(--line); border-radius: 11px; padding: 9px 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .mapcard .t { font-size: 11.5px; font-weight: 750; }
+  .mapcard .s { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .mapcard .tag { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 6px; background: var(--amber-soft); color: var(--amber); border: 1px solid var(--amber); }
+  .mapcard .tag.sel { background: var(--teal-soft); color: var(--teal); border-color: var(--teal); }
+  .mapcard .act { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+  .mapcard .opendev {
+    font-size: 10.5px; font-weight: 800; text-decoration: none; white-space: nowrap;
+    color: var(--amber); background: var(--amber-soft); border: 1px solid var(--amber);
+    border-radius: 7px; padding: 4px 9px;
+  }
+  .mapcard .opendev .k { font-family: var(--mono); font-size: 9px; opacity: 0.75; }
+  .mapcard .hintline { font-size: 8.5px; color: var(--muted); letter-spacing: 0.2px; white-space: nowrap; }
+  .mapcard .np { font-family: var(--mono); font-size: 9px; color: var(--green); margin-top: 3px; }
+
+  /* ── the persistent rail: state on top, agent below ── */
+  aside.rail { grid-area: rail; background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .state { flex: 0 0 auto; max-height: 372px; display: flex; flex-direction: column; border-bottom: 2px solid var(--line); }
+  .state .hd {
+    display: flex; align-items: center; gap: 8px; padding: 9px 14px;
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted);
+    border-bottom: 1px solid var(--line);
+  }
+  .state .hd .cnt { background: var(--red); color: #fff; font-size: 9px; padding: 1px 6px; border-radius: 999px; }
+  .state .hd .why { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--teal); font-size: 9px; }
+  .al { padding: 8px 14px; border-top: 1px solid var(--line); }
+  .al:first-of-type { border-top: none; }
+  .al .l1 { display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 750; }
+  .sev { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+  .sev.crit { background: var(--red); color: #fff; }
+  .sev.warn { background: var(--amber); color: #16283e; }
+  .sev.info { background: var(--teal-soft); color: var(--teal); }
+  .al .l2 { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .al .acts { display: flex; gap: 5px; margin-top: 6px; }
+  .al .acts span {
+    font-size: 9.5px; font-weight: 750; padding: 3px 8px; border-radius: 6px;
+    background: #0d1826; border: 1px solid var(--line); color: var(--muted);
+  }
+  .al .acts span.pri { background: var(--amber); border-color: var(--amber); color: #16283e; }
+
+  .agent { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #0a121c; }
+  .agent .hd { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+  .agent .orb {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 30%, #f0a752, var(--amber) 65%);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; color: #16283e;
+  }
+  .agent .hd .t { font-size: 11.5px; font-weight: 800; }
+  .agent .hd .s { font-size: 9.5px; color: var(--muted); }
+  .agent .hd .why { margin-left: auto; font-size: 9px; color: var(--teal); }
+  .thread { flex: 1; overflow: hidden; padding: 10px 14px; display: flex; flex-direction: column; gap: 9px; }
+  .msg { display: flex; gap: 8px; }
+  .msg .who { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 3px; }
+  .msg .bub { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 11px; line-height: 1.5; }
+  .msg.user .bub { background: var(--panel-2); border-color: var(--panel-2); }
+  .msg .bub b { color: var(--amber); }
+  .msg .bub .kvp { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; border-top: 1px solid var(--line); font-size: 10px; }
+  .msg .bub .kvp:first-of-type { border-top: none; margin-top: 5px; }
+  .msg .bub .kvp .k { color: var(--muted); }
+  .msg .bub .kvp .v { font-weight: 700; font-family: var(--mono); font-size: 9.5px; }
+  .tools { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .tools .tl { font-family: var(--mono); font-size: 8.5px; padding: 2px 6px; border-radius: 4px; background: var(--teal-soft); color: var(--teal); border: 1px solid rgba(111,170,181,0.3); }
+  .approve {
+    margin-top: 7px; border: 1px solid var(--amber); border-radius: 8px; padding: 7px 9px;
+    background: var(--amber-soft); font-size: 10px; line-height: 1.45;
+  }
+  .approve .ask { font-weight: 750; color: var(--amber); }
+  .approve .row { display: flex; gap: 5px; margin-top: 6px; }
+  .approve .row span { font-size: 9.5px; font-weight: 800; padding: 3px 8px; border-radius: 5px; background: var(--amber); color: #16283e; }
+  .approve .row span.no { background: #0d1826; color: var(--muted); border: 1px solid var(--line); }
+  .composer { border-top: 1px solid var(--line); padding: 9px 14px 12px; background: #08101a; flex-shrink: 0; }
+  .composer .in { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 11px; color: var(--muted); }
+  .composer .in .send { margin-left: auto; width: 22px; height: 22px; border-radius: 6px; background: var(--amber); color: #16283e; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .composer .note { font-size: 8.5px; color: var(--muted); margin-top: 5px; }
+
+  /* ── the shortcuts sheet: an overlay reference over the live map, not a destination ── */
+  /* keycaps: the same key marks the boards already carry in their hint chips */
+  .kbd {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 17px; height: 17px; padding: 0 4px;
+    font-family: var(--mono); font-size: 9px; font-weight: 700; line-height: 1;
+    color: var(--text); background: #0d1826;
+    border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px;
+  }
+  .kbd.assist { color: var(--teal); border-color: rgba(111,170,181,0.55); background: var(--teal-soft); }
+  .kbd.lead { color: var(--amber); border-color: rgba(224,138,46,0.55); background: var(--amber-soft); }
+  .then { font-family: var(--mono); font-size: 8px; font-weight: 600; color: var(--muted); padding: 0 1px; }
+
+  /* the scrim only covers the map: the rail and the units stay readable underneath */
+  .scrim {
+    position: absolute; inset: 0; z-index: 9;
+    background: rgba(8,16,26,0.66);
+    backdrop-filter: blur(1px);
+  }
+  .sheet {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10;
+    width: 664px; padding: 12px 15px 11px;
+    background: #0b131d; border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: 0 22px 56px rgba(0,0,0,0.55);
+  }
+  .shd { display: flex; align-items: flex-start; gap: 10px; }
+  .stitle { font-size: 15px; font-weight: 800; letter-spacing: -0.2px; display: flex; align-items: center; gap: 8px; }
+  .ssub { font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .smeta { margin-left: auto; display: flex; align-items: center; gap: 5px; flex: none; }
+  .smeta .mx {
+    font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted);
+    background: #0d1826; border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px;
+  }
+  .smeta .close { display: flex; align-items: center; gap: 4px; font-size: 8.5px; color: var(--muted); }
+  .ssearch {
+    display: flex; align-items: center; gap: 8px; margin-top: 9px;
+    background: #0d1826; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px;
+  }
+  .ssearch svg { color: var(--muted); flex: none; width: 11px; height: 11px; position: static; }
+  .ssearch input {
+    flex: 1; min-width: 0; border: 0; outline: 0; background: transparent;
+    color: var(--text); font: inherit; font-size: 11px;
+  }
+  .ssearch input::placeholder { color: var(--muted); }
+  .ssearch .tail { font-size: 8.5px; color: var(--muted); white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+  /* two balanced columns of scope cards; a scope is never split across the gutter */
+  .scols { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; align-items: start; margin-top: 9px; }
+  .scol { display: flex; flex-direction: column; gap: 8px; }
+  .sect {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 9px 7px;
+  }
+  .sect[hidden], .krow[hidden] { display: none; }
+  .shead { display: flex; align-items: center; gap: 7px; padding-bottom: 4px; margin-bottom: 3px; border-bottom: 1px solid var(--line); }
+  .shead b { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; }
+  .shead .n { margin-left: auto; font-size: 8px; font-weight: 650; color: var(--teal); text-align: right; }
+  .explain {
+    font-size: 8.5px; line-height: 1.5; color: var(--muted); margin: 2px 0 3px;
+    background: #0d1826; border: 1px solid var(--line); border-radius: 7px; padding: 4px 6px;
+  }
+  .explain .kbd { height: 13px; min-width: 13px; font-size: 7.5px; padding: 0 3px; vertical-align: -2px; }
+  .krow { display: grid; grid-template-columns: 90px 1fr; column-gap: 8px; align-items: center; padding: 1px 0; }
+  .krow .keys { display: flex; align-items: center; gap: 3px; }
+  .krow .lbl { font-size: 10px; line-height: 1.35; }
+  .krow .lbl small { font-size: 8.5px; color: var(--muted); }
+  .notes { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 2px; }
+  .note {
+    background: #0a121c; border: 1px solid var(--line); border-left: 2px solid var(--amber);
+    border-radius: 9px; padding: 7px 9px; font-size: 8.5px; line-height: 1.6; color: var(--muted);
+  }
+  .note.prov { border-left-color: var(--teal); }
+  .note .nh { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text); margin-bottom: 3px; }
+  .note b { color: var(--text); font-weight: 700; }
+  .note .kbd { height: 13px; min-width: 13px; font-size: 7.5px; padding: 0 3px; border-bottom-width: 1px; vertical-align: -2px; }
+  .sfoot {
+    display: flex; align-items: center; gap: 7px; margin-top: 9px; padding-top: 8px;
+    border-top: 1px solid var(--line); font-size: 8.5px; color: var(--muted);
+  }
+  .sfoot .kbd { height: 16px; min-width: 16px; font-size: 9px; vertical-align: -2px; }
+  .sfoot .hint { margin-left: auto; text-align: right; color: var(--muted); }
+  .sfoot .hint .kbd { vertical-align: -3px; margin: 0 2px; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>FleetGo <span>Ops</span></b>
+  </div>
+  <span class="crumb"><span>ops</span> <span class="sep">&rsaquo;</span> <span class="here">live</span></span>
+  <span class="pill">live</span>
+  <span class="kbar">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    Ask, search or type a command…
+    <kbd>⌘K</kbd>
+  </span>
+  <nav class="views" aria-label="Ops views">
+    <a href="#" class="on">Live</a>
+    <a href="#">Alerts</a>
+  </nav>
+  <a href="#" class="cfg" aria-label="Settings">Settings</a>
+  <div class="stat">
+    <span>Fleet <b>28</b></span>
+    <span>Alerts <b>3</b></span>
+  </div>
+</header>
+
+<aside class="fleet">
+  <div class="bar">
+    <div class="search">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      Search units, plates, routes…
+    </div>
+    <div class="groups" aria-label="Groups">
+      <div class="ghd">Groups <span class="why">following takes one at a time</span></div>
+      <div class="gchips">
+        <span class="gchip on" aria-current="true">My shift <b>4</b></span>
+        <span class="gchip">Zona Norte <b>6</b></span>
+        <span class="gchip">Contractors <b>3</b></span>
+        <span class="gchip add" title="New group">+</span>
+      </div>
+    </div>
+    <div class="chips">
+      <span class="chip s on">&#9733; 4</span>
+      <span class="chip on">All 28</span>
+      <span class="chip r">Alerts 3</span>
+      <span class="chip">No signal 2</span>
+    </div>
+  </div>
+  <h2>Units</h2>
+  <div class="device sel">
+    <span class="id">truck-042</span>
+    <span class="spd">67<small>km/h</small></span>
+    <span class="watch"><span class="st on">&#9733;</span><span class="act rm" title="Remove from watched">&minus;</span></span>
+    <span class="meta">S-42 &middot; Ruta 3 &middot; 4 s</span>
+  </div>
+  <div class="device">
+    <span class="id">bus-017</span>
+    <span class="spd">23<small>km/h</small></span>
+    <span class="watch"><span class="st off">&#9734;</span><span class="act" title="Add to watched">+</span></span>
+    <span class="meta">S-17 &middot; Av. 9 de Julio</span>
+  </div>
+  <div class="device">
+    <span class="id bad">truck-088</span>
+    <span class="spd">0<small>km/h</small></span>
+    <span class="watch"><span class="st on">&#9733;</span><span class="act rm" title="Remove from watched">&minus;</span></span>
+    <span class="meta">S-88 &middot; stopped 24 min</span>
+  </div>
+  <div class="device">
+    <span class="id warn">van-118</span>
+    <span class="spd">0<small>km/h</small></span>
+    <span class="watch"><span class="st on">&#9733;</span><span class="act rm" title="Remove from watched">&minus;</span></span>
+    <span class="meta">S-118 &middot; parked</span>
+  </div>
+  <div class="device">
+    <span class="id bad">van-203</span>
+    <span class="spd">&mdash;</span>
+    <span class="watch"><span class="st on">&#9733;</span><span class="act rm" title="Remove from watched">&minus;</span></span>
+    <span class="meta">S-203 &middot; silent 2 h 15 m</span>
+  </div>
+  <div class="device">
+    <span class="id">truck-201</span>
+    <span class="spd">54<small>km/h</small></span>
+    <span class="watch"><span class="st off">&#9734;</span><span class="act" title="Add to watched">+</span></span>
+    <span class="meta">S-201 &middot; Ruta 8</span>
+  </div>
+  <div class="newgroup"><span class="plus">+</span> New group</div>
+  <div class="gfoot">Groups and watched units are managed here, next to the units they contain &mdash; not in a settings screen.</div>
+</aside>
+
+<main>
+  <svg viewBox="0 0 724 848" aria-hidden="true">
+    <rect width="724" height="848" fill="#08101a"/>
+    <g stroke="#111d2a" stroke-width="1">
+      <path d="M90 0V848 M220 0V848 M370 0V848 M540 0V848 M680 0V848"/>
+      <path d="M0 90H724 M0 210H724 M0 350H724 M0 500H724 M0 650H724 M0 780H724"/>
+    </g>
+    <g stroke="#182636" stroke-width="4">
+      <path d="M300 0 C 340 280 285 520 380 848" fill="none"/>
+      <path d="M0 660 H724" fill="none"/>
+    </g>
+    <rect x="60" y="360" width="170" height="130" rx="10" fill="#160f1c" stroke="#3a2430"/>
+    <text x="145" y="476" text-anchor="middle" font-family="system-ui" font-size="9.5" fill="#d9604f" font-weight="700">CRITICAL ZONE</text>
+    <polyline points="380,340 420,420 460,500 500,570" fill="none" stroke="#e08a2e" stroke-width="2.5" stroke-dasharray="2 6" stroke-linecap="round"/>
+    <g transform="translate(500,570)">
+      <circle r="26" fill="none" stroke="#e08a2e" stroke-width="1" stroke-dasharray="3 6" opacity="0.5"/>
+      <circle r="12" fill="#e08a2e"/><circle r="4.5" fill="#16283e"/>
+    </g>
+    <text x="500" y="612" text-anchor="middle" font-family="system-ui" font-size="11" font-weight="800" fill="#f0a752">truck-042</text>
+    <g transform="translate(145,420)">
+      <circle r="26" fill="rgba(217,96,79,0.16)"/><circle r="13" fill="#d9604f"/><circle r="4.5" fill="#fff"/>
+    </g>
+    <text x="145" y="360" text-anchor="middle" font-family="system-ui" font-size="11" font-weight="800" fill="#f2a49a">truck-088 &middot; 24 min</text>
+    <g transform="translate(600,720)"><circle r="8" fill="#58b47c"/><circle r="3" fill="#08101a"/></g>
+    <text x="614" y="724" font-family="system-ui" font-size="10" fill="#8fa0b4">truck-201</text>
+  </svg>
+
+  <div class="modebar">
+    <div class="switcher" role="group" aria-label="Map mode">
+      <span class="seg on">Live <kbd>L</kbd></span>
+      <span class="seg">Following <kbd>F</kbd></span>
+      <span class="seg">Replay <kbd>R</kbd></span>
+      <span class="esc">Esc &rarr; Live</span>
+    </div>
+    <div class="entries">
+      <span class="entry"><span class="g">&#8982;</span> Follow a unit <span class="go">&#9662;</span></span>
+      <span class="entry"><span class="g">&#9719;</span> Replay 24 h <span class="go">&rarr;</span></span>
+    </div>
+    <div class="note"><b>free camera</b> &middot; pan and zoom freely &middot; nothing locked</div>
+  </div>
+
+  <div class="mapcard">
+    <div>
+      <div class="t">truck-042 &middot; 67 km/h</div>
+      <div class="s">214&deg; SW &middot; acc 4.2 m &middot; last sample 4 s ago</div>
+      <div class="np">next sample in 2 s</div>
+    </div>
+    <div class="act">
+      <a class="opendev" href="#" aria-label="Open unit detail for truck-042" title="Open unit detail">Open unit <span class="k">&#8629;</span></a>
+      <div class="hintline">selected &middot; detail opens over the map</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="lg"><i style="background:var(--amber)"></i>selected</span>
+    <span class="lg"><i style="background:var(--red)"></i>alert</span>
+    <span class="lg"><i style="background:var(--green)"></i>normal</span>
+    <span class="lg"><span class="sq"></span>critical zone</span>
+    <span class="lg"><span class="dash"></span>recent samples</span>
+  </div>
+  <span class="attribution">Map data &copy; Google &middot; dark style</span>
+
+  <!-- the scrim dims the map only; the rail keeps working underneath -->
+  <div class="scrim" aria-hidden="true"></div>
+
+  <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="shd">
+      <div>
+        <div class="stitle" id="sheet-title">Keyboard shortcuts <span class="kbd">?</span></div>
+        <div class="ssub">One sheet for every board &mdash; open with <b>?</b> from anywhere, closed with <b>?</b> or <b>Esc</b>. Keys reach what you can see; language goes to the assistant.</div>
+      </div>
+      <div class="smeta">
+        <span class="mx">34 actions</span>
+        <span class="mx">6 scopes</span>
+        <span class="close"><span class="kbd">Esc</span> close</span>
+      </div>
+    </div>
+
+    <div class="ssearch">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="ks-q" type="text" autocomplete="off" spellcheck="false" placeholder="Type an action or a key…" aria-label="Filter the shortcut list by action or key">
+      <span class="tail">filters this sheet only <span class="then">·</span> <span class="kbd">/</span> searches units</span>
+    </div>
+
+    <div class="scols">
+      <div class="scol">
+        <div class="sect">
+          <div class="shead"><b>Global</b><span class="n">works on every board</span></div>
+          <div class="krow" data-k="? question mark help sheet overlay"><div class="keys"><span class="kbd">?</span></div><div class="lbl">this sheet &mdash; open, and close again</div></div>
+          <div class="krow" data-k="cmd command assistant focus language"><div class="keys"><span class="kbd assist">⌘K</span></div><div class="lbl">focus the assistant</div></div>
+          <div class="krow" data-k="slash search units fleet"><div class="keys"><span class="kbd">/</span></div><div class="lbl">search units</div></div>
+          <div class="krow" data-k="esc escape close overlay leave mode"><div class="keys"><span class="kbd">Esc</span></div><div class="lbl">close the overlay, or leave a mode</div></div>
+          <div class="krow" data-k="g jump leader chord go board"><div class="keys"><span class="kbd lead">G</span> <span class="then">then</span> <span class="kbd">a–z</span></div><div class="lbl">jump to a board <small>&middot; see Jump chords</small></div></div>
+        </div>
+
+        <div class="sect">
+          <div class="shead"><b>Map</b><span class="n">the board you can see</span></div>
+          <div class="krow" data-k="l live mode"><div class="keys"><span class="kbd">L</span></div><div class="lbl">live</div></div>
+          <div class="krow" data-k="f follow selected unit"><div class="keys"><span class="kbd">F</span></div><div class="lbl">follow the selected unit</div></div>
+          <div class="krow" data-k="r replay last 24 h"><div class="keys"><span class="kbd">R</span></div><div class="lbl">replay the last 24 h</div></div>
+          <div class="krow" data-k="esc escape back live"><div class="keys"><span class="kbd">Esc</span></div><div class="lbl">back to live</div></div>
+          <div class="krow" data-k="arrows pan up down left right"><div class="keys"><span class="kbd">↑</span><span class="kbd">↓</span><span class="kbd">←</span><span class="kbd">→</span></div><div class="lbl">pan the map</div></div>
+          <div class="krow" data-k="plus minus zoom in out"><div class="keys"><span class="kbd">+</span><span class="kbd">−</span></div><div class="lbl">zoom in / out</div></div>
+          <div class="krow" data-k="w watch unwatch selected unit"><div class="keys"><span class="kbd">W</span></div><div class="lbl">watch / unwatch the selected unit</div></div>
+          <div class="krow" data-k="enter return unit detail open"><div class="keys"><span class="kbd">⏎</span></div><div class="lbl">open unit detail</div></div>
+        </div>
+
+        <div class="sect">
+          <div class="shead"><b>Queue</b><span class="n">the alert list in the rail</span></div>
+          <div class="krow" data-k="j k move selection down up"><div class="keys"><span class="kbd">J</span><span class="kbd">K</span></div><div class="lbl">move the selection down / up</div></div>
+          <div class="krow" data-k="a acknowledge alert ack"><div class="keys"><span class="kbd">A</span></div><div class="lbl">acknowledge the alert</div></div>
+          <div class="krow" data-k="shift d dispatch unit"><div class="keys"><span class="kbd">⇧D</span></div><div class="lbl">dispatch a unit</div></div>
+          <div class="krow" data-k="s silence 1 h hour"><div class="keys"><span class="kbd">S</span></div><div class="lbl">silence 1 h</div></div>
+          <div class="krow" data-k="cmd enter return resolve"><div class="keys"><span class="kbd">⌘⏎</span></div><div class="lbl">resolve the alert</div></div>
+          <div class="krow" data-k="1 2 3 4 saved view queue"><div class="keys"><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span><span class="kbd">4</span></div><div class="lbl">pick the saved view</div></div>
+        </div>
+      </div>
+
+      <div class="scol">
+        <div class="sect">
+          <div class="shead"><b>Jump chords</b><span class="n">leader, then a letter</span></div>
+          <div class="explain">
+            <b>G</b> is a leader, not a command: press <span class="kbd lead">G</span>, then the letter within one second &mdash; <span class="kbd lead">G</span> <span class="then">then</span> <span class="kbd">L</span> goes to Live. <span class="kbd lead">G</span> alone is inert, so a mistyped jump never lands on the wrong board.
+          </div>
+          <div class="krow" data-k="g l live"><div class="keys"><span class="kbd lead">G</span> <span class="then">then</span> <span class="kbd">L</span></div><div class="lbl">Live</div></div>
+          <div class="krow" data-k="g a alerts"><div class="keys"><span class="kbd lead">G</span> <span class="then">then</span> <span class="kbd">A</span></div><div class="lbl">Alerts</div></div>
+          <div class="krow" data-k="g s settings"><div class="keys"><span class="kbd lead">G</span> <span class="then">then</span> <span class="kbd">S</span></div><div class="lbl">Settings</div></div>
+          <div class="krow" data-k="g z zones"><div class="keys"><span class="kbd lead">G</span> <span class="then">then</span> <span class="kbd">Z</span></div><div class="lbl">Zones</div></div>
+          <div class="krow" data-k="g r routing"><div class="keys"><span class="kbd lead">G</span> <span class="then">then</span> <span class="kbd">R</span></div><div class="lbl">Routing</div></div>
+          <div class="krow" data-k="g h history"><div class="keys"><span class="kbd lead">G</span> <span class="then">then</span> <span class="kbd">H</span></div><div class="lbl">History</div></div>
+          <div class="krow" data-k="g d unit selection"><div class="keys"><span class="kbd lead">G</span> <span class="then">then</span> <span class="kbd">D</span></div><div class="lbl">unit of the selection</div></div>
+        </div>
+
+        <div class="sect">
+          <div class="shead"><b>Replay</b><span class="n">the replay timeline</span></div>
+          <div class="krow" data-k="space play pause"><div class="keys"><span class="kbd">Space</span></div><div class="lbl">play / pause</div></div>
+          <div class="krow" data-k="1 2 3 speed 1x 4x 16x"><div class="keys"><span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span></div><div class="lbl">1× / 4× / 16× speed</div></div>
+          <div class="krow" data-k="left right arrows step samples"><div class="keys"><span class="kbd">←</span><span class="kbd">→</span></div><div class="lbl">step samples</div></div>
+          <div class="krow" data-k="b back live"><div class="keys"><span class="kbd">B</span></div><div class="lbl">back to live</div></div>
+        </div>
+
+        <div class="sect">
+          <div class="shead"><b>Unit detail</b><span class="n">the unit card</span></div>
+          <div class="krow" data-k="f follow unit"><div class="keys"><span class="kbd">F</span></div><div class="lbl">follow</div></div>
+          <div class="krow" data-k="r replay this day"><div class="keys"><span class="kbd">R</span></div><div class="lbl">replay this day</div></div>
+          <div class="krow" data-k="w watch unwatch"><div class="keys"><span class="kbd">W</span></div><div class="lbl">watch / unwatch</div></div>
+          <div class="krow" data-k="cmd enter platform open"><div class="keys"><span class="kbd">⌘⏎</span></div><div class="lbl">open in Platform</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <div class="nh">Conflicts, resolved</div>
+        <b>F</b> follows the selected unit on the map and inside unit detail, and filters nothing in the queue.
+        <b>R</b> is always Replay, never refresh.
+        <b>1</b>–<b>4</b> pick saved views in the queue and speeds in replay &mdash; the active surface decides, and every row above says which one it belongs to.
+      </div>
+      <div class="note prov">
+        <div class="nh">Provenance</div>
+        The palette is gone and it is not coming back. Language goes to <span class="kbd assist">⌘K</span>; keys go to surfaces you can see. Nothing in this sheet is hidden behind a menu, and nothing here needs a second click to be found.
+      </div>
+    </div>
+
+    <div class="sfoot">
+      <span class="kbd">?</span>
+      again to close &middot; <span class="kbd">Esc</span> works too
+      <span class="hint">every board carries its own hint chips &mdash; the small keycaps in its mode bar are the same keys listed here</span>
+    </div>
+  </section>
+</main>
+
+<aside class="rail">
+  <!-- STATE: always visible, no tab -->
+  <div class="state">
+    <div class="hd">Alerts <span class="cnt">3</span> <span class="why">state &mdash; glanceable, never behind a tab</span></div>
+    <div class="al">
+      <div class="l1"><span class="sev crit">Critical</span> truck-088 stopped 24 min</div>
+      <div class="l2">S-88 &middot; Zona Norte &middot; stopped &gt; 20 min &middot; since 11:40</div>
+      <div class="acts"><span class="pri">Ack</span><span>Dispatch</span><span>Ask why</span></div>
+    </div>
+    <div class="al">
+      <div class="l1"><span class="sev warn">Warning</span> van-203 silent 2 h 15 m</div>
+      <div class="l2">S-203 &middot; last seq 22 907 &middot; rule silence &gt; 2 h</div>
+    </div>
+    <div class="al">
+      <div class="l1"><span class="sev info">Info</span> bus-017 left route 340 m</div>
+      <div class="l2">S-17 &middot; Ruta 3 corridor</div>
+    </div>
+  </div>
+
+  <!-- INTENT: the agent, always present -->
+  <div class="agent">
+    <div class="hd">
+      <span class="orb">&#10022;</span>
+      <div>
+        <div class="t">Fleet Assistant</div>
+        <div class="s">asks, explains, prepares &mdash; you approve</div>
+      </div>
+      <span class="why">⌘K focuses</span>
+    </div>
+
+    <div class="thread">
+      <div class="msg user">
+        <div>
+          <div class="who">M. Rivas</div>
+          <div class="bub">Why is truck-088 critical?</div>
+        </div>
+      </div>
+      <div class="msg bot">
+        <div>
+          <div class="who">Assistant</div>
+          <div class="bub">
+            Stopped <b>24 min</b> inside Zona Norte &mdash; the rule is legit. Not a data problem.
+            <div class="kvp"><span class="k">Last sample</span><span class="v">12:09:41 &middot; 0 km/h</span></div>
+            <div class="kvp"><span class="k">Gaps</span><span class="v">1 held &middot; seq 7 211</span></div>
+            <div class="tools"><span class="tl">buscar_dispositivo()</span><span class="tl">alertas_abiertas()</span></div>
+            <div class="approve">
+              <div class="ask">Proposed: dispatch a tow check and call the driver.</div>
+              <div class="row"><span>Approve</span><span class="no">Edit</span><span class="no">No</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="composer">
+      <div class="in">
+        Ask, or type a command &mdash; &ldquo;silence S-88 for 1 h&rdquo;…
+        <span class="send">&uarr;</span>
+      </div>
+      <div class="note">Nothing runs without your click. Every approved action is logged with the alert it belongs to.</div>
+    </div>
+  </div>
+</aside>
+
+<script>
+  /* the search field filters the sheet: keys are matched by their spoken name too */
+  (function () {
+    var q = document.getElementById('ks-q');
+    if (!q) return;
+    var rows = Array.prototype.slice.call(document.querySelectorAll('.krow'));
+    var secs = Array.prototype.slice.call(document.querySelectorAll('.sect'));
+    function apply() {
+      var t = (q.value || '').toLowerCase().trim();
+      rows.forEach(function (r) {
+        var hay = ((r.getAttribute('data-k') || '') + ' ' + r.textContent).toLowerCase();
+        r.hidden = !!t && hay.indexOf(t) === -1;
+      });
+      secs.forEach(function (s) {
+        s.hidden = s.querySelectorAll('.krow:not([hidden])').length === 0;
+      });
+    }
+    q.addEventListener('input', apply);
+  })();
+</script>
+</body>
+</html>
