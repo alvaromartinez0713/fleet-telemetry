@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Fleet Platform v2 · alerts &amp; delivery</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24425d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --violet: #6c7cf0; --violet-soft: rgba(108,124,240,0.14);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 214px 1fr 400px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top top" "side main agent";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 12px;
+    padding: 0 16px; background: #08101a; border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--teal); }
+  .pill {
+    font-size: 10.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px;
+    background: var(--amber-soft); color: var(--amber); display: flex; align-items: center; gap: 6px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+  header .kbar {
+    margin-left: 4px; display: flex; align-items: center; gap: 8px; flex: 0 1 340px;
+    background: #0d1826; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px;
+    font-size: 11.5px; color: var(--muted);
+  }
+  header .kbar kbd {
+    margin-left: auto; font-family: var(--mono); font-size: 9.5px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px;
+  }
+  header .stat { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 14px; }
+  header .stat b { color: var(--text); font-weight: 700; font-family: var(--mono); }
+
+  aside.side { grid-area: side; background: var(--panel); border-right: 1px solid var(--line); padding: 10px 9px; }
+  aside.side .grp { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 11px 8px 6px; }
+  aside.side a {
+    display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 8px;
+    font-size: 12px; font-weight: 650; color: var(--muted); text-decoration: none; margin-bottom: 2px;
+  }
+  aside.side a.on { background: var(--panel-2); color: var(--text); }
+  aside.side a .d { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 6px; }
+  .d.ok { background: var(--green); } .d.warn { background: var(--amber); } .d.bad { background: var(--red); } .d.off { background: var(--line); }
+  aside.side a .n { margin-left: auto; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: var(--amber-soft); color: var(--amber); }
+
+  main { grid-area: main; display: flex; flex-direction: column; overflow: hidden; padding: 14px 16px; gap: 12px; }
+  .kpis { display: flex; gap: 10px; flex-shrink: 0; }
+  .kpi { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; }
+  .kpi .k { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); }
+  .kpi .v { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .kpi .v small { font-size: 10.5px; font-weight: 650; color: var(--muted); margin-left: 2px; letter-spacing: 0; }
+  .kpi .v.good { color: var(--green); } .kpi .v.warn { color: var(--amber); } .kpi .v.bad { color: var(--red); }
+  .kpi .sub { font-size: 9.5px; color: var(--muted); margin-top: 3px; }
+
+  .cols { display: flex; gap: 12px; flex: 1; min-height: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; display: flex; flex-direction: column; overflow: hidden; flex: 1; }
+  .card > h2 {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted);
+    padding: 10px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .card > h2 .why { margin-left: auto; font-size: 9px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--teal); white-space: nowrap; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); padding: 7px 14px; border-bottom: 1px solid var(--line); }
+  td { padding: 8px 14px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  td.mono { font-family: var(--mono); font-size: 10px; }
+  .scroll { overflow: hidden; flex: 1; }
+  .tag { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+  .tag.ok { background: var(--green-soft); color: var(--green); }
+  .tag.warn { background: var(--amber-soft); color: var(--amber); }
+  .tag.bad { background: var(--red-soft); color: var(--red); }
+  .tag.info { background: var(--teal-soft); color: var(--teal); }
+  .tag.vio { background: var(--violet-soft); color: var(--violet); }
+
+  /* delivery channels */
+  .chan { display: grid; grid-template-columns: 20px 1fr 62px 54px 62px; gap: 9px; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--line); font-size: 11px; }
+  .chan .ic { width: 18px; height: 18px; border-radius: 5px; background: #0d1826; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--muted); }
+  .chan .nm { font-weight: 700; }
+  .chan .nm small { display: block; font-weight: 500; color: var(--muted); font-size: 9.5px; margin-top: 1px; }
+  .chan .num { text-align: right; font-family: var(--mono); font-size: 10.5px; }
+  .chan .num.fail { color: var(--red); }
+  .note { padding: 9px 14px; font-size: 10px; line-height: 1.55; color: var(--muted); border-top: 1px solid var(--line); background: #0a121c; }
+  .note b { color: var(--teal); }
+
+  aside.agent { grid-area: agent; background: #0a121c; border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .ahd { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .ahd .orb {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 30%, #9aa8ff, var(--violet) 65%);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; color: #0b1020;
+  }
+  .ahd .t { font-size: 11.5px; font-weight: 800; }
+  .ahd .s { font-size: 9.5px; color: var(--muted); }
+  .ahd .why { margin-left: auto; font-size: 9px; color: var(--teal); }
+  .thread { flex: 1; overflow: hidden; padding: 11px 14px; display: flex; flex-direction: column; gap: 9px; }
+  .msg .who { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 3px; }
+  .msg .bub { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 11px; line-height: 1.55; }
+  .msg.user .bub { background: var(--panel-2); border-color: var(--panel-2); }
+  .msg .bub b { color: var(--amber); }
+  .msg .bub .kv { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; border-top: 1px solid var(--line); font-size: 10px; }
+  .msg .bub .kv:first-of-type { border-top: none; margin-top: 6px; }
+  .msg .bub .kv .k { color: var(--muted); }
+  .msg .bub .kv .v { font-family: var(--mono); font-weight: 700; font-size: 9.5px; }
+  .msg .bub .kv .v.bad { color: var(--red); }
+  .tools { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .tools .tl { font-family: var(--mono); font-size: 8.5px; padding: 2px 6px; border-radius: 4px; background: var(--teal-soft); color: var(--teal); border: 1px solid rgba(111,170,181,0.3); }
+  .composer { border-top: 1px solid var(--line); padding: 9px 14px 12px; background: #08101a; }
+  .composer .in { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 11px; color: var(--muted); }
+  .composer .in .send { margin-left: auto; width: 22px; height: 22px; border-radius: 6px; background: var(--violet); color: #0b1020; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .composer .note2 { font-size: 8.5px; color: var(--muted); margin-top: 5px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>Fleet <span>Platform</span></b>
+  </div>
+  <span class="pill">1 channel failing</span>
+  <span class="kbar">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    Ask, or query &mdash; &ldquo;which alerts never reached a human?&rdquo;
+    <kbd>&#8984;K</kbd>
+  </span>
+  <div class="stat">
+    <span>Rules <b>6</b></span>
+    <span>Delivery <b>99.1%</b></span>
+  </div>
+</header>
+
+<aside class="side">
+  <div class="grp">Ingest</div>
+  <a href="#"><span class="d ok"></span>Gateway &amp; ingest</a>
+  <a href="#"><span class="d ok"></span>Pipeline</a>
+  <a href="#"><span class="d warn"></span>Partitions</a>
+  <div class="grp">Runtime</div>
+  <a href="#"><span class="d ok"></span>Workers</a>
+  <a href="#"><span class="d ok"></span>Assistant</a>
+  <div class="grp">Alerting</div>
+  <a href="#" class="on"><span class="d warn"></span>Alert &amp; delivery <span class="n">1</span></a>
+  <a href="#"><span class="d ok"></span>Rule evaluation</a>
+  <a href="#"><span class="d off"></span>Notification log</a>
+  <div class="grp">Data</div>
+  <a href="#"><span class="d warn"></span>Data health</a>
+  <a href="#"><span class="d ok"></span>Logs &amp; traces</a>
+</aside>
+
+<main>
+  <div class="kpis">
+    <div class="kpi"><div class="k">Rules evaluated</div><div class="v">6<small>/ 30 s</small></div><div class="sub">evaluation lag p95 48 s</div></div>
+    <div class="kpi"><div class="k">Alerts fired 24 h</div><div class="v">3</div><div class="sub">2 fleet &middot; 1 data</div></div>
+    <div class="kpi"><div class="k">Delivered</div><div class="v good">99.1<small>%</small></div><div class="sub">of 108 notifications</div></div>
+    <div class="kpi"><div class="k">Failed</div><div class="v bad">1</div><div class="sub">SMS &middot; carrier reject</div></div>
+    <div class="kpi"><div class="k">Time to ack</div><div class="v warn">4 m 12 s</div><div class="sub">p95, last 7 days</div></div>
+    <div class="kpi"><div class="k">Suppressed</div><div class="v">2</div><div class="sub">quiet hours &middot; logged</div></div>
+  </div>
+
+  <div class="cols">
+    <div class="card" style="flex: 1.1;">
+      <h2>Delivery by channel <span class="why">did it reach a human?</span></h2>
+      <div class="scroll">
+        <div class="chan">
+          <span class="ic">&#9993;</span>
+          <span class="nm">Email<small>ops@logistica-sur.com &middot; on-call group</small></span>
+          <span class="num">96</span><span class="num" style="color: var(--muted);">0</span><span class="tag ok">ok</span>
+        </div>
+        <div class="chan">
+          <span class="ic">&#9788;</span>
+          <span class="nm">Push<small>dispatchers &middot; 4 devices</small></span>
+          <span class="num">11</span><span class="num" style="color: var(--muted);">0</span><span class="tag ok">ok</span>
+        </div>
+        <div class="chan">
+          <span class="ic">&#9990;</span>
+          <span class="nm">SMS<small>on-call duty &middot; after 5 min unacknowledged</small></span>
+          <span class="num">1</span><span class="num fail">1</span><span class="tag bad">carrier reject</span>
+        </div>
+        <div class="chan">
+          <span class="ic">&#128279;</span>
+          <span class="nm">Webhook<small>TMS &middot; POST /alerts</small></span>
+          <span class="num">&mdash;</span><span class="num" style="color: var(--muted);">0</span><span class="tag info">off</span>
+        </div>
+      </div>
+      <div class="note">
+        A notification that never arrives is indistinguishable from an alert nobody saw.
+        <b>This is the only place that can tell the difference</b> &mdash; Ops cannot.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Rule evaluation <span class="why">per rule, not per worker</span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Rule</th><th>Scope</th><th>Eval p95</th><th>Fired</th></tr></thead>
+          <tbody>
+            <tr><td>Stopped in critical zone</td><td class="mono">zone</td><td>38 ms</td><td>3</td></tr>
+            <tr><td>Silence too long</td><td class="mono">all</td><td>41 ms</td><td>1</td></tr>
+            <tr><td>Data unreliable (skew)</td><td class="mono">&#9733; group</td><td>44 ms</td><td>5</td></tr>
+            <tr><td>Sequence stalls</td><td class="mono">all</td><td>39 ms</td><td>1</td></tr>
+            <tr><td>Route deviation</td><td class="mono">unit S-88</td><td>36 ms</td><td>2</td></tr>
+            <tr><td>Overspeed</td><td class="mono">unit S-42</td><td>&mdash;</td><td><span class="tag info">off</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">
+        Evaluation lag is <b>48 s</b> against a 30 s window: the alerting worker is behind.
+        Rules still fire, but 20 s late &mdash; that is the number behind &ldquo;time to ack&rdquo;.
+      </div>
+    </div>
+  </div>
+</main>
+
+<aside class="agent">
+  <div class="ahd">
+    <span class="orb">&#10022;</span>
+    <div>
+      <div class="t">Platform Assistant</div>
+      <div class="s">reads the same telemetry as these panels</div>
+    </div>
+    <span class="why">&#8984;K focuses</span>
+  </div>
+
+  <div class="thread">
+    <div class="msg user">
+      <div>
+        <div class="who">On call</div>
+        <div class="bub">Did the truck-088 alert ever reach anyone? Nobody picked it up for 4 minutes.</div>
+      </div>
+    </div>
+    <div class="msg">
+      <div>
+        <div class="who">Assistant</div>
+        <div class="bub">
+          Yes &mdash; it reached <b>email and push</b> at 11:40:14. The escalation path then broke.
+          <div class="kv"><span class="k">Email delivered</span><span class="v">11:40:16 &middot; 4 recipients</span></div>
+          <div class="kv"><span class="k">Push delivered</span><span class="v">11:40:18 &middot; 3 of 4 devices</span></div>
+          <div class="kv"><span class="k">SMS escalation</span><span class="v bad">rejected by carrier</span></div>
+          <div class="kv"><span class="k">Acknowledged</span><span class="v">11:44:02 &middot; M. Rivas</span></div>
+          The 4 minutes were operator time, not delivery time. The SMS failure would have
+          escalated to the supervisor at 11:45 &mdash; it never left.
+          <div class="tools"><span class="tl">notification_log()</span><span class="tl">rule_evaluations()</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="composer">
+    <div class="in">
+      Ask why, or query the pipeline…
+      <span class="send">&uarr;</span>
+    </div>
+    <div class="note2">Every answer links back to the panel it came from.</div>
+  </div>
+</aside>
+</body>
+</html>

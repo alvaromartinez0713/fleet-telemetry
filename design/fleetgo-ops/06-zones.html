@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FleetGo Ops v2</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24425d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --star: #f0b429;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 1fr 316px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top" "main agent";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 12px;
+    padding: 0 16px; background: #08101a; border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--amber); }
+  .crumb {
+    display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;
+    color: var(--muted); padding: 4px 10px; border-radius: 999px;
+    background: #0d1826; border: 1px solid var(--line);
+  }
+  .crumb b { color: var(--text); font-weight: 800; }
+  .crumb .sep { color: var(--line); }
+  .crumb .mstate { color: var(--amber); font-weight: 800; }
+  header .stat { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 14px; }
+  header .stat b { color: var(--text); font-weight: 700; }
+  header .stat .dr b { color: var(--amber); }
+
+  main { grid-area: main; display: flex; flex-direction: column; overflow: hidden; padding: 14px; gap: 12px; }
+  /* secondary section strip: peers below the top bar, not a second bar */
+  .sectabs {
+    display: flex; align-items: stretch; gap: 20px; height: 32px; flex: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .sectabs a {
+    display: flex; align-items: center; padding: 0 2px; text-decoration: none;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.4px; color: var(--muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .sectabs a.on { color: var(--text); border-bottom-color: var(--amber); }
+  .head { display: flex; align-items: flex-start; gap: 12px; }
+  .head h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; }
+  .head .sub { font-size: 11.5px; color: var(--muted); margin-top: 3px; max-width: 700px; line-height: 1.45; }
+  .headact { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+  .head .new {
+    white-space: nowrap; font: inherit; font-size: 11.5px; font-weight: 800; letter-spacing: 0.1px;
+    padding: 7px 14px; border: none; border-radius: 9px; cursor: pointer;
+    background: var(--amber); color: #16283e; display: flex; align-items: center; gap: 7px;
+  }
+  .head .new .pen { font-size: 12px; }
+  .session {
+    display: flex; align-items: center; gap: 6px; white-space: nowrap;
+    font-size: 9.5px; font-weight: 700; color: var(--muted);
+    background: #0d1826; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px;
+  }
+  .session i { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); flex: none; }
+  .session b { color: var(--amber); }
+  .session kbd { font-family: var(--mono); font-size: 8.5px; border: 1px solid var(--line); border-radius: 3px; padding: 0 3px; color: var(--text); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+  .card > h2 {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted);
+    padding: 9px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px;
+  }
+  .card > h2 .why { margin-left: auto; white-space: nowrap; }
+  .why { font-size: 9px; font-weight: 600; color: var(--teal); line-height: 1.3; }
+
+  .pillx { display: inline-block; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 5px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .pillx.crit { background: var(--red); border-color: var(--red); color: #fff; }
+  .pillx.warn { background: var(--amber); border-color: var(--amber); color: #16283e; }
+  .sev { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; }
+  .sev.crit { background: var(--red); color: #fff; }
+  .sev.info { background: var(--teal-soft); color: var(--teal); }
+
+  /* ── the editor: map is primary, rail is the index ── */
+  .stage { display: flex; gap: 12px; flex: 1; min-height: 0; }
+  .mapwrap {
+    position: relative; flex: 1 1 auto; min-width: 0;
+    background: #08101a; border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  }
+  .mapwrap > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  .toolstrip {
+    position: absolute; left: 12px; top: 12px; z-index: 7;
+    display: flex; align-items: center; gap: 2px;
+    background: rgba(8,16,26,0.94); border: 1px solid var(--line); border-radius: 10px; padding: 4px;
+  }
+  .tool {
+    display: flex; align-items: center; gap: 6px; white-space: nowrap;
+    font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;
+    color: var(--muted); padding: 5px 9px; border-radius: 7px;
+  }
+  .tool .g { font-size: 10px; }
+  .tool.on { background: var(--amber); color: #16283e; }
+  .tool kbd { font-family: var(--mono); font-size: 8.5px; border: 1px solid currentColor; border-radius: 3px; padding: 0 3px; opacity: 0.75; }
+
+  .draftban {
+    position: absolute; right: 12px; top: 12px; z-index: 7; width: 300px;
+    background: rgba(8,16,26,0.96); border: 1px solid var(--amber); border-radius: 11px;
+    padding: 9px 11px; box-shadow: 0 10px 22px rgba(0,0,0,0.4);
+  }
+  .draftban .hd { display: flex; align-items: center; gap: 7px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: var(--amber); }
+  .draftban .hd .x { margin-left: auto; font-size: 8.5px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--muted); }
+  .draftban .q { font-size: 11px; line-height: 1.45; margin-top: 5px; }
+  .draftban .m { font-size: 9.5px; color: var(--muted); margin-top: 4px; }
+  .draftban .m b { color: var(--text); font-weight: 750; }
+  .draftban .acts { display: flex; gap: 5px; margin-top: 7px; }
+  .draftban .acts span { font-size: 9.5px; font-weight: 800; padding: 4px 8px; border-radius: 6px; background: #0d1826; border: 1px solid var(--line); color: var(--muted); }
+  .draftban .acts span.pri { background: var(--amber); border-color: var(--amber); color: #16283e; }
+
+  .drawhint {
+    position: absolute; left: 236px; top: 446px; z-index: 6; white-space: nowrap;
+    display: flex; align-items: center; gap: 6px;
+    background: var(--amber); color: #16283e; font-size: 9.5px; font-weight: 800;
+    border-radius: 999px; padding: 4px 10px; box-shadow: 0 6px 16px rgba(0,0,0,0.45);
+  }
+  .drawhint .dot { width: 5px; height: 5px; border-radius: 50%; background: #16283e; }
+
+  .legend {
+    position: absolute; right: 12px; bottom: 26px; z-index: 6;
+    display: flex; align-items: center; gap: 9px;
+    background: rgba(8,16,26,0.9); border: 1px solid var(--line); border-radius: 9px; padding: 5px 9px;
+    font-size: 9px; color: var(--muted);
+  }
+  .legend .lg { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .legend i { width: 7px; height: 7px; border-radius: 2px; display: block; }
+  .legend .dash { width: 13px; height: 0; border-top: 2px dashed var(--teal); display: block; }
+  .legend .dr { width: 13px; height: 0; border-top: 2px dashed var(--amber); display: block; }
+  .legend .hz { width: 9px; height: 7px; border-radius: 2px; border: 1px solid var(--red); background: repeating-linear-gradient(45deg, rgba(217,96,79,0.55) 0 1px, transparent 1px 3px); display: block; }
+  .scalebar { position: absolute; left: 12px; bottom: 12px; z-index: 6; display: flex; align-items: flex-end; gap: 6px; font-size: 9px; color: var(--muted); }
+  .scalebar .bar { display: flex; }
+  .scalebar .bar i { display: block; width: 40px; height: 5px; border: 1px solid rgba(233,237,242,0.5); }
+  .scalebar .bar i:first-child { border-right: none; background: rgba(233,237,242,0.45); }
+  .scalebar b { font-weight: 750; color: var(--text); }
+  .attribution { position: absolute; bottom: 5px; right: 11px; font-size: 8.5px; color: rgba(255,255,255,0.38); }
+
+  .zside { flex: 0 0 244px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .zlist { flex: 0 0 auto; }
+  .selz { flex: 1; min-height: 0; }
+  .zr { padding: 5px 12px; border-top: 1px solid var(--line); }
+  .zr:first-of-type { border-top: none; }
+  .zr.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); padding-left: 9px; }
+  .zr .l1 { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 750; }
+  .zr .l1 .sw { width: 7px; height: 7px; border-radius: 2px; flex: none; }
+  .zr .l1 .end { margin-left: auto; }
+  .zr .l2 { font-size: 9.5px; color: var(--muted); margin-top: 1px; display: flex; gap: 4px; align-items: baseline; }
+  .zr .l2 .num { font-family: var(--mono); font-size: 9.5px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .zr .l2 .st { color: var(--amber); font-weight: 750; }
+  .wrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 3px 12px; border-top: 1px solid var(--line); font-size: 10.5px; }
+  .selz > h2 { padding: 6px 12px; }
+  .wrow:first-of-type { border-top: none; }
+  .wrow .sev { align-self: center; }
+  .wrow .nm { color: var(--muted); font-weight: 650; }
+  .wrow .sp { font-weight: 750; font-variant-numeric: tabular-nums; }
+  .wrow .sp small { font-size: 8.5px; color: var(--muted); font-weight: 650; }
+  .note { padding: 7px 12px; border-top: 1px solid var(--line); font-size: 9.5px; color: var(--muted); line-height: 1.45; }
+  .note b { color: var(--teal); }
+
+  .foot-note { font-size: 10px; color: var(--muted); line-height: 1.55; background: #0a121c; }
+  .foot-note b { color: var(--teal); }
+  .contract { border: 1px solid var(--line); border-radius: 12px; padding: 9px 14px; display: flex; gap: 10px; align-items: baseline; }
+  .contract .tag {
+    flex: none; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--amber); background: var(--amber-soft); border: 1px solid var(--amber);
+    border-radius: 5px; padding: 2px 7px;
+  }
+  .contract p { font-size: 10px; line-height: 1.55; }
+  .contract b { color: var(--text); }
+
+  /* ── assistant rail: drafts geometry, never saves ── */
+  aside.agent { grid-area: agent; background: #0a121c; border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .ahd { display: flex; align-items: center; gap: 8px; padding: 10px 13px; border-bottom: 1px solid var(--line); }
+  .ahd .orb {
+    width: 22px; height: 22px; border-radius: 50%; flex: none;
+    background: radial-gradient(circle at 32% 30%, #f0a752, var(--amber) 65%);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; color: #16283e;
+  }
+  .ahd .t { font-size: 11.5px; font-weight: 800; }
+  .ahd .s { font-size: 9.5px; color: var(--muted); }
+  .thread { flex: 1; overflow: hidden; padding: 11px 13px; display: flex; flex-direction: column; gap: 10px; }
+  .tn { margin-top: auto; font-size: 9px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 7px; line-height: 1.5; }
+  .tn .k { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--amber); margin-right: 4px; }
+  .tn b { color: var(--text); font-weight: 700; }
+  .msg .who { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 3px; }
+  .msg .bub { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; font-size: 11px; line-height: 1.5; }
+  .msg.user .bub { background: var(--panel-2); border-color: var(--panel-2); }
+  .msg .bub b { color: var(--amber); }
+  .msg .bub .why { font-size: 10px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .kvp { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-top: 1px solid var(--line); font-size: 10px; }
+  .kvp:first-of-type { margin-top: 6px; }
+  .kvp .k { color: var(--muted); }
+  .kvp .v { font-weight: 700; font-family: var(--mono); font-size: 9.5px; }
+  .approve { margin-top: 8px; border: 1px solid var(--amber); background: var(--amber-soft); border-radius: 8px; padding: 8px 9px; }
+  .approve .ask { font-size: 10px; font-weight: 750; color: var(--amber); line-height: 1.45; }
+  .approve .row { display: flex; gap: 5px; margin-top: 7px; flex-wrap: wrap; }
+  .approve .row span { font-size: 9.5px; font-weight: 800; padding: 4px 8px; border-radius: 5px; background: var(--amber); color: #16283e; }
+  .approve .row span.no { background: #0d1826; color: var(--muted); border: 1px solid var(--line); }
+  .composer { border-top: 1px solid var(--line); padding: 9px 13px 12px; background: #08101a; flex-shrink: 0; }
+  .composer .in { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 10.5px; color: var(--muted); }
+  .composer .in .send { margin-left: auto; width: 22px; height: 22px; border-radius: 6px; background: var(--amber); color: #16283e; display: flex; align-items: center; justify-content: center; font-size: 11px; flex: none; }
+  .composer .note { border-top: none; padding: 0; margin-top: 5px; font-size: 8.5px; line-height: 1.45; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>FleetGo <span>Ops</span></b>
+  </div>
+  <span class="crumb" aria-label="You are in settings, zones">
+    Live map <span class="sep">&#8250;</span> settings <span class="sep">&#8250;</span> <span class="mstate">zones</span>
+  </span>
+  <div class="stat">
+    <span>Zones <b>6</b></span>
+    <span>Critical <b>2</b></span>
+    <span class="dr">Drafts <b>1</b></span>
+  </div>
+</header>
+
+<main>
+  <nav class="sectabs" aria-label="Settings sections">
+    <a href="#">Rules</a>
+    <a href="#" class="on" aria-current="page">Zones</a>
+    <a href="#">Routing</a>
+    <a href="#">History</a>
+  </nav>
+
+  <div class="head">
+    <div>
+      <h1>Zones</h1>
+      <div class="sub">A zone is the boundary between &ldquo;somewhere&rdquo; and &ldquo;a rule fired&rdquo; &mdash; a geofence is space, so draw it on the map.</div>
+    </div>
+    <div class="headact">
+      <span class="session"><i></i>Drawing <b>Zona Norte</b> &middot; 4 vertices &middot; <kbd>Esc</kbd> to finish</span>
+      <button class="new" type="button"><span class="pen">&#9998;</span> Draw a zone</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="mapwrap" id="map">
+      <svg viewBox="0 0 840 687" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs>
+          <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="7" stroke="#d9604f" stroke-width="1.4" opacity="0.4"/>
+          </pattern>
+        </defs>
+        <rect width="840" height="692" fill="#08101a"/>
+
+        <!-- subtle editing grid -->
+        <g stroke="#111d2a" stroke-width="1">
+          <path d="M60 0V692 M120 0V692 M180 0V692 M240 0V692 M300 0V692 M360 0V692 M420 0V692 M480 0V692 M540 0V692 M600 0V692 M660 0V692 M720 0V692 M780 0V692"/>
+          <path d="M0 60H840 M0 120H840 M0 180H840 M0 240H840 M0 300H840 M0 360H840 M0 420H840 M0 480H840 M0 540H840 M0 600H840 M0 660H840"/>
+        </g>
+        <g stroke="#16232f" stroke-width="1">
+          <path d="M180 0V692 M360 0V692 M540 0V692 M720 0V692"/>
+          <path d="M0 180H840 M0 360H840 M0 540H840"/>
+        </g>
+
+        <!-- roads -->
+        <g fill="none" stroke="#182636" stroke-linecap="round">
+          <path d="M600 -10 C 578 140, 626 350, 582 700" stroke-width="8"/>
+          <path d="M-10 590 H 850" stroke-width="7"/>
+          <path d="M-10 300 H 560" stroke-width="3" opacity="0.8"/>
+          <path d="M120 692 V 500" stroke-width="3" opacity="0.6"/>
+        </g>
+
+        <!-- Ruta 3 corridor: a buffer, not a polygon -->
+        <path d="M600 -10 C 578 140, 626 350, 582 700" fill="none" stroke="rgba(111,170,181,0.10)" stroke-width="56"/>
+        <path d="M600 -10 C 578 140, 626 350, 582 700" fill="none" stroke="#6faab5" stroke-width="1.6" stroke-dasharray="9 7" opacity="0.6"/>
+        <rect x="618" y="222" width="140" height="15" rx="3" fill="rgba(8,16,26,0.72)"/>
+        <text x="622" y="234" font-family="system-ui" font-size="9.5" font-weight="700" fill="#9fc8cf">Ruta 3 corridor &middot; 84 km</text>
+
+        <!-- Zona Norte · critical zone -->
+        <polygon points="58,84 296,58 404,144 418,292 326,374 150,352 48,232" fill="rgba(217,96,79,0.13)" stroke="#d9604f" stroke-width="2"/>
+        <text x="196" y="122" text-anchor="middle" font-family="system-ui" font-size="12.5" font-weight="800" fill="#f2a49a">Zona Norte</text>
+        <text x="196" y="139" text-anchor="middle" font-family="system-ui" font-size="9.5" fill="#8fa0b4">critical &middot; 412 km&sup2; &middot; 38 units</text>
+        <g fill="#58b47c">
+          <circle cx="180" cy="176" r="3.2"/><circle cx="252" cy="166" r="3.2"/>
+          <circle cx="316" cy="206" r="3.2"/><circle cx="120" cy="228" r="3.2"/>
+        </g>
+        <text x="262" y="170" font-family="system-ui" font-size="9" fill="#9fe0b8">bus-017</text>
+
+        <!-- Planta Pilar · depot -->
+        <polygon points="686,120 776,108 784,172 696,186" fill="rgba(111,170,181,0.15)" stroke="#6faab5" stroke-width="2"/>
+        <text x="735" y="152" text-anchor="middle" font-family="system-ui" font-size="11" font-weight="800" fill="#9fc8cf">Planta Pilar</text>
+
+        <!-- Zona Franca · avoid -->
+        <polygon points="636,392 792,380 804,506 650,522" fill="url(#hatch)" stroke="#d9604f" stroke-width="1.6" stroke-dasharray="5 4"/>
+        <rect x="668" y="404" width="106" height="30" rx="4" fill="rgba(8,16,26,0.8)"/>
+        <text x="721" y="416" text-anchor="middle" font-family="system-ui" font-size="11" font-weight="800" fill="#f2a49a">Zona Franca</text>
+        <text x="721" y="429" text-anchor="middle" font-family="system-ui" font-size="8.5" fill="#8fa0b4">avoid &middot; customer declared &middot; 0 units</text>
+
+        <!-- Av. 9 de Julio · customer -->
+        <polygon points="168,548 300,540 314,624 180,632" fill="rgba(88,180,124,0.13)" stroke="#58b47c" stroke-width="2"/>
+        <text x="240" y="568" text-anchor="middle" font-family="system-ui" font-size="11" font-weight="800" fill="#9fe0b8">Av. 9 de Julio</text>
+        <text x="240" y="581" text-anchor="middle" font-family="system-ui" font-size="8.5" fill="#8fa0b4">customer &middot; 07&ndash;11 &middot; 6 units</text>
+        <g fill="#58b47c"><circle cx="214" cy="600" r="2.6"/><circle cx="272" cy="608" r="2.6"/></g>
+
+        <!-- Depot Sur · depot -->
+        <polygon points="452,406 534,396 554,452 486,480 444,452" fill="rgba(111,170,181,0.18)" stroke="#6faab5" stroke-width="2"/>
+        <text x="499" y="444" text-anchor="middle" font-family="system-ui" font-size="11" font-weight="800" fill="#9fc8cf">Depot Sur</text>
+        <text x="499" y="457" text-anchor="middle" font-family="system-ui" font-size="8.5" fill="#8fa0b4">depot &middot; 12 units</text>
+        <g fill="#58b47c"><circle cx="470" cy="424" r="2.6"/><circle cx="524" cy="420" r="2.6"/></g>
+
+        <!-- assistant draft: tentative geometry, not a zone -->
+        <path d="M430 372L556 360L598 444L520 514L428 478Z" fill="none" stroke="#08101a" stroke-width="5" opacity="0.55"/>
+        <polygon points="430,372 556,360 598,444 520,514 428,478" fill="rgba(224,138,46,0.10)" stroke="#e08a2e" stroke-width="2" stroke-dasharray="7 5"/>
+        <rect x="424" y="334" width="196" height="15" rx="3" fill="rgba(8,16,26,0.8)"/>
+        <text x="428" y="346" font-family="system-ui" font-size="9.5" font-weight="800" fill="#f0a752" letter-spacing="0.5">DRAFT &middot; DEPOT + LOADING DOCK</text>
+        <g transform="translate(598,444)"><circle r="7" fill="#08101a" stroke="#e08a2e" stroke-width="1.4"/><circle r="2.4" fill="#e08a2e"/></g>
+
+        <!-- the polygon being drawn right now -->
+        <polyline points="116,196 330,166 452,286 368,404" fill="none" stroke="#08101a" stroke-width="5" opacity="0.5"/>
+        <polyline points="116,196 330,166 452,286 368,404" fill="rgba(224,138,46,0.07)" stroke="#e08a2e" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round"/>
+        <line x1="368" y1="404" x2="206" y2="432" stroke="#e08a2e" stroke-width="1.8" stroke-dasharray="4 4"/>
+        <line x1="206" y1="432" x2="116" y2="196" stroke="#e08a2e" stroke-width="1" stroke-dasharray="2 8" opacity="0.35"/>
+        <g transform="translate(206,432)">
+          <circle r="11" fill="none" stroke="#e08a2e" stroke-width="1.2" opacity="0.8"/>
+          <path d="M-16 0H16 M0 -16V16" stroke="#e08a2e" stroke-width="1" opacity="0.7"/>
+        </g>
+        <g>
+          <circle cx="116" cy="196" r="9" fill="#e08a2e" stroke="#08101a" stroke-width="1.5"/>
+          <text x="116" y="199" text-anchor="middle" font-family="system-ui" font-size="9" font-weight="800" fill="#16283e">1</text>
+          <circle cx="330" cy="166" r="9" fill="#e08a2e" stroke="#08101a" stroke-width="1.5"/>
+          <text x="330" y="169" text-anchor="middle" font-family="system-ui" font-size="9" font-weight="800" fill="#16283e">2</text>
+          <circle cx="452" cy="286" r="9" fill="#e08a2e" stroke="#08101a" stroke-width="1.5"/>
+          <text x="452" y="289" text-anchor="middle" font-family="system-ui" font-size="9" font-weight="800" fill="#16283e">3</text>
+          <circle cx="368" cy="404" r="9" fill="#e08a2e" stroke="#08101a" stroke-width="1.5"/>
+          <text x="368" y="407" text-anchor="middle" font-family="system-ui" font-size="9" font-weight="800" fill="#16283e">4</text>
+        </g>
+      </svg>
+
+      <div class="toolstrip" role="group" aria-label="Drawing tools">
+        <span class="tool"><span class="g">&#10021;</span> Select</span>
+        <span class="tool on"><span class="g">&#9998;</span> Draw polygon <kbd>P</kbd></span>
+        <span class="tool"><span class="g">&#9707;</span> Edit vertices</span>
+        <span class="tool"><span class="g">&#9003;</span> Delete</span>
+      </div>
+
+      <div class="draftban">
+        <div class="hd">Draft from the assistant <span class="x">tentative &middot; not a zone</span></div>
+        <div class="q">&ldquo;around Depot Sur, plus the loading dock&rdquo;</div>
+        <div class="m"><b>2.1 km&sup2;</b> &middot; <b>4 units</b> inside &middot; 9 vertices</div>
+        <div class="acts"><span class="pri">Accept draft</span><span>Adjust vertices</span><span>Discard</span></div>
+      </div>
+
+      <div class="drawhint"><span class="dot"></span>38 units inside &middot; updates as you drag</div>
+
+      <div class="legend">
+        <span class="lg"><i style="background:var(--red)"></i>critical</span>
+        <span class="lg"><i style="background:var(--teal)"></i>depot</span>
+        <span class="lg"><i style="background:var(--green)"></i>customer</span>
+        <span class="lg"><span class="hz"></span>avoid</span>
+        <span class="lg"><span class="dash"></span>route buffer</span>
+        <span class="lg"><span class="dr"></span>draft</span>
+      </div>
+
+      <div class="scalebar">
+        <span class="bar"><i></i><i></i></span>
+        <span><b>1 km</b> &middot; schematic</span>
+      </div>
+      <span class="attribution">Map data &copy; Google &middot; dark style &middot; geometry not to scale</span>
+    </div>
+
+    <div class="zside">
+      <div class="card zlist">
+        <h2>Zones <span class="why">2 critical</span></h2>
+        <div class="zr sel">
+          <div class="l1"><span class="sw" style="background:var(--red)"></span>Zona Norte<span class="end"><span class="pillx crit">critical</span></span></div>
+          <div class="l2"><span class="num">412 km&sup2;</span><span>&middot;</span><span class="num">38 units</span><span class="st">&middot; redrawing</span></div>
+        </div>
+        <div class="zr">
+          <div class="l1"><span class="sw" style="background:var(--teal)"></span>Depot Sur<span class="end"><span class="pillx">depot</span></span></div>
+          <div class="l2"><span class="num">0.4 km&sup2;</span><span>&middot;</span><span class="num">12 units</span><span class="st">&middot; draft over it</span></div>
+        </div>
+        <div class="zr">
+          <div class="l1"><span class="sw" style="background:var(--teal)"></span>Ruta 3 corridor<span class="end"><span class="pillx">route</span></span></div>
+          <div class="l2"><span class="num">84 km</span><span>&middot;</span><span class="num">21 units</span><span class="st">&middot; buffer 1.5 km</span></div>
+        </div>
+        <div class="zr">
+          <div class="l1"><span class="sw" style="background:var(--green)"></span>Av. 9 de Julio<span class="end"><span class="pillx">customer</span></span></div>
+          <div class="l2"><span class="num">1.2 km&sup2;</span><span>&middot;</span><span class="num">6 units</span><span class="st">&middot; window 07&ndash;11</span></div>
+        </div>
+        <div class="zr">
+          <div class="l1"><span class="sw" style="background:var(--teal)"></span>Planta Pilar<span class="end"><span class="pillx">depot</span></span></div>
+          <div class="l2"><span class="num">0.9 km&sup2;</span><span>&middot;</span><span class="num">4 units</span><span class="st">&middot; inbound only</span></div>
+        </div>
+        <div class="zr">
+          <div class="l1"><span class="sw" style="background:var(--red)"></span>Zona Franca<span class="end"><span class="pillx warn">avoid</span></span></div>
+          <div class="l2"><span class="num">6 km&sup2;</span><span>&middot;</span><span class="num">0 units</span><span class="st">&middot; no alerts</span></div>
+        </div>
+        <div class="note">
+          <b>depot</b> for parking, <b>customer</b> for a delivery window, <b>route</b> for a buffer along a way,
+          <b>avoid</b> for a declared no-go. Entering an avoid zone never alerts on its own.
+        </div>
+      </div>
+
+      <div class="card selz">
+        <h2>Selected zone <span class="why">Zona Norte</span></h2>
+        <div class="wrow"><span class="nm">Type</span><span class="pillx crit">critical</span></div>
+        <div class="wrow"><span class="nm">Area</span><span class="sp">412 km&sup2; <small>draft 438</small></span></div>
+        <div class="wrow"><span class="nm">Units inside now</span><span class="sp">38</span></div>
+        <div class="wrow"><span class="nm">Drawn by</span><span class="sp" style="font-size:10px;">M. Rivas &middot; 4 Feb, 09:12</span></div>
+        <div class="wrow"><span class="nm">Polygon</span><span class="sp" style="font-size:10px;">148 pts &middot; saved</span></div>
+        <h2 style="border-top:1px solid var(--line);">Rules using this zone <span class="why">3</span></h2>
+        <div class="wrow"><span class="nm" style="color:var(--text);font-weight:700;">stopped &gt; 20 min</span><span class="sev crit">Crit</span></div>
+        <div class="wrow"><span class="nm" style="color:var(--text);font-weight:700;">silence &gt; 2 h</span><span class="sev crit">Crit</span></div>
+        <div class="wrow"><span class="nm" style="color:var(--text);font-weight:700;">drift &gt; 300 m</span><span class="sev info">Info</span></div>
+        <div class="foot-note note" style="margin-top:auto;">Every one of them is about a unit being <b>in</b> or <b>out</b> of this boundary.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot-note contract">
+    <span class="tag">the contract</span>
+    <p><b>Drawing a boundary is spatial work, so it happens on the map; the assistant only proposes geometry</b> and a human saves it &mdash; the saved polygon is audited like a rule and written to History with your name. Moving an edge re-evaluates every rule that names the zone, and that changes who gets alerted.</p>
+  </div>
+</main>
+
+<aside class="agent">
+  <div class="ahd">
+    <span class="orb">&#10022;</span>
+    <div>
+      <div class="t">Fleet Assistant</div>
+      <div class="s">drafts geometry &middot; never saves a zone</div>
+    </div>
+  </div>
+
+  <div class="thread">
+    <div class="msg user">
+      <div>
+        <div class="who">M. Rivas</div>
+        <div class="bub">Draw a zone around Depot Sur plus the loading dock.</div>
+      </div>
+    </div>
+    <div class="msg">
+      <div>
+        <div class="who">Assistant</div>
+        <div class="bub">
+          Drafted a tentative polygon: <b>2.1 km&sup2;</b>, <b>4 units</b> inside right now. It is on the map,
+          dashed amber, with draggable vertices waiting for you.
+          <div class="why">Why this boundary: it follows the south fence of Depot Sur and takes in the
+            loading-dock apron the night vans use, so a van parked on the apron is inside instead of 30 m out.
+            I left the Ruta 3 shoulder out &mdash; that belongs to the route buffer, not to a depot.</div>
+          <div class="kvp"><span class="k">Draft area</span><span class="v">2.1 km&sup2;</span></div>
+          <div class="kvp"><span class="k">Units inside now</span><span class="v">4</span></div>
+          <div class="kvp"><span class="k">Vertices</span><span class="v">9 &middot; draggable</span></div>
+          <div class="approve">
+            <div class="ask">I cannot save a zone &mdash; only a human can, and the save is written to History.</div>
+            <div class="row"><span>Accept draft</span><span class="no">Adjust vertices</span><span class="no">Discard</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tn"><span class="k">pending</span> 1 draft &middot; <b>6 zones saved</b> &middot; 3 rules read Zona Norte</div>
+  </div>
+
+  <div class="composer">
+    <div class="in">
+      Describe a zone, or ask about a boundary&hellip;
+      <span class="send">&uarr;</span>
+    </div>
+    <div class="note">Nothing I draft is a zone until a dispatcher saves it. Every save is audited like a rule.</div>
+  </div>
+</aside>
+</body>
+</html>

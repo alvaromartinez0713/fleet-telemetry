@@ -1,0 +1,76 @@
+{
+  "title": "FleetGo Ops v2",
+  "brief": "Operations console for FleetGo, v2 only: the live map, following and replay, each carrying its own detail in an accordion rail \u2014 unit detail, the current trip, and the replayable days and trips. Alerts are scoped to the vehicle in view. Settings keeps rules, zones, routing and history; watchlist lives in the units panel and personal notification preferences live in routing.",
+  "artboards": [
+    {
+      "file": "01-live.html",
+      "title": "FleetGo Ops v2 \u00b7 Live map + assistant rail",
+      "tradeoff": "The surface that cannot be language: map, two mode entries, critical-zone band and the agent in a rail \u2014 whose alerts are scoped to the selected unit and whose UNIT section carries the whole vehicle detail, so opening a screen to see one vehicle is no longer a destination",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "02-following.html",
+      "title": "FleetGo Ops v2 \u00b7 Following \u2014 camera locked",
+      "tradeoff": "Camera locked to one unit, with a full-width dock holding only what the map needs and a TRIP section that resolves the current connection on a strip: started 06:12 -> now 12:13 = 6 h 01 m of trip = 4 h 13 driving + 1 h 48 across four stops",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "03-replay.html",
+      "title": "FleetGo Ops v2 \u00b7 Replay \u2014 time travel over stored samples",
+      "tradeoff": "Time travel over stored samples with a REPLAY section that answers what can be replayed: five days, day totals that equal the sum of the listed trips (312 km, 4 h 13, 4 stops, 1 240 samples), and a Replay affordance per trip",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "04-alerts.html",
+      "title": "FleetGo Ops v2 \u00b7 Alerts queue",
+      "tradeoff": "Two lanes that must stay glanceable: alerts needing a person (acknowledge, with audit) and data problems that belong to Platform and are not yours to resolve",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "05-settings.html",
+      "title": "FleetGo Ops v2 \u00b7 Rules",
+      "tradeoff": "Plain language in, conditions out: rules written as sentences, an audited active list, and one settings shell whose sidebar now leads to a designed view at every destination",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "06-zones.html",
+      "title": "FleetGo Ops v2 \u00b7 Zones",
+      "tradeoff": "The map IS the editor: five zones drawn to scale-less geometry with a live \"units inside\" counter, a numbered-vertex drawing in progress, and the assistant allowed only to draft a dashed polygon the human accepts, adjusts or discards \u2014 because a boundary 200 m off changes who gets woken up",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "07-routing.html",
+      "title": "FleetGo Ops v2 \u00b7 Routing",
+      "tradeoff": "Team level, never mixed with personal: who hears an alert, on which channel, and the escalation ladder that stops on acknowledge rather than resolve",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "08-history.html",
+      "title": "FleetGo Ops v2 \u00b7 History",
+      "tradeoff": "An append-only audit record, not a chat log: who, when, before \u2192 after and why \u2014 the agent may propose a change and can never write the line",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "09-shortcuts.html",
+      "title": "FleetGo Ops v2 \u00b7 Keyboard \u2014 the shortcuts sheet",
+      "tradeoff": "The keymap back without the palette: an overlay opened with ? over the map, 34 bindings grouped by scope (global, G-chords, map, queue, replay, device) with the collisions resolved in writing \u2014 because language goes to \u2318K and keys go to what you can see",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "10-modes.html",
+      "title": "FleetGo Ops v2 \u00b7 Modes (reference, not a screen)",
+      "tradeoff": "Why follow, replay and device inspection are states of one map: the fold/drop ledger for the ten v1 boards, the show/hide matrix of the three modes, and the test every future screen must pass",
+      "width": 1440,
+      "height": 900
+    }
+  ]
+}

@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FleetGo Ops v2</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24425d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 216px 1fr 400px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top top" "sidenav main agent";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 12px;
+    padding: 0 16px; background: #08101a; border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--amber); }
+  .pill {
+    font-size: 10.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px;
+    background: var(--red-soft); color: var(--red); display: flex; align-items: center; gap: 6px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
+  header .kbar {
+    margin-left: 6px; display: flex; align-items: center; gap: 8px; flex: 0 1 280px;
+    background: #0d1826; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px;
+    font-size: 11.5px; color: var(--muted);
+  }
+  header .kbar kbd {
+    margin-left: auto; font-family: var(--mono); font-size: 9.5px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px;
+  }
+  .views { display: flex; gap: 2px; background: #0d1826; border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  .views a { font-size: 10.5px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 4px 10px; border-radius: 7px; }
+  .views a.on { background: var(--panel-2); color: var(--text); }
+  header .cfg {
+    display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 750;
+    text-decoration: none; color: var(--muted); padding: 4px 9px; border-radius: 8px;
+    border: 1px solid var(--line); background: #0d1826;
+  }
+  header .stat { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 14px; }
+  header .stat b { color: var(--text); font-weight: 700; font-family: var(--mono); }
+
+  aside.sidenav {
+    grid-area: sidenav; background: var(--panel); border-right: 1px solid var(--line);
+    padding: 12px 10px; display: flex; flex-direction: column; overflow: hidden;
+  }
+  /* filter panel header: what this rail is, and how much is on */
+  aside.sidenav .fhd { padding: 2px 6px 9px; border-bottom: 1px solid var(--line); }
+  aside.sidenav .fhd-r { display: flex; align-items: center; gap: 6px; }
+  aside.sidenav .fhd-r b { font-size: 12.5px; font-weight: 800; letter-spacing: -0.2px; }
+  aside.sidenav .fcount {
+    font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 2px 6px; border-radius: 999px; background: var(--amber-soft); color: var(--amber);
+  }
+  aside.sidenav .fclear {
+    margin-left: auto; font-size: 8.5px; font-weight: 800; color: var(--teal);
+    border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px;
+  }
+  aside.sidenav .fhd p { font-size: 9.5px; line-height: 1.45; color: var(--muted); margin-top: 6px; }
+  aside.sidenav .grp { display: flex; align-items: center; gap: 6px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 11px 8px 6px; }
+  aside.sidenav .grp .gnote { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 7.5px; font-weight: 700; color: rgba(143,160,180,0.7); }
+  aside.sidenav a {
+    display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 9px;
+    font-size: 12px; font-weight: 650; color: var(--muted); text-decoration: none; margin-bottom: 2px;
+  }
+  aside.sidenav a.on { background: var(--panel-2); color: var(--text); box-shadow: inset 2px 0 0 var(--amber); }
+  aside.sidenav a.saved-on { background: rgba(224,138,46,0.09); color: var(--text); }
+  aside.sidenav a .n { margin-left: auto; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: var(--red); color: #fff; }
+  aside.sidenav a .rt { margin-left: auto; display: flex; align-items: center; gap: 5px; }
+  aside.sidenav a .rt .n { margin-left: 0; }
+  aside.sidenav a .q {
+    font-size: 7.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px;
+  }
+  aside.sidenav a .chk {
+    margin-left: auto; width: 13px; height: 13px; border-radius: 4px; background: var(--amber);
+    color: #16283e; font-size: 8.5px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* Data warnings: a Platform lane, not a filter of this queue */
+  aside.sidenav a.lane {
+    display: block; padding: 7px 9px 8px; background: #0b141e;
+    border: 1px dashed rgba(224,138,46,0.36); border-radius: 9px;
+  }
+  aside.sidenav a.lane .lt { display: flex; align-items: center; font-size: 12px; font-weight: 650; color: var(--text); }
+  aside.sidenav a.lane .arw { margin-left: auto; color: var(--teal); font-size: 11px; font-weight: 800; }
+  aside.sidenav a.lane .ls { display: block; margin-top: 3px; font-size: 8.5px; line-height: 1.4; color: var(--amber); }
+  aside.sidenav a.lane .ls b { font-weight: 800; }
+  aside.sidenav a.lane .ls2 { display: block; font-size: 8.5px; line-height: 1.4; color: var(--muted); }
+  aside.sidenav a.add { border: 1px dashed var(--line); background: transparent; font-size: 10.5px; font-weight: 750; }
+  aside.sidenav .qual { display: block; font-size: 8.5px; line-height: 1.4; color: var(--muted); padding: 0 10px 4px; margin-top: -1px; }
+  aside.sidenav .fnote {
+    margin-top: auto; padding: 10px 8px 0; border-top: 1px solid var(--line);
+    font-size: 8.5px; line-height: 1.5; color: var(--muted);
+  }
+
+  main { grid-area: main; display: flex; flex-direction: column; overflow: hidden; }
+  .bar {
+    display: flex; align-items: center; gap: 9px; padding: 12px 16px;
+    border-bottom: 1px solid var(--line); flex-shrink: 0;
+  }
+  .bar h1 { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  .bar .cnt { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: var(--red); color: #fff; }
+  .bar .right { margin-left: auto; display: flex; gap: 7px; }
+  .btn {
+    font-size: 10.5px; font-weight: 800; padding: 5px 10px; border-radius: 7px;
+    border: 1px solid var(--line); color: var(--muted); background: #0d1826;
+  }
+  .btn.on { background: var(--panel-2); color: var(--text); border-color: var(--panel-2); }
+  .btn.pri { background: var(--amber); border-color: var(--amber); color: #16283e; }
+
+  .table { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  .thead, .row {
+    display: grid; grid-template-columns: 14px 62px 48px minmax(0, 1fr) 118px 62px 132px;
+    gap: 10px; align-items: center; padding: 9px 16px;
+  }
+  .thead {
+    font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px;
+    color: var(--muted); border-bottom: 1px solid var(--line); background: #0a121c;
+  }
+  .row { border-bottom: 1px solid var(--line); font-size: 11.5px; }
+  .row.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); }
+  .row .cb { width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid var(--line); }
+  .row .cb.on { background: var(--amber); border-color: var(--amber); }
+  .sev {
+    font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;
+    padding: 3px 0; border-radius: 5px; text-align: center; white-space: nowrap;
+  }
+  .sev.crit { background: var(--red-soft); color: var(--red); box-shadow: inset 0 0 0 1px rgba(217,96,79,0.4); }
+  .sev.warn { background: var(--amber-soft); color: var(--amber); box-shadow: inset 0 0 0 1px rgba(224,138,46,0.4); }
+  .sev.info { background: var(--teal-soft); color: var(--teal); box-shadow: inset 0 0 0 1px rgba(111,170,181,0.35); }
+  .row .dev { font-family: var(--mono); font-weight: 650; font-size: 11px; }
+  .row .what b { font-weight: 750; }
+  .row .what small { display: block; color: var(--muted); font-size: 10px; margin-top: 1px; }
+  .row .age { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+  .row .age.late { color: var(--amber); }
+  .row .own { font-size: 10.5px; color: var(--muted); }
+  .row .own.me { color: var(--teal); font-weight: 700; }
+  .state { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; padding: 2px 6px; border-radius: 4px; text-align: center; }
+  .state.open { background: var(--red-soft); color: var(--red); }
+  .state.ack { background: var(--amber-soft); color: var(--amber); }
+  .state.res { background: var(--green-soft); color: var(--green); }
+
+  .databand {
+    border-top: 1px solid var(--line); background: #0b141e; flex-shrink: 0;
+    border-left: 2px solid var(--amber);
+  }
+  .databand .dhead {
+    display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+    font-size: 9.5px; color: var(--muted);
+  }
+  .databand .dtag {
+    font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 2px 7px; border-radius: 4px; background: var(--amber-soft); color: var(--amber);
+  }
+  .databand .dcount { font-weight: 800; color: var(--text); font-size: 10px; }
+  .databand .dwhy { font-size: 10px; }
+  .databand .dlink { margin-left: auto; color: var(--teal); font-weight: 750; font-size: 10px; }
+  .databand .drow {
+    display: grid; grid-template-columns: 46px 1fr 62px; gap: 10px; align-items: center;
+    padding: 6px 16px 6px 18px; font-size: 10.5px; color: var(--muted);
+    border-top: 1px solid rgba(36,66,93,0.6);
+  }
+  .databand .dsev { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--amber); }
+  .databand .dage { font-family: var(--mono); font-size: 10px; text-align: right; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 18px; padding: 9px 16px;
+    border-top: 1px solid var(--line); background: #0a121c;
+    font-size: 10px; color: var(--muted); line-height: 1.5; flex-shrink: 0;
+  }
+  .legend b { color: var(--text); font-weight: 750; }
+  .bulk {
+    display: flex; align-items: center; gap: 9px; padding: 10px 16px;
+    border-top: 1px solid var(--line); background: #08101a; flex-shrink: 0;
+  }
+  .bulk .n { font-size: 11px; font-weight: 750; color: var(--amber); }
+  .bulk .acts { margin-left: auto; display: flex; gap: 7px; }
+  .bulk .acts span { font-size: 10px; font-weight: 800; padding: 4px 9px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); }
+  .bulk .acts span.pri { background: var(--amber); border-color: var(--amber); color: #16283e; }
+
+  aside.agent { grid-area: agent; background: #0a121c; border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .ahd { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .ahd .orb {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 30%, #f0a752, var(--amber) 65%);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; color: #16283e;
+  }
+  .ahd .t { font-size: 11.5px; font-weight: 800; }
+  .ahd .s { font-size: 9.5px; color: var(--muted); }
+  .thread { flex: 1; overflow: hidden; padding: 11px 14px; display: flex; flex-direction: column; gap: 9px; }
+  .msg .who { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 3px; }
+  .msg .bub { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 11px; line-height: 1.55; }
+  .msg.user .bub { background: var(--panel-2); border-color: var(--panel-2); }
+  .msg .bub b { color: var(--amber); }
+  .msg .bub ul { list-style: none; margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+  .msg .bub li { display: flex; gap: 6px; font-size: 10.5px; color: var(--muted); }
+  .msg .bub li .i { color: var(--teal); }
+  .composer { border-top: 1px solid var(--line); padding: 9px 14px 12px; background: #08101a; }
+  .composer .in { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 11px; color: var(--muted); }
+  .composer .in .send { margin-left: auto; width: 22px; height: 22px; border-radius: 6px; background: var(--amber); color: #16283e; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .composer .note { font-size: 8.5px; color: var(--muted); margin-top: 5px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>FleetGo <span>Ops</span></b>
+  </div>
+  <span class="pill">2 need a person</span>
+  <span class="kbar">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    Ask, search or type a command…
+    <kbd>&#8984;K</kbd>
+  </span>
+  <nav class="views" aria-label="Ops views">
+    <a href="#">Live</a>
+    <a href="#" class="on">Alerts</a>
+  </nav>
+  <a href="#" class="cfg" aria-label="Settings">Settings</a>
+  <div class="stat">
+    <span>Fleet <b>2</b></span>
+    <span>Data <b>2</b></span>
+  </div>
+</header>
+
+<aside class="sidenav" aria-label="Alert queue filters">
+  <div class="fhd">
+    <div class="fhd-r">
+      <b>Filters</b>
+      <span class="fcount">2 active</span>
+      <span class="fclear">Clear</span>
+    </div>
+    <p>One queue &mdash; these narrow it, they do not open another screen.</p>
+  </div>
+
+  <div class="grp">Status <span class="gnote">one at a time</span></div>
+  <a href="#" class="on" aria-current="true">Open <span class="n">2</span></a>
+  <a href="#">Acknowledged</a>
+  <a href="#">Resolved today</a>
+  <a href="#">Silenced</a>
+  <span class="qual">Open includes acknowledged: acknowledging keeps the alert open.</span>
+
+  <div class="grp">Source <span class="gnote">where the rows come from</span></div>
+  <a href="#">Fleet alerts <span class="rt"><span class="q">queue</span><span class="n">2</span></span></a>
+  <a href="#" class="lane">
+    <span class="lt">Data warnings <span class="arw">&#8599;</span></span>
+    <span class="ls"><b>2</b> &middot; owned by Platform</span>
+    <span class="ls2">not hideable &middot; not this queue</span>
+  </a>
+
+  <div class="grp">Mine <span class="gnote">personal scope, still a filter</span></div>
+  <a href="#">My shift</a>
+  <a href="#">Acknowledged by me</a>
+
+  <div class="grp">Saved views <span class="gnote">combine with status</span></div>
+  <a href="#">Watched only</a>
+  <span class="qual">Uses the watched units &mdash; never limits the queue itself.</span>
+  <a href="#" class="saved-on">Critical only <span class="chk">&#10003;</span></a>
+  <a href="#" class="add">+ Save current view</a>
+
+  <div class="fnote">Status, mine and saved views stack on one queue. The assistant reads it too; nothing replaces it.</div>
+</aside>
+
+<main>
+  <div class="bar">
+    <h1>Fleet alerts</h1>
+    <span class="cnt">2</span>
+    <div class="right">
+      <span class="btn on">Fleet behaviour</span>
+      <span class="btn">Nobody on it</span>
+      <span class="btn">Data warnings</span>
+      <span class="btn pri">Acknowledge mine</span>
+    </div>
+  </div>
+
+  <div class="table">
+    <div class="thead">
+      <span></span><span>Severity</span><span>Fired</span><span>Alert</span><span>Unit</span><span>Age</span><span>State</span>
+    </div>
+
+    <div class="row sel">
+      <span class="cb on"></span>
+      <span class="sev crit">Crit</span>
+      <span style="font-size: 10px; color: var(--muted); font-family: var(--mono);">11:40</span>
+      <span class="what"><b>Stopped in critical zone</b><small>rule stopped &gt; 20 min &middot; Zona Norte</small></span>
+      <span class="dev">truck-088 <small style="display:block; color: var(--muted); font-size: 9.5px;">S-88 &middot; AB 555 FG</small></span>
+      <span class="age late">24 min</span>
+      <span class="state ack">Acknowledged &middot; Rivas</span>
+    </div>
+
+    <div class="row">
+      <span class="cb"></span>
+      <span class="sev crit">Crit</span>
+      <span style="font-size: 10px; color: var(--muted); font-family: var(--mono);">09:41</span>
+      <span class="what"><b>Silence too long</b><small>rule silence &gt; 2 h &middot; shift active</small></span>
+      <span class="dev">van-203 <small style="display:block; color: var(--muted); font-size: 9.5px;">S-203 &middot; AB 909 ZZ</small></span>
+      <span class="age late">2 h 28 m</span>
+      <span class="state open">Open</span>
+    </div>
+
+  </div>
+
+  <div class="databand">
+    <div class="dhead">
+      <span class="dtag">Data warnings</span>
+      <span class="dcount">2</span>
+      <span class="dwhy">ingest and integrity &mdash; not yours to resolve, and not hideable</span>
+      <span class="dlink">Open in Platform &rsaquo;</span>
+    </div>
+    <div class="drow">
+      <span class="dsev">Warn</span>
+      <span class="dwhat">truck-042 &middot; data unreliable: 2 samples rejected for clock drift</span>
+      <span class="dage">1 h 05 m</span>
+    </div>
+    <div class="drow">
+      <span class="dsev">Warn</span>
+      <span class="dwhat">truck-088 &middot; stopped reporting reliably: sequence 7 211 is held</span>
+      <span class="dage">2 h 57 m</span>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><b>Acknowledge</b> you own it &mdash; escalation stops, the alert stays open.</span>
+    <span><b>Resolve</b> the situation ended &mdash; closes it and records why.</span>
+    <span><b>Silence</b> hide it for a while &mdash; it keeps counting in history.</span>
+    <span style="color: var(--teal);"><b>Acknowledging takes ownership</b> &mdash; nobody has to assign anything.</span>
+    <span><b>Data warnings</b> are the cause of a symptom you already see; they belong to Platform.</span>
+  </div>
+  <div class="bulk">
+    <span class="n">1 selected</span>
+    <div class="acts">
+      <span class="pri">Dispatch</span>
+      <span>Reassign&hellip;</span>
+      <span>Silence 1 h</span>
+      <span>Resolve</span>
+    </div>
+  </div>
+</main>
+
+<aside class="agent">
+  <div class="ahd">
+    <span class="orb">&#10022;</span>
+    <div>
+      <div class="t">Fleet Assistant</div>
+      <div class="s">knows the queue you are looking at</div>
+    </div>
+  </div>
+
+  <div class="thread">
+    <div class="msg user">
+      <div>
+        <div class="who">M. Rivas</div>
+        <div class="bub">Triage these for me &mdash; what actually needs a person right now?</div>
+      </div>
+    </div>
+    <div class="msg">
+      <div>
+        <div class="who">Assistant</div>
+        <div class="bub">
+          Of the two fleet alerts, one needs a person: <b>truck-088</b> (stopped 24 min in Zona
+          Norte, already acknowledged by you).
+          <ul>
+            <li><span class="i">&#8226;</span> van-203 is silent but parked at the depot &mdash; suggest silence 1 h.</li>
+            <li><span class="i">&#8226;</span> The two <b>data warnings</b> are ingest problems, not fleet behaviour: they do not need a dispatcher.</li>
+          </ul>
+          <div style="margin-top: 8px; font-size: 10px; color: var(--muted);">
+            Want me to silence van-203 for an hour and leave the data warnings to Platform?
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="composer">
+    <div class="in">
+      Ask about this queue…
+      <span class="send">&uarr;</span>
+    </div>
+    <div class="note">Bulk actions you approve are logged per alert, with your name.</div>
+  </div>
+</aside>
+</body>
+</html>

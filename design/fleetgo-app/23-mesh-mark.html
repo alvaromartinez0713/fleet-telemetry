@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Fleet One · Mesh mark</title>
+<style>
+  :root {
+    --bg: #f3f4f1; --card: #ffffff; --line: #e3e4df; --info: #3e7480; --info-soft: #e6efef; --text: #1c2530; --muted: #6d756e;
+    --brand-deep: #9a5a14; --brand-soft: #f4ead9;
+    --shadow: 0 8px 24px rgba(26, 36, 52, 0.06);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); width: 390px; height: 844px; overflow-y: auto; overflow-x: hidden; }
+  .phone { display: flex; flex-direction: column; padding: 0 20px 20px; }
+  .statusbar { display: flex; justify-content: space-between; padding: 14px 6px 6px; font-size: 13px; font-weight: 600; }
+  h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.4px; margin: 12px 6px 4px; }
+  .sub { font-size: 12.5px; color: var(--muted); margin: 0 6px 16px; line-height: 1.5; }
+  /* showcase tiles at three sizes */
+  .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .tile {
+    background: var(--brand-deep); border-radius: 22px;
+    display: flex; align-items: center; justify-content: center;
+    aspect-ratio: 1;
+  }
+  .tile.s2 { border-radius: 16px; }
+  .tile.s3 { border-radius: 12px; }
+  .lockup {
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    box-shadow: var(--shadow); padding: 20px; display: flex; align-items: center; gap: 14px;
+    margin-bottom: 14px;
+  }
+  .lockup .tile { width: 56px; height: 56px; border-radius: 16px; aspect-ratio: auto; flex-shrink: 0; }
+  .lockup .t { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  .lockup .t span { color: var(--brand-deep); }
+  .note { font-size: 12px; color: var(--muted); line-height: 1.55; margin: 0 6px; }
+</style>
+</head>
+<body>
+<div class="phone" role="application" aria-label="Mesh brand mark">
+  <div class="statusbar"><span>9:41</span><span>📶 ⌖ ▮</span></div>
+
+  <h1>Mesh mark — refined</h1>
+  <p class="sub">Node mesh rebuilt with precise geometry: a center hub, three fleet nodes at equal angles, one accent node. Same at every size.</p>
+
+  <div class="row" aria-label="Mark at three sizes">
+    <div class="tile" role="img" aria-label="Mark large">
+      <svg width="76" height="76" viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+        <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+        <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+        <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+        <circle cx="24" cy="25" r="6" fill="#fff"/>
+        <circle cx="24" cy="25" r="2.4" fill="#16283e"/>
+      </svg>
+    </div>
+    <div class="tile s2" role="img" aria-label="Mark medium">
+      <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+        <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+        <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+        <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+        <circle cx="24" cy="25" r="6" fill="#fff"/>
+        <circle cx="24" cy="25" r="2.4" fill="#16283e"/>
+      </svg>
+    </div>
+    <div class="tile s3" role="img" aria-label="Mark small">
+      <svg width="30" height="30" viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+        <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+        <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+        <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+        <circle cx="24" cy="25" r="6" fill="#fff"/>
+        <circle cx="24" cy="25" r="2.4" fill="#16283e"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="lockup" role="img" aria-label="FleetGo lockup">
+    <div class="tile">
+      <svg width="34" height="34" viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+        <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+        <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+        <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+        <circle cx="24" cy="25" r="6" fill="#fff"/>
+        <circle cx="24" cy="25" r="2.4" fill="#16283e"/>
+      </svg>
+    </div>
+    <div class="t">Fleet<span>Go</span></div>
+  </div>
+
+  <p class="note">Geometry: equilateral triangle of fleet nodes, hub node at center with a cut-out dot (the "sample"), triangle drawn as a ghost path. The accent node (light blue) breaks symmetry — the vehicle currently reporting. Holds from 30 px favicon to store icon.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Fleet Platform · Schema & limits</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24344d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 210px 1fr; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top" "sidenav main";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 14px;
+    padding: 0 18px; background: #0a111b; border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--teal); }
+  header .pill { font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px; background: var(--green-soft); color: var(--green); display: flex; align-items: center; gap: 6px; }
+  header .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .views { display: flex; gap: 2px; background: #0a111b; border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  .views a { font-size: 11px; font-weight: 750; text-decoration: none; color: var(--muted); padding: 5px 11px; border-radius: 7px; }
+  .views a.on { background: var(--panel-2); color: var(--text); }
+  header .stat { margin-left: auto; font-size: 11.5px; color: var(--muted); display: flex; gap: 16px; }
+  header .stat b { color: var(--text); font-weight: 700; font-family: var(--mono); }
+  aside.sidenav { grid-area: sidenav; background: var(--panel); border-right: 1px solid var(--line); padding: 12px 10px; }
+  aside.sidenav .grp { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 12px 8px 6px; }
+  aside.sidenav a { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 9px; font-size: 12.5px; font-weight: 650; color: var(--muted); text-decoration: none; margin-bottom: 2px; }
+  aside.sidenav a.on { background: var(--panel-2); color: var(--text); }
+  aside.sidenav a .n { margin-left: auto; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: var(--red); color: #fff; }
+  aside.sidenav a .n.amber { background: var(--amber); color: #16283e; }
+  main { grid-area: main; overflow: hidden; display: flex; flex-direction: column; padding: 16px 18px; gap: 14px; }
+  .kpis { display: flex; gap: 12px; flex-shrink: 0; }
+  .kpi { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 12px 13px; }
+  .kpi .k { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); }
+  .kpi .v { font-size: 22px; font-weight: 800; letter-spacing: -0.6px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .kpi .v small { font-size: 11px; font-weight: 650; color: var(--muted); margin-left: 2px; letter-spacing: 0; }
+  .kpi .v.good { color: var(--green); } .kpi .v.warn { color: var(--amber); } .kpi .v.bad { color: var(--red); }
+  .kpi .sub { font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .cols { display: flex; gap: 14px; flex: 1; min-height: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; flex: 1; }
+  .card > h2 { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 12px 15px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .card > h2 .hint { font-size: 9.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--teal); margin-left: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  th { text-align: left; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); padding: 8px 15px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  td { padding: 9px 15px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  td.mono { font-family: var(--mono); font-size: 10.5px; }
+  .scroll { overflow: auto; flex: 1; }
+  .tag { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 5px; }
+  .tag.ok { background: var(--green-soft); color: var(--green); }
+  .tag.warn { background: var(--amber-soft); color: var(--amber); }
+  .tag.bad { background: var(--red-soft); color: var(--red); }
+  .tag.info { background: var(--teal-soft); color: var(--teal); }
+  .note2 { padding: 11px 15px; font-size: 10.5px; line-height: 1.6; color: var(--muted); border-top: 1px solid var(--line); }
+  .note2 b { color: var(--teal); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>Fleet <span>Platform</span></b>
+  </div>
+  <span class="pill">healthy</span>
+  <div class="stat"><span>Build <b>v1.4.2</b></span><span>Schema <b>v1</b></span><span>Migration <b>001_init</b></span></div>
+</header>
+
+<aside class="sidenav">
+  <div class="grp">Platform</div>
+  <a href="#">Gateway &amp; ingest</a>
+  <a href="#">Pipeline</a>
+  <a href="#">Partitions</a>
+  <a href="#">Workers <span class="n amber">1</span></a>
+  <a href="#">Assistant</a>
+  <div class="grp">Data</div>
+  <a href="#">Data health</a>
+  <a href="#">Logs &amp; traces</a>
+  <div class="grp">Reference</div>
+  <a href="#">Sender wire</a>
+  <a href="#" class="on">Schema &amp; limits</a>
+</aside>
+
+<main>
+
+  <div class="kpis">
+    <div class="kpi"><div class="k">Schema version</div><div class="v">1</div><div class="sub">the only accepted wire version</div></div>
+    <div class="kpi"><div class="k">Max batch</div><div class="v">500</div><div class="sub">events per POST</div></div>
+    <div class="kpi"><div class="k">Skew tolerance</div><div class="v">5<small>min</small></div><div class="sub">future clock allowance</div></div>
+    <div class="kpi"><div class="k">Build</div><div class="v" style="font-size: 15px; font-family: var(--mono);">v1.4.2</div><div class="sub">deployed 3 d ago</div></div>
+    <div class="kpi"><div class="k">Migration</div><div class="v" style="font-size: 15px; font-family: var(--mono);">001_init</div><div class="sub">current schema</div></div>
+  </div>
+
+  <div class="cols">
+    <div class="card" style="flex: 1.2;">
+      <h2>Contract <span class="hint">enforced by the contracts package</span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Rule</th><th>Value</th><th>Violation returns</th></tr></thead>
+          <tbody>
+            <tr><td>schema_version</td><td class="mono">must equal 1</td><td><span class="tag bad">422 unsupported_schema_version</span></td></tr>
+            <tr><td>device_id</td><td class="mono">non-empty, &le; 64 bytes</td><td><span class="tag bad">422 device_id is empty / too long</span></td></tr>
+            <tr><td>seq</td><td class="mono">&gt; 0, &le; int64 max</td><td><span class="tag bad">422 seq out of range</span></td></tr>
+            <tr><td>captured_at</td><td class="mono">not zero, &le; now + 5 min</td><td><span class="tag bad">422 captured_at beyond skew</span></td></tr>
+            <tr><td>lat / lon</td><td class="mono">[-90,90] / [-180,180]</td><td><span class="tag bad">422 lat/lon out of range</span></td></tr>
+            <tr><td>mode</td><td class="mono">moving | heartbeat</td><td><span class="tag bad">422 bad mode</span></td></tr>
+            <tr><td>batch size</td><td class="mono">&le; 500 events</td><td><span class="tag bad">413 batch too large</span></td></tr>
+            <tr><td>empty batch</td><td class="mono">at least 1 event</td><td><span class="tag bad">422 batch has no events</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note2">
+        A batch is validated as a whole and refuses on the <b>first</b> violation, so the device can
+        fix one field at a time. Nothing reaches the journal until every event in the batch passes.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Runtime surface <span class="hint">what this build serves</span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Name</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>Ingest route</td><td class="mono">/v1/telemetry</td></tr>
+            <tr><td>Topic</td><td class="mono">telemetry.events</td></tr>
+            <tr><td>Partition key</td><td class="mono">device_id</td></tr>
+            <tr><td>Dedup key</td><td class="mono">device + captured_at + seq</td></tr>
+            <tr><td>Watermark</td><td class="mono">contiguous seq per device</td></tr>
+            <tr><td>Live API</td><td class="mono">REST first paint + SSE deltas</td></tr>
+            <tr><td>Assistant</td><td class="mono">POST /internal/assistant &middot; breaker 3/60s</td></tr>
+            <tr><td>Retention</td><td class="mono">logs 7 d &middot; events forever</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note2">
+        This table is generated from the running build, not from a document &mdash; if it says
+        500 here, the gateway rejects 501 today.
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FleetGo Ops v2</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24425d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --star: #f0b429;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 1fr 400px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top" "main agent";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 12px;
+    padding: 0 16px; background: #08101a; border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--amber); }
+  .crumb {
+    display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;
+    color: var(--muted); padding: 4px 10px; border-radius: 999px;
+    background: #0d1826; border: 1px solid var(--line);
+  }
+  .crumb b { color: var(--text); font-weight: 800; }
+  .crumb .sep { color: var(--line); }
+  .crumb .mstate { color: var(--amber); font-weight: 800; }
+  header .stat { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 14px; }
+  header .stat b { color: var(--text); font-weight: 700; }
+
+  main { grid-area: main; display: flex; flex-direction: column; overflow: hidden; padding: 16px 18px; gap: 14px; }
+  /* secondary section strip: peers below the top bar, not a second bar */
+  .sectabs {
+    display: flex; align-items: stretch; gap: 20px; height: 32px; flex: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .sectabs a {
+    display: flex; align-items: center; padding: 0 2px; text-decoration: none;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.4px; color: var(--muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .sectabs a.on { color: var(--text); border-bottom-color: var(--amber); }
+  .head { display: flex; align-items: flex-end; gap: 12px; }
+  .head h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; }
+  .head .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .head .new {
+    margin-left: auto; align-self: flex-start; flex-shrink: 0; white-space: nowrap;
+    font: inherit; font-size: 11.5px; font-weight: 800; letter-spacing: 0.1px;
+    padding: 8px 14px; border: none; border-radius: 9px; cursor: pointer;
+    background: var(--amber); color: #16283e;
+  }
+  .lsearch {
+    display: flex; align-items: center; gap: 8px; background: #0d1826;
+    border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px; font-size: 11.5px; color: var(--muted);
+  }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .why {
+    font-size: 9px; font-weight: 600; text-transform: none; letter-spacing: 0;
+    color: var(--teal); line-height: 1.3;
+  }
+  .card > h2 {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted);
+    padding: 9px 15px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px;
+  }
+  .card > h2 .why { margin-left: auto; white-space: nowrap; }
+  .scroll { overflow: hidden; flex: 1; }
+  .rule { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 10px 15px; border-top: 1px solid var(--line); }
+  .rule:first-of-type { border-top: none; }
+  .rule.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); }
+  .rule .sent { font-size: 12px; line-height: 1.5; }
+  .rule .sent b { color: var(--text); }
+  .rule .sent .kw { color: var(--teal); font-family: var(--mono); font-size: 10.5px; }
+  .rule .meta { font-size: 9.5px; color: var(--muted); margin-top: 2px; }
+  .sev { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+  .sev.crit { background: var(--red); color: #fff; }
+  .sev.warn { background: var(--amber); color: #16283e; }
+  .sev.info { background: var(--teal-soft); color: var(--teal); }
+  .scope {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 750;
+    padding: 2px 7px; border-radius: 5px; background: #0d1826; border: 1px solid var(--line);
+    color: var(--muted); white-space: nowrap;
+  }
+  .scope.unit { border-color: var(--amber); color: var(--amber); }
+  .scope.group { border-color: var(--star); color: var(--star); }
+  .scope.zone { border-color: var(--teal); color: var(--teal); }
+  .scope.all { border-color: var(--line); }
+  .fam {
+    font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 2px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted);
+  }
+  .fam.data { border-color: var(--amber); color: var(--amber); background: var(--amber-soft); }
+  .toggle { width: 32px; height: 18px; border-radius: 999px; background: var(--green); position: relative; display: inline-block; }
+  .toggle::after { content: ""; position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; border-radius: 50%; background: #06100a; }
+  .toggle.off { background: var(--line); }
+  .toggle.off::after { right: auto; left: 2px; background: var(--muted); }
+  .foot-note { padding: 8px 15px; border-top: 1px solid var(--line); font-size: 10px; color: var(--muted); line-height: 1.55; background: #0a121c; }
+  .foot-note b { color: var(--teal); }
+
+  /* side cards */
+  .side2 { display: flex; flex-direction: column; gap: 14px; flex: 0 0 300px; }
+  .wl { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; flex: 1; }
+  .wl h2 {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted);
+    padding: 11px 14px; border-bottom: 1px solid var(--line); margin: 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .wl h2 .why { margin-left: auto; white-space: nowrap; }
+  .wrow { display: grid; grid-template-columns: 10px 1fr auto 12px; gap: 8px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); font-size: 11.5px; }
+  .wrow:first-of-type { border-top: none; }
+  .wrow .grip { color: var(--line); font-size: 10px; }
+  .wrow .nm { font-family: var(--mono); font-weight: 650; }
+  .wrow .sp { font-weight: 750; font-variant-numeric: tabular-nums; }
+  .wrow .sp small { font-size: 8.5px; color: var(--muted); margin-left: 2px; font-weight: 650; }
+  .wrow .st { color: var(--star); text-align: center; }
+
+  /* settings agent */
+  aside.agent { grid-area: agent; background: #0a121c; border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .ahd { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+  .ahd .orb {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 30%, #f0a752, var(--amber) 65%);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; color: #16283e;
+  }
+  .ahd .t { font-size: 11.5px; font-weight: 800; }
+  .ahd .s { font-size: 9.5px; color: var(--muted); }
+  .thread { flex: 1; overflow: hidden; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .msg .who { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 3px; }
+  .msg .bub { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 11.5px; line-height: 1.55; }
+  .msg.user .bub { background: var(--panel-2); border-color: var(--panel-2); }
+  .msg .bub b { color: var(--amber); }
+  .msg .bub .why { font-size: 10px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .diff {
+    margin-top: 8px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+    font-family: var(--mono); font-size: 10px; line-height: 1.6;
+  }
+  .diff .ln { padding: 3px 9px; }
+  .diff .ln.rem { background: rgba(217,96,79,0.14); color: #f0a8a0; }
+  .diff .ln.add { background: rgba(88,180,124,0.14); color: #9fe0b8; }
+  .approve { margin-top: 8px; border: 1px solid var(--amber); background: var(--amber-soft); border-radius: 8px; padding: 8px 10px; }
+  .approve .ask { font-size: 10.5px; font-weight: 750; color: var(--amber); }
+  .approve .row { display: flex; gap: 5px; margin-top: 6px; }
+  .approve .row span { font-size: 9.5px; font-weight: 800; padding: 4px 9px; border-radius: 5px; background: var(--amber); color: #16283e; }
+  .approve .row span.no { background: #0d1826; color: var(--muted); border: 1px solid var(--line); }
+  .composer { border-top: 1px solid var(--line); padding: 10px 14px 13px; background: #08101a; }
+  .composer .in { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 11px; color: var(--muted); }
+  .composer .in .send { margin-left: auto; width: 22px; height: 22px; border-radius: 6px; background: var(--amber); color: #16283e; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .composer .note { font-size: 8.5px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  .tbl { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .trow { display: grid; align-items: center; gap: 12px; padding: 8px 15px; border-top: 1px solid var(--line); font-size: 12px; }
+  .trow:first-child { border-top: none; }
+  .trow.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); }
+  .trow .nm { font-weight: 700; }
+  .trow .mono { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+  .trow .end { justify-self: end; }
+  .pillx { display: inline-block; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 5px; border: 1px solid var(--line); color: var(--muted); }
+  .pillx.crit { background: var(--red); border-color: var(--red); color: #fff; }
+  .pillx.warn { background: var(--amber); border-color: var(--amber); color: #16283e; }
+  .pillx.teal { background: var(--teal-soft); border-color: transparent; color: var(--teal); }
+  .pillx.on { border-color: var(--green); color: var(--green); }
+  .note { padding: 8px 15px; border-top: 1px solid var(--line); font-size: 10px; color: var(--muted); line-height: 1.55; }
+  .note b { color: var(--teal); }
+  .trow .s2 { display: block; font-size: 9.5px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+  .w2 { grid-template-columns: 1fr auto; }
+  .w3 { grid-template-columns: 1fr auto auto; }
+  .composer .note { padding: 0; border-top: none; }
+
+  .rrow { grid-template-columns: 1fr 86px auto; }
+
+  /* per-operator overrides: the only personal scope, and it can only narrow */
+  .col { display: flex; flex-direction: column; gap: 14px; flex: 1; min-width: 0; }
+  .col > .card.ov { flex: 0 0 auto; }
+  .ovnote {
+    padding: 8px 15px 9px; font-size: 10.5px; color: var(--muted); line-height: 1.5;
+    border-bottom: 1px solid var(--line);
+  }
+  .ovnote b { color: var(--text); }
+  .orow { grid-template-columns: 1fr auto; }
+  .orow .who { font-size: 11.5px; font-weight: 700; letter-spacing: -0.1px; }
+  .pillx.stricter { background: var(--teal-soft); border-color: transparent; color: var(--teal); }
+  .addrow {
+    display: flex; align-items: center; gap: 7px; padding: 8px 15px;
+    border-top: 1px solid var(--line); font-size: 11px; font-weight: 800; color: var(--amber);
+  }
+  .addrow .plus { font-size: 13px; line-height: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>FleetGo <span>Ops</span></b>
+  </div>
+  <span class="crumb" aria-label="You are in settings">
+    Live map <span class="sep">&#8250;</span> settings <span class="sep">&#8250;</span> <span class="mstate">routing</span>
+  </span>
+  <div class="stat">
+    <span>Channels <b>4</b></span>
+    <span>Escalations <b>2</b></span>
+  </div>
+</header>
+
+<main>
+  <nav class="sectabs" aria-label="Settings sections">
+    <a href="#">Rules</a>
+    <a href="#">Zones</a>
+    <a href="#" class="on" aria-current="page">Routing</a>
+    <a href="#">History</a>
+  </nav>
+
+  <div class="head">
+    <div>
+      <h1>Routing</h1>
+      <div class="sub">Who hears about an alert, on which channel, and when it escalates. This is team level &mdash; every dispatcher inherits it.</div>
+    </div>
+    <button class="new" type="button">Add channel</button>
+  </div>
+
+  <div class="lsearch">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    Search channels and targets&hellip;
+  </div>
+
+  <div style="display: flex; gap: 14px; flex: 1; min-height: 0;">
+    <div class="col">
+      <div class="card">
+        <h2>Channels <span class="why">team level</span></h2>
+        <div class="tbl">
+          <div class="trow rrow">
+            <div><span class="nm">Email &middot; on-call group</span><span class="s2">6 people &middot; every severity</span></div>
+            <span class="pillx">team</span>
+            <span class="end"><span class="toggle"></span></span>
+          </div>
+          <div class="trow rrow">
+            <div><span class="nm">Push &middot; dispatchers</span><span class="s2">4 people &middot; critical + warning</span></div>
+            <span class="pillx">team</span>
+            <span class="end"><span class="toggle"></span></span>
+          </div>
+          <div class="trow rrow">
+            <div><span class="nm">SMS &middot; 5 min unack</span><span class="s2">on-call phone list &middot; only if nobody acknowledged</span></div>
+            <span class="pillx">fallback</span>
+            <span class="end"><span class="toggle"></span></span>
+          </div>
+          <div class="trow rrow">
+            <div><span class="nm">Webhook &middot; TMS</span><span class="s2">integration &middot; warning + info, never critical</span></div>
+            <span class="pillx teal">integration</span>
+            <span class="end"><span class="toggle"></span></span>
+          </div>
+          <div class="trow rrow">
+            <div><span class="nm">Voice call &middot; critical only</span><span class="s2">on-call lead &middot; wakes one person at a time</span></div>
+            <span class="pillx">critical</span>
+            <span class="end"><span class="toggle off"></span></span>
+          </div>
+        </div>
+        <div class="note">
+          <b>SMS and voice use the on-call phone list</b>, synced from the roster &mdash; one number per
+          person, nothing typed twice. A disabled channel is skipped, never queued.
+        </div>
+        <div class="foot-note">
+          <b>Routing is team level.</b> A dispatcher can still narrow what reaches them with a
+          per-operator override below &mdash; stricter only, never looser, so nothing here is set twice.
+        </div>
+      </div>
+
+      <div class="card ov">
+        <h2>Per-operator overrides <span class="why">stricter only</span></h2>
+        <div class="ovnote">
+          A person can be <b>stricter than the team, never looser</b>: an override narrows what reaches
+          them and can never add a channel the team turned off. <b>Critical alerts cannot be muted</b> by anyone.
+        </div>
+        <div class="tbl">
+          <div class="trow orow">
+            <span class="who">M. Rivas &middot; push after 5 min instead of SMS</span>
+            <span class="pillx stricter">stricter</span>
+          </div>
+          <div class="trow orow">
+            <span class="who">L. Paredes &middot; SMS on critical only</span>
+            <span class="pillx stricter">stricter</span>
+          </div>
+          <div class="trow orow">
+            <span class="who">R. Vega &middot; quiet hours 23:00&ndash;06:00</span>
+            <span class="pillx stricter">stricter</span>
+          </div>
+          <div class="addrow"><span class="plus">+</span> Add override</div>
+        </div>
+        <div class="foot-note">
+          Every override is written to <b>History</b> with the operator's name, when it changed and why.
+        </div>
+      </div>
+    </div>
+
+    <div class="side2">
+      <div class="wl">
+        <h2>Escalation ladder <span class="why">until someone acks</span></h2>
+        <div class="wrow w2"><span class="nm" style="font-family: inherit;">T+0 &middot; push</span><span class="pillx on">dispatchers</span></div>
+        <div class="wrow w2"><span class="nm" style="font-family: inherit;">T+5 min &middot; SMS</span><span class="pillx warn">on-call</span></div>
+        <div class="wrow w2"><span class="nm" style="font-family: inherit;">T+15 min &middot; voice</span><span class="pillx">lead &middot; off</span></div>
+        <div class="foot-note" style="margin-top: auto;">The ladder stops on <b>acknowledge</b>, not on resolve. Voice is off today, so it stops at SMS.</div>
+      </div>
+
+      <div class="wl">
+        <h2>Quiet hours <span class="why">22:00&ndash;06:00</span></h2>
+        <div class="wrow w2"><span class="nm" style="font-family: inherit;">Window</span><span class="sp" style="font-size: 10px;">22:00&ndash;06:00</span></div>
+        <div class="wrow w2"><span class="nm" style="font-family: inherit;">Critical</span><span class="pillx warn">critical bypasses</span></div>
+        <div class="wrow w2"><span class="nm" style="font-family: inherit;">Warning &amp; info</span><span class="sp" style="font-size: 10px;">held until 06:00</span></div>
+        <div class="foot-note" style="margin-top: auto;">Weekends use the same window. A person who wants more quiet narrows their own override.</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<aside class="agent">
+  <div class="ahd">
+    <span class="orb">&#10022;</span>
+    <div>
+      <div class="t">Fleet Assistant</div>
+      <div class="s">knows who is on call tonight</div>
+    </div>
+  </div>
+
+  <div class="thread">
+    <div class="msg user">
+      <div>
+        <div class="who">M. Rivas</div>
+        <div class="bub">Nobody answered the SMS at 04:10. Why did nothing escalate?</div>
+      </div>
+    </div>
+    <div class="msg">
+      <div>
+        <div class="who">Assistant</div>
+        <div class="bub">
+          Because <b>voice is off</b> on the critical channel. The ladder has a T+15 step, but no enabled
+          channel can take it, so escalation stopped at SMS while the alert stayed open.
+          <div class="why">Turning voice on for critical only would have reached the on-call lead at 04:25.
+            It would also have rung for the 3 other critical alerts that night, two of which were
+            acknowledged on push.</div>
+          <div class="approve">
+            <div class="ask">Draft: enable voice for critical only?</div>
+            <div class="row"><span>Review draft</span><span class="no">Not now</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="composer">
+    <div class="in">
+      Ask who was paged, or why an escalation stopped&hellip;
+      <span class="send">&uarr;</span>
+    </div>
+    <div class="note">Channel changes take effect after a human approves them, and land in History.</div>
+  </div>
+</aside>
+</body>
+</html>

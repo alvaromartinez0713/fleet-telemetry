@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FleetGo Ops v2</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24425d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --star: #f0b429;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 1fr 400px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top" "main agent";
+  }
+  header {
+    grid-area: top; display: flex; align-items: center; gap: 12px;
+    padding: 0 16px; background: #08101a; border-bottom: 1px solid var(--line);
+  }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--amber); }
+  .crumb {
+    display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;
+    color: var(--muted); padding: 4px 10px; border-radius: 999px;
+    background: #0d1826; border: 1px solid var(--line);
+  }
+  .crumb b { color: var(--text); font-weight: 800; }
+  .crumb .sep { color: var(--line); }
+  .crumb .mstate { color: var(--amber); font-weight: 800; }
+  header .stat { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 14px; }
+  header .stat b { color: var(--text); font-weight: 700; }
+
+  main { grid-area: main; display: flex; flex-direction: column; overflow: hidden; padding: 16px 18px; gap: 14px; }
+  /* secondary section strip: peers below the top bar, not a second bar */
+  .sectabs {
+    display: flex; align-items: stretch; gap: 20px; height: 32px; flex: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .sectabs a {
+    display: flex; align-items: center; padding: 0 2px; text-decoration: none;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.4px; color: var(--muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .sectabs a.on { color: var(--text); border-bottom-color: var(--amber); }
+  .head { display: flex; align-items: flex-end; gap: 12px; }
+  .head h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; }
+  .head .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .head .new {
+    margin-left: auto; align-self: flex-start; flex-shrink: 0; white-space: nowrap;
+    font: inherit; font-size: 11.5px; font-weight: 800; letter-spacing: 0.1px;
+    padding: 8px 14px; border: none; border-radius: 9px; cursor: pointer;
+    background: var(--amber); color: #16283e;
+  }
+  .lsearch {
+    display: flex; align-items: center; gap: 8px; background: #0d1826;
+    border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px; font-size: 11.5px; color: var(--muted);
+  }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .why {
+    font-size: 9px; font-weight: 600; text-transform: none; letter-spacing: 0;
+    color: var(--teal); line-height: 1.3;
+  }
+  .card > h2 {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted);
+    padding: 11px 15px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px;
+  }
+  .card > h2 .why { margin-left: auto; white-space: nowrap; }
+  .scroll { overflow: hidden; flex: 1; }
+  .rule { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 10px 15px; border-top: 1px solid var(--line); }
+  .rule:first-of-type { border-top: none; }
+  .rule.sel { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--amber); }
+  .rule .sent { font-size: 12px; line-height: 1.5; }
+  .rule .sent b { color: var(--text); }
+  .rule .sent .kw { color: var(--teal); font-family: var(--mono); font-size: 10.5px; }
+  .rule .meta { font-size: 9.5px; color: var(--muted); margin-top: 2px; }
+  .sev { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+  .sev.crit { background: var(--red); color: #fff; }
+  .sev.warn { background: var(--amber); color: #16283e; }
+  .sev.info { background: var(--teal-soft); color: var(--teal); }
+  .scope {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 750;
+    padding: 2px 7px; border-radius: 5px; background: #0d1826; border: 1px solid var(--line);
+    color: var(--muted); white-space: nowrap;
+  }
+  .scope.unit { border-color: var(--amber); color: var(--amber); }
+  .scope.group { border-color: var(--star); color: var(--star); }
+  .scope.zone { border-color: var(--teal); color: var(--teal); }
+  .scope.all { border-color: var(--line); }
+  .fam {
+    font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 2px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted);
+  }
+  .fam.data { border-color: var(--amber); color: var(--amber); background: var(--amber-soft); }
+  .toggle { width: 32px; height: 18px; border-radius: 999px; background: var(--green); position: relative; display: inline-block; }
+  .toggle::after { content: ""; position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; border-radius: 50%; background: #06100a; }
+  .toggle.off { background: var(--line); }
+  .toggle.off::after { right: auto; left: 2px; background: var(--muted); }
+  .foot-note { padding: 10px 15px; border-top: 1px solid var(--line); font-size: 10px; color: var(--muted); line-height: 1.55; background: #0a121c; }
+  .foot-note b { color: var(--teal); }
+
+  /* side cards */
+  .side2 { display: flex; flex-direction: column; gap: 14px; flex: 0 0 300px; }
+  .wl { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; flex: 1; }
+  .wl h2 {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted);
+    padding: 11px 14px; border-bottom: 1px solid var(--line); margin: 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .wl h2 .why { margin-left: auto; white-space: nowrap; }
+  .wrow { display: grid; grid-template-columns: 10px 1fr auto 12px; gap: 8px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line); font-size: 11.5px; }
+  .wrow:first-of-type { border-top: none; }
+  .wrow .grip { color: var(--line); font-size: 10px; }
+  .wrow .nm { font-family: var(--mono); font-weight: 650; }
+  .wrow .sp { font-weight: 750; font-variant-numeric: tabular-nums; }
+  .wrow .sp small { font-size: 8.5px; color: var(--muted); margin-left: 2px; font-weight: 650; }
+  .wrow .st { color: var(--star); text-align: center; }
+
+  /* settings agent */
+  aside.agent { grid-area: agent; background: #0a121c; border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .ahd { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+  .ahd .orb {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 30%, #f0a752, var(--amber) 65%);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; color: #16283e;
+  }
+  .ahd .t { font-size: 11.5px; font-weight: 800; }
+  .ahd .s { font-size: 9.5px; color: var(--muted); }
+  .thread { flex: 1; overflow: hidden; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .msg .who { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 3px; }
+  .msg .bub { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 11.5px; line-height: 1.55; }
+  .msg.user .bub { background: var(--panel-2); border-color: var(--panel-2); }
+  .msg .bub b { color: var(--amber); }
+  .msg .bub .why { font-size: 10px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .diff {
+    margin-top: 8px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+    font-family: var(--mono); font-size: 10px; line-height: 1.6;
+  }
+  .diff .ln { padding: 3px 9px; }
+  .diff .ln.rem { background: rgba(217,96,79,0.14); color: #f0a8a0; }
+  .diff .ln.add { background: rgba(88,180,124,0.14); color: #9fe0b8; }
+  .approve { margin-top: 8px; border: 1px solid var(--amber); background: var(--amber-soft); border-radius: 8px; padding: 8px 10px; }
+  .approve .ask { font-size: 10.5px; font-weight: 750; color: var(--amber); }
+  .approve .row { display: flex; gap: 5px; margin-top: 6px; }
+  .approve .row span { font-size: 9.5px; font-weight: 800; padding: 4px 9px; border-radius: 5px; background: var(--amber); color: #16283e; }
+  .approve .row span.no { background: #0d1826; color: var(--muted); border: 1px solid var(--line); }
+  .composer { border-top: 1px solid var(--line); padding: 10px 14px 13px; background: #08101a; }
+  .composer .in { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 11px; color: var(--muted); }
+  .composer .in .send { margin-left: auto; width: 22px; height: 22px; border-radius: 6px; background: var(--amber); color: #16283e; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .composer .note { font-size: 8.5px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>FleetGo <span>Ops</span></b>
+  </div>
+  <span class="crumb" aria-label="You are in settings">
+    Live map <span class="sep">&#8250;</span> <span class="mstate">settings</span>
+  </span>
+  <div class="stat">
+    <span>Rules <b>6</b></span>
+    <span>Enabled <b>5</b></span>
+  </div>
+</header>
+
+<main>
+  <nav class="sectabs" aria-label="Settings sections">
+    <a href="#" class="on" aria-current="page">Rules</a>
+    <a href="#">Zones</a>
+    <a href="#">Routing</a>
+    <a href="#">History</a>
+  </nav>
+
+  <div class="head">
+    <div>
+      <h1>Rules</h1>
+      <div class="sub">Plain language in, conditions out. A rule can target the whole fleet, a zone, a route, a single unit or your watched group.</div>
+    </div>
+    <button class="new" type="button">Describe a rule</button>
+  </div>
+
+  <div class="lsearch">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    Search rules and zones…
+  </div>
+
+  <div style="display: flex; gap: 14px; flex: 1; min-height: 0;">
+    <div class="card">
+      <h2>Active rules <span class="why">audited, not asked</span></h2>
+      <div class="scroll">
+        <div class="rule sel">
+          <div>
+            <div class="sent">Alert me when a unit <b>stops more than 20 minutes</b> inside a <span class="kw">critical zone</span>.</div>
+            <div class="meta"><span class="scope zone">zone: Zona Norte, Depot Sur</span> &middot; fired 3&times; in 24 h <span class="fam">fleet alert</span></div>
+          </div>
+          <span class="sev crit">Critical</span>
+          <span class="toggle"></span>
+        </div>
+        <div class="rule">
+          <div>
+            <div class="sent">Alert me when a unit sends <b>nothing for 2 hours</b> during its shift.</div>
+            <div class="meta"><span class="scope all">all units</span> &middot; fired 1&times; (van-203) <span class="fam">fleet alert</span></div>
+          </div>
+          <span class="sev crit">Critical</span>
+          <span class="toggle"></span>
+        </div>
+        <div class="rule">
+          <div>
+            <div class="sent">Warn me when a unit's <b>data becomes unreliable</b> &mdash; samples rejected for clock drift.</div>
+            <div class="meta"><span class="scope group">&#9733; watched group</span> &middot; fired 5&times; <span class="fam data">data</span></div>
+          </div>
+          <span class="sev warn">Warning</span>
+          <span class="toggle"></span>
+        </div>
+        <div class="rule">
+          <div>
+            <div class="sent">Tell me when a unit drifts <b>more than 300 m off its route</b> for 5 minutes.</div>
+            <div class="meta"><span class="scope unit">unit S-88 only</span> &middot; fired 2&times; <span class="fam">fleet alert</span></div>
+          </div>
+          <span class="sev info">Info</span>
+          <span class="toggle"></span>
+        </div>
+        <div class="rule">
+          <div>
+            <div class="sent">Tell me when a unit <b>stops reporting reliably</b> &mdash; its sequence stalls for 30 min.</div>
+            <div class="meta"><span class="scope all">all units</span> &middot; fired 1&times; <span class="fam data">data</span></div>
+          </div>
+          <span class="sev warn">Warning</span>
+          <span class="toggle"></span>
+        </div>
+        <div class="rule">
+          <div>
+            <div class="sent">Tell me when a unit goes <b>over 90 km/h for 2 minutes</b>.</div>
+            <div class="meta"><span class="scope unit">unit S-42</span> &middot; disabled <span class="fam">fleet alert</span></div>
+          </div>
+          <span class="sev info">Info</span>
+          <span class="toggle off"></span>
+        </div>
+      </div>
+      <div class="foot-note">
+        <b>Why the list survives the agent:</b> a rule you cannot read at a glance is a rule nobody
+        reviewed. The agent writes the sentence; the sentence is the contract. <b style="color: var(--amber);">Data</b> rules never enter the dispatcher queue &mdash; they surface in Platform.
+      </div>
+    </div>
+
+    <div class="side2">
+      <div class="wl">
+        <h2>Routing <span class="why">channels</span></h2>
+        <div class="wrow" style="grid-template-columns: 1fr auto;"><span class="nm" style="font-family: inherit;">Email &middot; on-call group</span><span class="sp" style="color: var(--green); font-size: 10px;">on</span></div>
+        <div class="wrow" style="grid-template-columns: 1fr auto;"><span class="nm" style="font-family: inherit;">Push &middot; dispatchers</span><span class="sp" style="color: var(--green); font-size: 10px;">on</span></div>
+        <div class="wrow" style="grid-template-columns: 1fr auto;"><span class="nm" style="font-family: inherit;">SMS &middot; 5 min unack</span><span class="sp" style="color: var(--green); font-size: 10px;">on</span></div>
+        <div class="wrow" style="grid-template-columns: 1fr auto;"><span class="nm" style="font-family: inherit;">Quiet hours</span><span class="sp" style="font-size: 10px;">22:00–06:00</span></div>
+        <div class="foot-note" style="margin-top: auto;">Team level &mdash; every dispatcher inherits these channels. Groups and watched units are managed on the <b>Live map</b>, next to the units they contain.</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<aside class="agent">
+  <div class="ahd">
+    <span class="orb">&#10022;</span>
+    <div>
+      <div class="t">Fleet Assistant</div>
+      <div class="s">drafts rules &mdash; you approve the change</div>
+    </div>
+  </div>
+
+  <div class="thread">
+    <div class="msg user">
+      <div>
+        <div class="who">M. Rivas</div>
+        <div class="bub">Make the stopped-in-zone rule 30 minutes instead of 20, and warn me on push before SMS.</div>
+      </div>
+    </div>
+    <div class="msg">
+      <div>
+        <div class="who">Assistant</div>
+        <div class="bub">
+          Two changes on <b>Stopped in critical zone</b>:
+          <div class="diff">
+            <div class="ln rem">&minus; stopped &gt; 20 min</div>
+            <div class="ln add">+ stopped &gt; 30 min</div>
+            <div class="ln add">+ notify: push first, SMS after 5 min</div>
+          </div>
+          <div class="why">This rule fired 3 times today and every one was a real stop, so 30 min will
+            still catch it &mdash; you will just hear about it later.</div>
+          <div class="approve">
+            <div class="ask">Apply these two changes?</div>
+            <div class="row"><span>Approve</span><span class="no">Edit</span><span class="no">Cancel</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="composer">
+    <div class="in">
+      Describe a new rule or change one…
+      <span class="send">&uarr;</span>
+    </div>
+    <div class="note">Rules are written by the agent, read by humans, and logged with who approved them.</div>
+  </div>
+</aside>
+</body>
+</html>

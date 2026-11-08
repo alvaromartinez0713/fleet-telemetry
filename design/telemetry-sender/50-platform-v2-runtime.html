@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Telemetry Sender — Fleet Platform v2 · runtime</title>
+<style>
+  :root {
+    --bg: #0d141d; --panel: #101a29; --panel-2: #16283e; --line: #24425d;
+    --text: #e9edf2; --muted: #8fa0b4;
+    --amber: #e08a2e; --amber-soft: rgba(224,138,46,0.14);
+    --teal: #6faab5; --teal-soft: rgba(111,170,181,0.13);
+    --violet: #6c7cf0; --violet-soft: rgba(108,124,240,0.14);
+    --green: #58b47c; --green-soft: rgba(88,180,124,0.13);
+    --red: #d9604f; --red-soft: rgba(217,96,79,0.13);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    width: 1440px; height: 900px; overflow: hidden;
+    display: grid; grid-template-columns: 196px 1fr 404px; grid-template-rows: 52px 1fr;
+    grid-template-areas: "top top top" "side main agent";
+  }
+  header { grid-area: top; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: #08101a; border-bottom: 1px solid var(--line); }
+  header .mark { display: flex; align-items: center; gap: 9px; }
+  header .mark b { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  header .mark b span { color: var(--violet); }
+  .pill { font-size: 10.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--amber-soft); color: var(--amber); display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+  header .kbar { margin-left: 4px; display: flex; align-items: center; gap: 8px; flex: 0 1 300px; background: #0d1826; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px; font-size: 11.5px; color: var(--muted); }
+  header .kbar kbd { margin-left: auto; font-family: var(--mono); font-size: 9.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+  header .ro { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; padding: 3px 9px; border-radius: 5px; background: var(--violet-soft); color: var(--violet); border: 1px solid var(--violet); }
+  header .stat { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 14px; }
+  header .stat b { color: var(--text); font-weight: 700; font-family: var(--mono); }
+
+  aside.side { grid-area: side; background: var(--panel); border-right: 1px solid var(--line); padding: 10px 9px; }
+  aside.side .grp { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 11px 8px 6px; }
+  aside.side a { display: flex; align-items: center; gap: 8px; padding: 8px 9px; border-radius: 8px; font-size: 12px; font-weight: 650; color: var(--muted); text-decoration: none; margin-bottom: 2px; }
+  aside.side a.on { background: var(--panel-2); color: var(--text); }
+  aside.side a .d { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 6px; }
+  .d.ok { background: var(--green); } .d.warn { background: var(--amber); } .d.bad { background: var(--red); }
+  aside.side a .n { margin-left: auto; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: var(--red); color: #fff; }
+
+  main { grid-area: main; display: flex; flex-direction: column; overflow: hidden; padding: 13px 15px; gap: 11px; }
+  .workers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; flex-shrink: 0; }
+  .w { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .w.warn { border-color: var(--amber); }
+  .w .top { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+  .w .top .d { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 7px; }
+  .w .top .nm { font-size: 11.5px; font-weight: 800; }
+  .w .top .mod { margin-left: auto; font-family: var(--mono); font-size: 9px; color: var(--muted); }
+  .w .rows { padding: 3px 12px 8px; }
+  .w .r { display: flex; justify-content: space-between; padding: 4px 0; font-size: 10.5px; border-top: 1px solid var(--line); }
+  .w .r:first-child { border-top: none; }
+  .w .r .k { color: var(--muted); }
+  .w .r .v { font-family: var(--mono); font-weight: 700; font-size: 10px; }
+  .w .r .v.good { color: var(--green); } .w .r .v.warn { color: var(--amber); } .w .r .v.bad { color: var(--red); }
+
+  .cols { display: flex; gap: 11px; flex: 1; min-height: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; flex: 1; }
+  .card > h2 { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--muted); padding: 9px 13px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .card > h2 .why { margin-left: auto; font-size: 8.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--teal); white-space: nowrap; }
+  table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  th { text-align: left; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); padding: 6px 13px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 13px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  td.mono { font-family: var(--mono); font-size: 9.5px; }
+  .scroll { overflow: hidden; flex: 1; }
+  .tag { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+  .tag.ok { background: var(--green-soft); color: var(--green); }
+  .tag.warn { background: var(--amber-soft); color: var(--amber); }
+  .tag.bad { background: var(--red-soft); color: var(--red); }
+  .tag.info { background: var(--teal-soft); color: var(--teal); }
+  .chan { display: grid; grid-template-columns: 18px 1fr 54px 54px 62px; gap: 8px; align-items: center; padding: 7px 13px; border-bottom: 1px solid var(--line); font-size: 10.5px; }
+  .chan .ic { width: 16px; height: 16px; border-radius: 4px; background: #0d1826; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 8px; color: var(--muted); }
+  .chan .nm { font-weight: 700; }
+  .chan .nm small { display: block; font-weight: 500; color: var(--muted); font-size: 9px; margin-top: 1px; }
+  .chan .num { text-align: right; font-family: var(--mono); font-size: 10px; }
+  .chan .num.fail { color: var(--red); }
+  .note { padding: 8px 13px; font-size: 9.5px; line-height: 1.55; color: var(--muted); border-top: 1px solid var(--line); background: #0a121c; }
+  .note b { color: var(--teal); }
+
+  aside.agent { grid-area: agent; background: #0a121c; border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .ahd { display: flex; align-items: center; gap: 8px; padding: 10px 13px; border-bottom: 1px solid var(--line); }
+  .ahd .orb { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 32% 30%, #9aa8ff, var(--violet) 65%); display: flex; align-items: center; justify-content: center; font-size: 11px; color: #0b1020; }
+  .ahd .t { font-size: 11px; font-weight: 800; }
+  .ahd .s { font-size: 9px; color: var(--muted); }
+  .ahd .ro { margin-left: auto; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px; background: var(--violet-soft); color: var(--violet); border: 1px solid var(--violet); }
+  .thread { flex: 1; overflow: hidden; padding: 10px 13px; display: flex; flex-direction: column; gap: 8px; }
+  .msg .who { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 3px; }
+  .msg .bub { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 10.5px; line-height: 1.55; }
+  .msg.user .bub { background: var(--panel-2); border-color: var(--panel-2); }
+  .msg .bub b { color: var(--amber); }
+  .msg .bub .kv { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; border-top: 1px solid var(--line); font-size: 9.5px; }
+  .msg .bub .kv:first-of-type { border-top: none; margin-top: 6px; }
+  .msg .bub .kv .k { color: var(--muted); }
+  .msg .bub .kv .v { font-family: var(--mono); font-weight: 700; font-size: 9px; }
+  .msg .bub .kv .v.bad { color: var(--red); }
+  .cite { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+  .cite .c { font-size: 8.5px; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: var(--violet-soft); color: var(--violet); border: 1px solid rgba(108,124,240,0.4); }
+  .composer { border-top: 1px solid var(--line); padding: 9px 13px 12px; background: #08101a; }
+  .composer .in { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 10.5px; color: var(--muted); }
+  .composer .in .send { margin-left: auto; width: 21px; height: 21px; border-radius: 6px; background: var(--violet); color: #0b1020; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+  .composer .note2 { font-size: 8.5px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="24" height="24" viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="12" fill="#1e4a7a"/>
+      <path d="M24 12.5L11 33h26z" stroke="#fff" stroke-width="2.4" fill="none" stroke-linejoin="round" opacity="0.45"/>
+      <circle cx="24" cy="12.5" r="4.4" fill="#fff"/>
+      <circle cx="11" cy="33" r="4.4" fill="#fff"/>
+      <circle cx="37" cy="33" r="4.4" fill="#e8b06a"/>
+      <circle cx="24" cy="25" r="6" fill="#fff"/>
+      <circle cx="24" cy="25" r="2.4" fill="#1e4a7a"/>
+    </svg>
+    <b>Fleet <span>Platform</span></b>
+  </div>
+  <span class="pill">1 worker behind</span>
+  <span class="kbar">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    Ask, or query — "did the SMS escalation ever leave?"
+    <kbd>&#8984;K</kbd>
+  </span>
+  <span class="ro" title="This assistant never writes">read-only</span>
+  <div class="stat">
+    <span>Uptime <b>14 d 6 h</b></span>
+    <span>Restarts <b>2</b></span>
+  </div>
+</header>
+
+<aside class="side">
+  <div class="grp">Surfaces</div>
+  <a href="#"><span class="d ok"></span>Ingest &amp; pipeline</a>
+  <a href="#" class="on"><span class="d warn"></span>Runtime</a>
+  <a href="#"><span class="d ok"></span>Evidence</a>
+  <div class="grp">Inside this one</div>
+  <a href="#">Workers</a>
+  <a href="#">Evaluation</a>
+  <a href="#">Delivery</a>
+  <a href="#">Notification log</a>
+</aside>
+
+<main>
+  <div class="workers">
+    <div class="w">
+      <div class="top"><span class="d" style="background: var(--green);"></span><span class="nm">Consumer</span><span class="mod">dedup+watermark</span></div>
+      <div class="rows">
+        <div class="r"><span class="k">Status</span><span class="v good">running</span></div>
+        <div class="r"><span class="k">Lag</span><span class="v good">0.2 s</span></div>
+        <div class="r"><span class="k">Throughput</span><span class="v">12.3 /s</span></div>
+        <div class="r"><span class="k">Restarts 24 h</span><span class="v">0</span></div>
+      </div>
+    </div>
+    <div class="w warn">
+      <div class="top"><span class="d" style="background: var(--amber);"></span><span class="nm">Alerting</span><span class="mod">rules + delivery</span></div>
+      <div class="rows">
+        <div class="r"><span class="k">Status</span><span class="v warn">degraded</span></div>
+        <div class="r"><span class="k">Eval lag</span><span class="v warn">48 s / 30 s</span></div>
+        <div class="r"><span class="k">Delivery</span><span class="v bad">1 failed</span></div>
+        <div class="r"><span class="k">Restarts 24 h</span><span class="v bad">2</span></div>
+      </div>
+    </div>
+    <div class="w">
+      <div class="top"><span class="d" style="background: var(--green);"></span><span class="nm">Assistant</span><span class="mod">function calling</span></div>
+      <div class="rows">
+        <div class="r"><span class="k">Status</span><span class="v good">running</span></div>
+        <div class="r"><span class="k">Tool p95</span><span class="v">740 ms</span></div>
+        <div class="r"><span class="k">Breaker</span><span class="v warn">1 trip</span></div>
+        <div class="r"><span class="k">Calls 24 h</span><span class="v">318</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="card">
+      <h2>Rule evaluation <span class="why">per rule, not per worker</span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Rule</th><th>Scope</th><th>Eval p95</th><th>Fired 24 h</th></tr></thead>
+          <tbody>
+            <tr><td>Stopped in critical zone</td><td class="mono">zone</td><td>38 ms</td><td>3</td></tr>
+            <tr><td>Silence too long</td><td class="mono">all</td><td>41 ms</td><td>1</td></tr>
+            <tr><td>Data unreliable (skew)</td><td class="mono">&#9733; group</td><td>44 ms</td><td>5</td></tr>
+            <tr><td>Sequence stalls</td><td class="mono">all</td><td>39 ms</td><td>1</td></tr>
+            <tr><td>Route deviation</td><td class="mono">unit S-88</td><td>36 ms</td><td>2</td></tr>
+            <tr><td>Overspeed</td><td class="mono">unit S-42</td><td>&mdash;</td><td><span class="tag info">off</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">
+        Evaluation lag is <b>48 s</b> against the 30 s window, so rules fire up to 20 s late.
+        That is the number behind the dispatcher's &ldquo;time to acknowledge&rdquo;.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Delivery <span class="why">did it reach a human?</span></h2>
+      <div class="scroll">
+        <div class="chan">
+          <span class="ic">&#9993;</span>
+          <span class="nm">Email<small>on-call group</small></span>
+          <span class="num">96</span><span class="num" style="color: var(--muted);">0</span><span class="tag ok">ok</span>
+        </div>
+        <div class="chan">
+          <span class="ic">&#9788;</span>
+          <span class="nm">Push<small>4 dispatchers</small></span>
+          <span class="num">11</span><span class="num" style="color: var(--muted);">0</span><span class="tag ok">ok</span>
+        </div>
+        <div class="chan">
+          <span class="ic">&#9990;</span>
+          <span class="nm">SMS<small>5 min unacknowledged</small></span>
+          <span class="num">1</span><span class="num fail">1</span><span class="tag bad">carrier</span>
+        </div>
+      </div>
+      <h2 style="border-top: 1px solid var(--line);">Notification log <span class="why">the audit trail</span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Time</th><th>Alert</th><th>Channel</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">11:40:16</td><td class="mono">a41f</td><td>email</td><td><span class="tag ok">4 recipients</span></td></tr>
+            <tr><td class="mono">11:40:18</td><td class="mono">a41f</td><td>push</td><td><span class="tag warn">3 of 4</span></td></tr>
+            <tr><td class="mono">11:45:12</td><td class="mono">a41f</td><td>sms</td><td><span class="tag bad">rejected</span></td></tr>
+            <tr><td class="mono">11:44:02</td><td class="mono">a41f</td><td>ack</td><td><span class="tag ok">M. Rivas</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<aside class="agent">
+  <div class="ahd">
+    <span class="orb">&#10022;</span>
+    <div>
+      <div class="t">Platform Assistant</div>
+      <div class="s">reads everything, changes nothing</div>
+    </div>
+    <span class="ro">read-only</span>
+  </div>
+
+  <div class="thread">
+    <div class="msg user">
+      <div>
+        <div class="who">On call</div>
+        <div class="bub">Did the SMS escalation for truck-088 ever leave?</div>
+      </div>
+    </div>
+    <div class="msg">
+      <div>
+        <div class="who">Assistant</div>
+        <div class="bub">
+          It did not. Email and push were delivered at 11:40:16 and 11:40:18; the SMS at
+          <b>11:45:12</b> was rejected by the carrier.
+          <div class="kv"><span class="k">Alert</span><span class="v">a41f &middot; critical</span></div>
+          <div class="kv"><span class="k">Recipients reached</span><span class="v">4 email &middot; 3 push</span></div>
+          <div class="kv"><span class="k">Escalation</span><span class="v bad">failed &middot; not retried</span></div>
+          <div class="kv"><span class="k">Acknowledged</span><span class="v">11:44:02 &middot; Rivas</span></div>
+          Two things to look at: the carrier rejected the message, and the fan-out to push missed one
+          device that has not registered in 6 days.
+          <div class="cite">
+            <span class="c">&#8594; Notification log</span>
+            <span class="c">&#8594; Delivery by channel</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="composer">
+    <div class="in">
+      Ask about a worker, a rule or a delivery…
+      <span class="send">&uarr;</span>
+    </div>
+    <div class="note2">Read-only: it can read the notification log, never resend a notification.</div>
+  </div>
+</aside>
+</body>
+</html>
